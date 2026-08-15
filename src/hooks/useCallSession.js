@@ -8,10 +8,7 @@ import {
 } from '../utils/audio';
 import { transformOpusSdp, getQualityRating } from '../utils/webrtc';
 import { saveCallHistory } from '../components/RecentCalls';
-
-const OUTGOING_TIMEOUT_MS = 30000;
-const INCOMING_TIMEOUT_MS = 45000;
-const STATS_POLL_INTERVAL_MS = 3000;
+import { TIMINGS } from '../constants/config';
 
 export function useCallSession({ addLog, onStatusChange }) {
   // Active Streams & Refs
@@ -190,7 +187,7 @@ export function useCallSession({ addLog, onStatusChange }) {
               setQuality(getQualityRating(rtt));
             }
           } catch (e) {}
-        }, STATS_POLL_INTERVAL_MS);
+        }, TIMINGS.STATS_POLL_INTERVAL_MS);
       }
     });
 
@@ -232,7 +229,7 @@ export function useCallSession({ addLog, onStatusChange }) {
       dialTimeoutRef.current = setTimeout(() => {
         addLog?.(`No answer from ${targetPeerId} (timeout)`, 'warn');
         endCall();
-      }, OUTGOING_TIMEOUT_MS);
+      }, TIMINGS.OUTGOING_CALL_TIMEOUT_MS);
     } catch (err) {
       if (err.name !== 'NotAllowedError') {
         addLog?.(`Could not initiate call: ${err.message}`, 'error');
@@ -257,7 +254,7 @@ export function useCallSession({ addLog, onStatusChange }) {
         stopRingtoneRef.current = null;
       }
       setIncomingCall(null);
-    }, INCOMING_TIMEOUT_MS);
+    }, TIMINGS.INCOMING_CALL_TIMEOUT_MS);
   }, [addLog]);
 
   // Answer Incoming Call

@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Phone, Trash2, Clock } from 'lucide-react';
 import { sanitizePeerId } from '../utils/webrtc';
-
-const RECENT_KEY = 'secure_voice_recent_calls';
-const MAX_RECENTS = 10;
+import { STORAGE_KEYS, TIMINGS } from '../constants/config';
 
 function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
   const [recents, setRecents] = useState([]);
@@ -11,7 +9,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(RECENT_KEY);
+      const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -26,7 +24,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
   const saveRecents = useCallback((list) => {
     setRecents(list);
     try {
-      localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+      localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(list));
     } catch (e) {
       console.warn('Failed to save recent calls:', e);
     }
@@ -36,7 +34,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
     e.stopPropagation();
     setRecents(prev => {
       const updated = prev.filter(r => r.id !== id);
-      try { localStorage.setItem(RECENT_KEY, JSON.stringify(updated)); } catch (err) {}
+      try { localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated)); } catch (err) {}
       return updated;
     });
   }, []);
@@ -132,11 +130,11 @@ export function saveCallHistory(peerId) {
   if (!cleanId) return;
 
   try {
-    const saved = localStorage.getItem(RECENT_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
     const list = saved ? JSON.parse(saved) : [];
     const filtered = Array.isArray(list) ? list.filter(r => r && r.id !== cleanId) : [];
-    const updated = [{ id: cleanId, timestamp: Date.now() }, ...filtered.slice(0, MAX_RECENTS - 1)];
-    localStorage.setItem(RECENT_KEY, JSON.stringify(updated));
+    const updated = [{ id: cleanId, timestamp: Date.now() }, ...filtered.slice(0, TIMINGS.MAX_RECENT_CALLS - 1)];
+    localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
   } catch (e) {
     console.warn('Failed to save call history:', e);
   }

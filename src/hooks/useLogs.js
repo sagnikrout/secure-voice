@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-
-const MAX_LOG_ENTRIES = 50;
+import { TIMINGS } from '../constants/config';
 
 export function useLogs() {
   const [logs, setLogs] = useState([]);
@@ -15,7 +14,7 @@ export function useLogs() {
 
     setLogs(prev => [
       { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, time, msg, level },
-      ...prev.slice(0, MAX_LOG_ENTRIES - 1)
+      ...prev.slice(0, TIMINGS.MAX_LOG_ENTRIES - 1)
     ]);
   }, []);
 

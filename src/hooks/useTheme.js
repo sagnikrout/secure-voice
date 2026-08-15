@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const THEME_STORAGE_KEY = 'secure_voice_theme';
+import { STORAGE_KEYS } from '../constants/config';
 
 export function useTheme() {
   const [darkMode, setDarkMode] = useState(() => {
     try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
       if (saved !== null) return saved === 'dark';
     } catch (e) {}
     return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -15,7 +14,7 @@ export function useTheme() {
     const root = document.documentElement;
     root.dataset.theme = darkMode ? 'dark' : 'light';
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, darkMode ? 'dark' : 'light');
+      localStorage.setItem(STORAGE_KEYS.THEME, darkMode ? 'dark' : 'light');
     } catch (e) {}
   }, [darkMode]);
 

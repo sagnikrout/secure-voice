@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer from 'peerjs';
-import { ICE_SERVERS, generatePeerId } from '../utils/webrtc';
-
-const MAX_RETRY_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW_MS = 5000;
+import { generatePeerId } from '../utils/webrtc';
+import { ICE_SERVERS, TIMINGS } from '../constants/config';
 
 export function usePeer({ addLog, onIncomingCall, isInActiveCall }) {
   const [myId, setMyId] = useState('');
@@ -50,7 +48,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall }) {
       // Rate limit check
       const now = Date.now();
       const lastCallTime = rateLimitMapRef.current[incomingCall.peer] || 0;
-      if (now - lastCallTime < RATE_LIMIT_WINDOW_MS) {
+      if (now - lastCallTime < TIMINGS.RATE_LIMIT_WINDOW_MS) {
         addLog?.(`Rate-limited rapid call from ${incomingCall.peer}`, 'warn');
         try { incomingCall.close(); } catch (e) {}
         return;
@@ -63,7 +61,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall }) {
     peer.on('error', (err) => {
       if (destroyedRef.current) return;
 
-      if (err.type === 'unavailable-id' && retryCountRef.current < MAX_RETRY_ATTEMPTS) {
+      if (err.type === 'unavailable-id' && retryCountRef.current < TIMINGS.MAX_RETRY_ATTEMPTS) {
         retryCountRef.current += 1;
         const newId = generatePeerId();
         peerIdRef.current = newId;
