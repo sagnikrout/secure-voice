@@ -13,7 +13,7 @@ const OUTGOING_TIMEOUT_MS = 30000;
 const INCOMING_TIMEOUT_MS = 45000;
 const STATS_POLL_INTERVAL_MS = 3000;
 
-export function useCallSession({ peer, myId, addLog, onStatusChange }) {
+export function useCallSession({ addLog, onStatusChange }) {
   // Active Streams & Refs
   const rawStreamRef = useRef(null);
   const processedStreamRef = useRef(null);
@@ -69,7 +69,7 @@ export function useCallSession({ peer, myId, addLog, onStatusChange }) {
       remoteAudioRef.current.srcObject = null;
     }
 
-    // 3. Stop all media tracks explicitly to prevent hardware mic light leak
+    // 3. Stop all media tracks explicitly
     stopMediaStream(rawStreamRef.current);
     stopMediaStream(processedStreamRef.current);
     rawStreamRef.current = null;
@@ -210,8 +210,8 @@ export function useCallSession({ peer, myId, addLog, onStatusChange }) {
   }, [addLog, endCall, onStatusChange, startTimer]);
 
   // Outgoing Call
-  const startCall = useCallback(async (targetPeerId) => {
-    if (!peer || !targetPeerId || targetPeerId === myId) return;
+  const startCall = useCallback(async (targetPeerId, peerInstance, myPeerId) => {
+    if (!peerInstance || !targetPeerId || targetPeerId === myPeerId) return;
 
     try {
       setIsCalling(true);
@@ -219,7 +219,7 @@ export function useCallSession({ peer, myId, addLog, onStatusChange }) {
       addLog?.(`Dialing encrypted call to ${targetPeerId}...`, 'info');
 
       const stream = await acquireMicrophone();
-      const call = peer.call(targetPeerId, stream, {
+      const call = peerInstance.call(targetPeerId, stream, {
         sdpTransform: transformOpusSdp
       });
 
@@ -240,7 +240,7 @@ export function useCallSession({ peer, myId, addLog, onStatusChange }) {
       setIsCalling(false);
       onStatusChange?.('ready');
     }
-  }, [peer, myId, acquireMicrophone, bindCallEvents, addLog, endCall, onStatusChange]);
+  }, [acquireMicrophone, bindCallEvents, addLog, endCall, onStatusChange]);
 
   // Incoming Call Handler
   const handleIncomingCall = useCallback((call) => {
