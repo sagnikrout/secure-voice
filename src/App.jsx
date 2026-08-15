@@ -59,8 +59,6 @@ export default function App() {
 
   // Call session hook
   const callSession = useCallSession({
-    peer: null, // Will be linked
-    myId: '',
     addLog,
     onStatusChange: (s) => setPeerStatus(s)
   });
@@ -76,10 +74,6 @@ export default function App() {
     onIncomingCall: callSession.handleIncomingCall,
     isInActiveCall: () => callSession.isInCall || callSession.isCalling
   });
-
-  // Keep peer reference in call session
-  callSession.peer = peer;
-  callSession.myId = myId;
 
   // Derive active UI status
   const currentStatus = callSession.isInCall
@@ -109,9 +103,9 @@ export default function App() {
   // Handle outgoing call trigger
   const handleStartCall = useCallback((targetId) => {
     const target = sanitizePeerId(targetId || calleeInput);
-    if (!target) return;
-    callSession.startCall(target);
-  }, [calleeInput, callSession]);
+    if (!target || !peer) return;
+    callSession.startCall(target, peer, myId);
+  }, [calleeInput, peer, myId, callSession]);
 
   return (
     <div className="app">
