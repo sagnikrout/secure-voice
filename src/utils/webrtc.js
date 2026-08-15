@@ -100,16 +100,18 @@ export function transformOpusSdp(sdp) {
     }
 
     if (isAudio && line.startsWith('a=fmtp:')) {
-      const match = line.match(/^(a=fmtp:\d+)\s+(.*)$/);
+      const match = line.match(/^(a=fmtp:\d+)(?:\s+(.*))?$/);
       if (match) {
         const prefix = match[1];
-        const paramsStr = match[2];
+        const paramsStr = match[2] || '';
         const paramMap = new Map();
 
-        paramsStr.split(';').forEach(p => {
-          const [k, v] = p.trim().split('=');
-          if (k) paramMap.set(k.trim(), v === undefined ? '1' : v.trim());
-        });
+        if (paramsStr) {
+          paramsStr.split(';').forEach(p => {
+            const [k, v] = p.trim().split('=');
+            if (k) paramMap.set(k.trim(), v === undefined ? '1' : v.trim());
+          });
+        }
 
         // Set low-bandwidth Opus params
         paramMap.set('maxaveragebitrate', '12000');

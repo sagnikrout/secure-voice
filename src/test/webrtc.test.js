@@ -75,7 +75,7 @@ describe('WebRTC Utilities', () => {
       expect(transformed).toContain('stereo=0');
     });
 
-    it('handles SDP formatted with \n line breaks', () => {
+    it('handles SDP formatted with \n line breaks and bare fmtp lines', () => {
       const mockSdp = [
         'v=0',
         'm=audio 9 UDP/TLS/RTP/SAVPF 111',
@@ -86,6 +86,7 @@ describe('WebRTC Utilities', () => {
       const transformed = transformOpusSdp(mockSdp);
       expect(transformed).toContain('b=AS:16');
       expect(transformed).toContain('maxaveragebitrate=12000');
+      expect(transformed).toContain('usedtx=1');
     });
 
     it('preserves non-audio sections untouched', () => {
