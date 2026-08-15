@@ -2,7 +2,7 @@
  * WebRTC SDP Transformation & Network Utilities
  */
 
-// Production ICE Servers (STUN & Turn fallback options)
+// Production ICE Servers (Google STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -28,28 +28,52 @@ export const ICE_SERVERS = {
   ]
 };
 
+const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Disambiguated 32-char charset (no 0/O, 1/I)
+
 /**
- * Generate clean 6-character uppercase alphanumeric ID
+ * Generate cryptographically secure 6-character uppercase alphanumeric ID
  */
-export function generatePeerId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Omit confusing 0/O, 1/I
+export function generatePeerId(length = 6) {
   let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  const alphabetLength = PEER_ID_ALPHABET.length;
+
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const randomBytes = new Uint8Array(length);
+    crypto.getRandomValues(randomBytes);
+    for (let i = 0; i < length; i++) {
+      result += PEER_ID_ALPHABET[randomBytes[i] % alphabetLength];
+    }
+  } else {
+    for (let i = 0; i < length; i++) {
+      result += PEER_ID_ALPHABET.charAt(Math.floor(Math.random() * alphabetLength));
+    }
   }
+
   return result;
+}
+
+/**
+ * Sanitize user input for Peer IDs
+ */
+export function sanitizePeerId(input) {
+  if (typeof input !== 'string') return '';
+  return input.replace(/[^A-Za-z0-9]/g, '').trim().toUpperCase();
 }
 
 /**
  * Transform SDP to force Opus codec low-bandwidth parameters:
  * - maxaveragebitrate = 12000 (12 kbps)
  * - usedtx = 1 (discontinuous transmission / silence suppression)
+ * - stereo = 0, sprop-stereo = 0 (mono voice optimization)
  * - b=AS:16 (bandwidth cap 16 kbps)
  */
 export function transformOpusSdp(sdp) {
-  if (!sdp) return sdp;
+  if (!sdp || typeof sdp !== 'string') return sdp;
 
-  const lines = sdp.split('\r\n');
+  // Support both \r\n and \n line breaks
+  const isCrlf = sdp.includes('\r\n');
+  const delimiter = isCrlf ? '\r\n' : '\n';
+  const lines = sdp.split(delimiter);
   const modifiedLines = [];
   let isAudio = false;
   let bandwidthAdded = false;
@@ -62,6 +86,7 @@ export function transformOpusSdp(sdp) {
       bandwidthAdded = false;
     }
 
+    // Insert bandwidth constraint right after c= line in audio section
     if (isAudio && !bandwidthAdded && line.startsWith('c=')) {
       modifiedLines.push(line);
       modifiedLines.push('b=AS:16');
@@ -103,15 +128,16 @@ export function transformOpusSdp(sdp) {
     modifiedLines.push(line);
   }
 
-  return modifiedLines.join('\r\n');
+  return modifiedLines.join(delimiter);
 }
 
 /**
  * Classify network connection quality by round-trip time (RTT in seconds)
  */
 export function getQualityRating(rttSeconds) {
-  if (rttSeconds === null || rttSeconds === undefined) return 'good';
-  if (rttSeconds < 0.15) return 'good'; // < 150ms
-  if (rttSeconds < 0.40) return 'fair'; // 150ms - 400ms
-  return 'poor'; // > 400ms
+  const rtt = Number(rttSeconds);
+  if (isNaN(rtt) || rtt < 0) return 'good';
+  if (rtt < 0.15) return 'good'; // < 150ms
+  if (rtt < 0.40) return 'fair'; // 150ms - 400ms
+  return 'poor'; // >= 400ms
 }
