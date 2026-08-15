@@ -1,37 +1,12 @@
 /**
  * WebRTC SDP Transformation & Network Utilities
  */
+import { ICE_SERVERS, PEER_ID_ALPHABET, OPUS_CONFIG } from '../constants/config';
 
-// Production ICE Servers (Google STUN + OpenRelay TURN Fallback)
-export const ICE_SERVERS = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
-  ]
-};
-
-const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Disambiguated 32-char charset (no 0/O, 1/I)
+export { ICE_SERVERS };
 
 /**
- * Generate cryptographically secure 6-character uppercase alphanumeric ID
+ * Generate cryptographically secure uppercase alphanumeric ID
  */
 export function generatePeerId(length = 6) {
   let result = '';
@@ -70,7 +45,6 @@ export function sanitizePeerId(input) {
 export function transformOpusSdp(sdp) {
   if (!sdp || typeof sdp !== 'string') return sdp;
 
-  // Support both \r\n and \n line breaks
   const isCrlf = sdp.includes('\r\n');
   const delimiter = isCrlf ? '\r\n' : '\n';
   const lines = sdp.split(delimiter);
@@ -89,13 +63,13 @@ export function transformOpusSdp(sdp) {
     // Insert bandwidth constraint right after c= line in audio section
     if (isAudio && !bandwidthAdded && line.startsWith('c=')) {
       modifiedLines.push(line);
-      modifiedLines.push('b=AS:16');
+      modifiedLines.push(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS}`);
       bandwidthAdded = true;
       continue;
     }
 
     if (isAudio && !bandwidthAdded && line.startsWith('a=')) {
-      modifiedLines.push('b=AS:16');
+      modifiedLines.push(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS}`);
       bandwidthAdded = true;
     }
 
@@ -113,11 +87,11 @@ export function transformOpusSdp(sdp) {
           });
         }
 
-        // Set low-bandwidth Opus params
-        paramMap.set('maxaveragebitrate', '12000');
-        paramMap.set('usedtx', '1');
-        paramMap.set('stereo', '0');
-        paramMap.set('sprop-stereo', '0');
+        // Apply low-bandwidth Opus params
+        paramMap.set('maxaveragebitrate', OPUS_CONFIG.MAX_AVERAGE_BITRATE);
+        paramMap.set('usedtx', OPUS_CONFIG.USE_DTX);
+        paramMap.set('stereo', OPUS_CONFIG.STEREO);
+        paramMap.set('sprop-stereo', OPUS_CONFIG.STEREO);
 
         const newParams = Array.from(paramMap.entries())
           .map(([k, v]) => `${k}=${v}`)

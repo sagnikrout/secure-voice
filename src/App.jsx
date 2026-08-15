@@ -21,27 +21,11 @@ import { useLogs } from './hooks/useLogs';
 import { usePeer } from './hooks/usePeer';
 import { useCallSession } from './hooks/useCallSession';
 import { sanitizePeerId } from './utils/webrtc';
+import { STATUS_LABELS, QUALITY_BADGES } from './constants/config';
 
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
 import InfoModal from './components/InfoModal';
-
-// Status labels & Quality badge mappings
-const STATUS_LABELS = {
-  connecting: 'Connecting...',
-  ready: 'Ready',
-  calling: 'Calling...',
-  'in-call': 'In Call',
-  reconnecting: 'Reconnecting...',
-  busy: 'User Busy',
-  error: 'Error'
-};
-
-const QUALITY_BADGES = {
-  good: '🟢 Good',
-  fair: '🟡 Fair',
-  poor: '🔴 Poor'
-};
 
 function formatTimer(seconds) {
   const mins = Math.floor(seconds / 60);

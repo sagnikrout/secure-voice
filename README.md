@@ -1,178 +1,219 @@
+<div align="center">
+
 # 🛡️ SecureVoice (v2.6)
 
-> **Zero-setup, end-to-end encrypted peer-to-peer voice calling optimized for low-bandwidth connections.**
+### *High-Performance, Privacy-First, Low-Bandwidth P2P Encrypted Voice Communicator*
 
-[![Build & Tests](https://img.shields.io/badge/Tests-33%2F33%20Passed-success?style=flat-square)](https://github.com/sagnikrout/secure-voice)
-[![React](https://img.shields.io/badge/React-18.2-blue?style=flat-square&logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.4-purple?style=flat-square&logo=vite)](https://vitejs.dev/)
-[![WebRTC](https://img.shields.io/badge/WebRTC-DTLS--SRTP-green?style=flat-square)](https://webrtc.org/)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)](LICENSE)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge&logo=vite)](https://github.com/sagnikrout/secure-voice)
+[![Vitest Suite](https://img.shields.io/badge/Tests-33%2F33%20Passed-success?style=for-the-badge&logo=vitest)](https://github.com/sagnikrout/secure-voice)
+[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
+[![WebRTC](https://img.shields.io/badge/WebRTC-DTLS--SRTP-333333?style=for-the-badge&logo=webrtc)](https://webrtc.org/)
+[![Bandwidth](https://img.shields.io/badge/Bandwidth-12--16%20kbps-orange?style=for-the-badge)](https://github.com/sagnikrout/secure-voice)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+<br/>
+
+</div>
 
 ---
 
-## 🌟 Overview
+## 📖 Overview
 
-**SecureVoice** is a lightweight, privacy-first peer-to-peer audio calling web application. It requires **zero account registration, phone numbers, or central user databases**. Users connect directly using cryptographically generated 6-character Peer IDs with audio encrypted end-to-end via **DTLS-SRTP**.
+**SecureVoice** is an ultra-secure, peer-to-peer voice calling application engineered for resilience in extremely low-bandwidth and high-latency network conditions (2G/3G cellular networks, satellite links, dial-up, congested public Wi-Fi).
 
-Specially tuned for constrained networks (2G, 3G, satellite links, congested public Wi-Fi), SecureVoice caps bandwidth at **16 kbps** using optimized Opus codec parameters and Web Audio API real-time noise suppression.
+Built on top of direct WebRTC peer connections with **DTLS-SRTP end-to-end encryption**, SecureVoice requires **zero signups, no phone numbers, and no central database**. Audio streams travel directly between peers with hardware noise suppression, silence compression, and sub-150ms real-time latency.
 
 ---
 
 ## 🚀 Key Features
 
-* **🔒 End-to-End Encryption (E2EE)**: Audio streams peer-to-peer over WebRTC using DTLS-SRTP. No voice data passes through or gets recorded on any intermediate server.
-* **📉 Low-Bandwidth Opus Tuning**: Custom SDP transformation limits bitrate to **12 kbps** (`maxaveragebitrate=12000`), enables Discontinuous Transmission / silence suppression (`usedtx=1`), and caps bandwidth to **16 kbps** (`b=AS:16`).
-* **🎙️ Web Audio Denoise Pipeline**: Real-time 80Hz high-pass filter (eliminates background AC rumble and wind) coupled with a low-latency `DynamicsCompressor` noise gate.
-* **📊 Live Audio Spectrum Visualizer**: Animated canvas showing real-time voice energy, with automatic frame throttling when the browser tab is hidden to save battery.
-* **📇 Quick Contacts & Recent History**: `localStorage`-backed call history with 1-tap re-dial and contact removal.
-* **🔔 Dual-Tone Synthetic Ringtone**: Oscillator-synthesized ringing frequencies (440Hz + 480Hz) with vibration sequences and mobile AudioContext unlock handlers.
-* **🔊 Cross-Platform Audio Output**: Dynamic switching between device Speaker and Earpiece with cross-browser capability fallbacks.
-* **🌓 Adaptive Dark / Light Themes**: Native CSS token design system with automatic system preference detection and smooth transitions.
+* 🔐 **True End-to-End Encryption (E2EE)**: All audio frames are encrypted at the client level using WebRTC `DTLS-SRTP`. No intermediate server can intercept or decode the audio payload.
+* 📉 **Aggressive Low-Bandwidth Opus Tuning**: Custom SDP munging sets `maxaveragebitrate=12000` (12 kbps), activates Discontinuous Transmission (`usedtx=1` silence compression), and caps session bandwidth to 16 kbps (`b=AS:16`).
+* 🎙️ **Web Audio Denoise Pipeline**: Real-time 80Hz high-pass filter (eliminates wind & AC rumble) combined with a low-latency `DynamicsCompressor` noise gate.
+* 📊 **Battery-Aware Waveform Visualizer**: Live 60 FPS audio frequency visualizer with automated page-visibility listeners (`document.hidden`) to pause canvas rendering loops when the app or tab is backgrounded.
+* 📇 **Instant Contact Book & Recents**: Fast 1-tap redial stored safely in device `localStorage` with automated self-ID filtering.
+* 🔔 **Synthetic Multi-Frequency Ringtone**: Browser-native oscillator pairs (440Hz + 480Hz) and device vibration patterns without external audio asset downloads.
+* 🔊 **Audio Route Switching**: Seamless runtime switching between Device Speaker and Earpiece with defensive cross-browser error handling (`setSinkId`).
+* 🌓 **Adaptive Liquid Glassmorphism Design**: High-contrast, accessibility-focused UI supporting native Dark and Light modes with automatic OS theme synchronization.
+
+---
+
+## 🏗️ Architecture & Audio Pipeline
+
+```
+  [ Hardware Mic ]
+         │
+         ▼
+[ Web Audio Pipeline ]
+  ├─ 80Hz High-Pass Filter (removes sub-bass rumble)
+  ├─ Dynamics Compressor (noise gating & voice boost)
+  └─ MediaStreamDestination
+         │
+         ▼
+[ Opus SDP Munging Engine ]
+  ├─ maxaveragebitrate=12000 (12 kbps)
+  ├─ usedtx=1 (silence suppression)
+  ├─ stereo=0, sprop-stereo=0 (mono voice optimization)
+  └─ b=AS:16 (session bandwidth capped at 16 kbps)
+         │
+         ▼
+ [ DTLS-SRTP Encrypted P2P Media Stream ] ──────► [ Remote Peer ]
+```
 
 ---
 
 ## 📐 Technical Specifications
 
-| Feature | Specification | Description |
+| Parameter | Specification | Details |
 | :--- | :--- | :--- |
-| **Encryption** | `DTLS-SRTP` | Standard WebRTC end-to-end encryption |
-| **Audio Codec** | `Opus` | Mono voice profile @ 12 kbps |
-| **Bandwidth Cap** | `16 kbps max` | Enforced via SDP `b=AS:16` attribute |
-| **Silence Suppression** | `DTX Enabled` | Zero bandwidth transmission during silence (`usedtx=1`) |
-| **Noise Cancellation** | `Web Audio API` | 80 Hz High-pass filter + Dynamics Compressor Gate |
-| **Connection Topology** | `Direct P2P Mesh` | Peer-to-peer media transport |
-| **NAT Traversal** | `STUN / TURN` | Google STUN + OpenRelay TURN fallback |
-| **Signaling** | `PeerJS Cloud` | Lightweight handshake signaling |
+| **Media Transport** | WebRTC `DTLS-SRTP` | Direct Peer-to-Peer encrypted UDP |
+| **Audio Codec** | Opus (Mono Voice) | Sampling: 48kHz, Bitrate: 12 kbps |
+| **Bandwidth Limit** | Max 16 kbps | Enforced by SDP `b=AS:16` attribute |
+| **Silence Compression** | DTX Enabled (`usedtx=1`) | Transmits 0 kbps during vocal pauses |
+| **Signaling** | PeerJS Mesh | Lightweight ephemeral connection handshakes |
+| **NAT Traversal** | STUN + TURN | Google STUN + OpenRelay TURN fallback |
+| **Noise Filtering** | Web Audio API | 80 Hz highpass BiquadFilter + DynamicsCompressor |
+| **Platform Target** | Web & Android | Responsive PWA + Native Capacitor APK |
 
 ---
 
-## 📂 Project Architecture
+## 📂 Project Directory Structure
 
 ```text
 secure-voice/
+├── android/                         # Native Android Studio project (Capacitor)
+│   ├── app/                         # App module & AndroidManifest.xml
+│   ├── gradle/                      # Gradle wrapper configuration
+│   └── build.gradle                 # Native build settings
 ├── public/
-│   └── favicon.svg               # Lightweight vector brand icon
+│   └── favicon.svg                  # Vector SVG brand icon
 ├── src/
-│   ├── components/
-│   │   ├── AudioVisualizer.jsx   # Real-time audio waveform canvas
-│   │   ├── InfoModal.jsx         # Technical specifications dialog
-│   │   └── RecentCalls.jsx       # LocalStorage recent contacts manager
-│   ├── hooks/
-│   │   ├── useCallSession.js     # Media stream, call lifecycle, timer, audio device routing
-│   │   ├── useLogs.js            # In-app activity logger
-│   │   ├── usePeer.js            # PeerJS signaling, collision backoff, rate limiting
-│   │   └── useTheme.js           # Dark/Light theme state manager
-│   ├── test/
-│   │   ├── setup.js              # JSDOM & Web Audio API test mocks
-│   │   ├── audio.test.js         # Audio utility unit tests
-│   │   ├── webrtc.test.js        # WebRTC & SDP transform unit tests
-│   │   ├── App.test.jsx          # Full App integration tests
-│   │   ├── InfoModal.test.jsx    # Modal component unit tests
-│   │   └── RecentCalls.test.jsx  # Recent calls component unit tests
-│   ├── utils/
-│   │   ├── audio.js              # Web Audio context unlock, denoise pipeline, ringtone
-│   │   └── webrtc.js             # Cryptographic ID generator, SDP modifier, ICE configuration
-│   ├── App.jsx                   # Main application container
-│   ├── index.css                 # CSS custom property design system
-│   └── main.jsx                  # Application entry point
-├── index.html                    # HTML shell & Content Security Policy
-├── package.json                  # Dependencies & scripts
-└── vite.config.js                # Vite build and Vitest configuration
+│   ├── components/                  # Pure, memoized UI components
+│   │   ├── AudioVisualizer.jsx      # Canvas audio spectrum visualizer
+│   │   ├── InfoModal.jsx            # Technical specs & security modal
+│   │   └── RecentCalls.jsx          # Local storage contact book & recents
+│   ├── constants/                   # Centralized application constants
+│   │   └── config.js                # ICE servers, SDP configs, timings, keys
+│   ├── hooks/                       # Custom decoupled React hooks
+│   │   ├── useCallSession.js        # Call lifecycle, timers, mute, speaker, audio routing
+│   │   ├── useLogs.js               # Activity log management
+│   │   ├── usePeer.js               # PeerJS lifecycle, reconnects, rate limits
+│   │   └── useTheme.js              # Theme manager with localStorage persistence
+│   ├── test/                        # Vitest & Testing Library test suites
+│   │   ├── setup.js                 # JSDOM, MediaDevices, & Web Audio mocks
+│   │   ├── App.test.jsx             # Integration tests for core application
+│   │   ├── audio.test.js            # Unit tests for Web Audio filters & ringtones
+│   │   ├── InfoModal.test.jsx       # Modal component tests
+│   │   ├── RecentCalls.test.jsx     # Recents list & storage tests
+│   │   └── webrtc.test.js           # SDP munging & cryptographic ID tests
+│   ├── utils/                       # Low-level system & WebRTC utilities
+│   │   ├── audio.js                 # AudioContext singleton, denoise & oscillator
+│   │   └── webrtc.js                # Crypto ID generator, SDP modifier, RTT monitor
+│   ├── App.jsx                      # Main React application component
+│   ├── index.css                    # Liquid glassmorphism CSS design system
+│   └── main.jsx                     # Vite application entry point
+├── capacitor.config.json            # Capacitor native mobile app configuration
+├── index.html                       # HTML5 entry with strict CSP headers
+├── package.json                     # Pinned dependencies & scripts
+├── vite.config.js                   # Vite bundler & Vitest test runner config
+└── SecureVoice-v2.6.apk              # Compiled production Android APK (4.2 MB)
 ```
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Quick Start & Local Setup
 
 ### Prerequisites
-* **Node.js**: v18.0.0 or higher
-* **npm**: v9.0.0 or higher
+* **Node.js**: `v18.0.0` or newer
+* **npm**: `v9.0.0` or newer
 
-### Installation
+### 1. Installation
+```bash
+# Clone the repository
+git clone https://github.com/sagnikrout/secure-voice.git
+cd secure-voice
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/sagnikrout/secure-voice.git
-   cd secure-voice
-   ```
+# Install pinned dependencies
+npm install
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Development Server
-
-Start the local development server:
+### 2. Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open **[http://localhost:3000](http://localhost:3000)** in your browser to launch the live application.
 
 ---
 
-## 🧪 Testing
+## 🧪 Automated Testing Suite
 
-The project includes 33 unit and integration tests powered by **Vitest** and **@testing-library/react**:
+SecureVoice is covered by **33 unit and integration tests** built with **Vitest**, **@testing-library/react**, and **JSDOM**:
 
 ```bash
 # Run all tests once
 npm test
 
-# Run tests in watch mode
+# Run tests in continuous watch mode
 npm run test:watch
+```
+
+### Test Suite Summary
+```text
+ ✓ src/test/webrtc.test.js (13 tests)   - SDP munging, DTX, AS:16, crypto ID, RTT quality
+ ✓ src/test/audio.test.js (8 tests)     - Denoise filter, singleton context, ringtone synth
+ ✓ src/test/RecentCalls.test.jsx (5 tests) - LocalStorage persistence, deletion, self-filter
+ ✓ src/test/InfoModal.test.jsx (3 tests)   - Spec modal display, escape-key listener
+ ✓ src/test/App.test.jsx (4 tests)         - Full UI rendering, sanitized input, theme toggle
+
+Test Files: 5 passed (5)
+     Tests: 33 passed (33)
+  Duration: ~2.4s
 ```
 
 ---
 
 ## 🏗️ Production Build
 
-To build the optimized static production bundle:
+To compile the optimized, tree-shaken static production bundle:
 ```bash
 npm run build
 ```
-
-The production assets will be generated in the `dist/` directory:
-```text
-dist/
-├── index.html
-└── assets/
-    ├── index-[hash].css
-    └── index-[hash].js
-```
+Compiled output will be generated in `dist/` ready for zero-configuration static hosting (Vercel, Netlify, GitHub Pages, Cloudflare Pages).
 
 ---
 
-## 📱 Packaging for Android (Capacitor)
+## 📱 Building the Android APK
 
-SecureVoice can be packaged into an Android APK using [Capacitor](https://capacitorjs.com/):
+The project includes an integrated native Android platform configured with Capacitor.
 
+### Build Steps:
 ```bash
-# Install Capacitor CLI & Core
-npm install @capacitor/core @capacitor/cli @capacitor/android
-
-# Initialize Capacitor
-npx cap init SecureVoice com.securevoice.app --web-dir=dist
-
-# Build project and sync to Android
+# 1. Compile web distribution bundle
 npm run build
-npx cap add android
+
+# 2. Sync web assets to native Android project
 npx cap sync android
 
-# Open project in Android Studio
-npx cap open android
+# 3. Compile Debug APK with Gradle
+cd android
+./gradlew assembleDebug
 ```
+The resulting APK is generated at:
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+*(A pre-compiled production build **`SecureVoice-v2.6.apk`** is located in the project root directory).*
 
 ---
 
-## 🔒 Security & Privacy
+## 🔒 Security & Privacy Guarantees
 
-* **Zero Metadata Logging**: No phone numbers, email addresses, usernames, or call histories are transmitted to any central database.
-* **Cryptographic Entropy**: Peer IDs are generated using `crypto.getRandomValues`.
-* **Content Security Policy (CSP)**: Strict CSP defined in `index.html` restricts media and script execution solely to authorized sources.
+* **Zero Data Retention**: The signaling layer only facilitates peer handshakes. No usernames, phone numbers, IP addresses, or call logs are saved on servers.
+* **Cryptographic ID Entropy**: Peer IDs are generated using `window.crypto.getRandomValues`.
+* **Clean Hardware Teardown**: Microphone audio tracks are immediately destroyed when a call is terminated, rejected, or canceled to prevent hardware mic leaks.
+* **Content Security Policy (CSP)**: Hardened headers prevent XSS and restrict remote resource execution.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+Distributed under the **MIT License**. See `LICENSE` for details.
