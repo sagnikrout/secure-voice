@@ -8,14 +8,18 @@ let globalAudioCtx = null;
  * Get or create a shared AudioContext safely handling autoplay restrictions.
  */
 export function getAudioContext() {
+  if (typeof window === 'undefined') return null;
+
   if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtxClass) return null;
     globalAudioCtx = new AudioCtxClass();
   }
+
   if (globalAudioCtx.state === 'suspended') {
     globalAudioCtx.resume().catch(() => {});
   }
+
   return globalAudioCtx;
 }
 
@@ -38,13 +42,17 @@ export async function unlockAudioContext() {
  * Build Denoise pipeline: MediaStreamSource -> HighPass 80Hz -> DynamicsCompressor (Noise Gate) -> Destination
  */
 export function createDenoisePipeline(stream) {
+  if (!stream || typeof stream.getAudioTracks !== 'function' || stream.getAudioTracks().length === 0) {
+    return { processedStream: stream, audioCtx: null, nodes: null };
+  }
+
   try {
     const ctx = getAudioContext();
-    if (!ctx) return { processedStream: stream, audioCtx: null };
+    if (!ctx) return { processedStream: stream, audioCtx: null, nodes: null };
 
     const source = ctx.createMediaStreamSource(stream);
-    
-    // High-pass filter to remove low-frequency background hum (below 80 Hz)
+
+    // High-pass filter to remove low-frequency background rumble (below 80 Hz)
     const highPass = ctx.createBiquadFilter();
     highPass.type = 'highpass';
     highPass.frequency.setValueAtTime(80, ctx.currentTime);
@@ -70,7 +78,7 @@ export function createDenoisePipeline(stream) {
     };
   } catch (err) {
     console.warn('Failed to build Web Audio denoise pipeline, falling back to raw stream:', err);
-    return { processedStream: stream, audioCtx: null };
+    return { processedStream: stream, audioCtx: null, nodes: null };
   }
 }
 
@@ -80,11 +88,12 @@ export function createDenoisePipeline(stream) {
 export function playRingtone() {
   let isPlaying = true;
   let intervalId = null;
-  let audioCtx = null;
+  const activeOscillators = [];
 
   const playToneChunk = () => {
+    if (!isPlaying) return;
     try {
-      audioCtx = getAudioContext();
+      const audioCtx = getAudioContext();
       if (!audioCtx) return;
 
       const now = audioCtx.currentTime;
@@ -110,13 +119,23 @@ export function playRingtone() {
       osc2.start(now);
       osc1.stop(now + 1.2);
       osc2.stop(now + 1.2);
+
+      activeOscillators.push(osc1, osc2);
+
+      // Clean reference after completion
+      setTimeout(() => {
+        const idx1 = activeOscillators.indexOf(osc1);
+        if (idx1 >= 0) activeOscillators.splice(idx1, 1);
+        const idx2 = activeOscillators.indexOf(osc2);
+        if (idx2 >= 0) activeOscillators.splice(idx2, 1);
+      }, 1300);
     } catch (e) {
       console.warn('Ringtone playback error:', e);
     }
   };
 
   const startVibration = () => {
-    if (navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate([800, 400, 800, 400, 800]);
       } catch (e) {}
@@ -135,7 +154,14 @@ export function playRingtone() {
   return function stopRingtone() {
     isPlaying = false;
     if (intervalId) clearInterval(intervalId);
-    if (navigator.vibrate) {
+
+    // Stop all active oscillators immediately
+    activeOscillators.forEach(osc => {
+      try { osc.stop(); } catch (e) {}
+    });
+    activeOscillators.length = 0;
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(0);
       } catch (e) {}
@@ -151,7 +177,6 @@ export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
 
   if (typeof audioElement.setSinkId === 'function') {
     try {
-      // 'default' = Speaker, 'communications' = Earpiece (on supported platforms)
       const deviceId = isSpeakerOn ? 'default' : 'communications';
       await audioElement.setSinkId(deviceId);
       return true;
@@ -167,7 +192,7 @@ export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
  * Completely stop all tracks on a MediaStream to avoid hardware mic light leaking.
  */
 export function stopMediaStream(stream) {
-  if (!stream) return;
+  if (!stream || typeof stream.getTracks !== 'function') return;
   try {
     stream.getTracks().forEach(track => {
       track.stop();

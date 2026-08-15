@@ -1,25 +1,28 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
+import { getAudioContext } from '../utils/audio';
 
 /**
- * Animated real-time Web Audio level visualizer canvas / bars
+ * Animated real-time Web Audio level visualizer canvas with battery-saving visibility handling
  */
-export default function AudioVisualizer({ stream, isActive }) {
+function AudioVisualizerComponent({ stream, isActive }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!stream || !isActive || !canvasRef.current) return;
 
     let animationFrameId;
-    let audioCtx;
     let analyser;
+    let sourceNode;
 
     try {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioCtxClass();
-      const source = audioCtx.createMediaStreamSource(stream);
+      const audioCtx = getAudioContext();
+      if (!audioCtx) return;
+
+      sourceNode = audioCtx.createMediaStreamSource(stream);
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 64;
-      source.connect(analyser);
+      analyser.smoothingTimeConstant = 0.8;
+      sourceNode.connect(analyser);
 
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
@@ -27,8 +30,13 @@ export default function AudioVisualizer({ stream, isActive }) {
       const ctx = canvas.getContext('2d');
 
       const render = () => {
-        analyser.getByteFrequencyData(dataArray);
+        if (document.hidden) {
+          // Skip drawing when page is hidden
+          animationFrameId = requestAnimationFrame(render);
+          return;
+        }
 
+        analyser.getByteFrequencyData(dataArray);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const barWidth = (canvas.width / bufferLength) * 2;
@@ -44,7 +52,11 @@ export default function AudioVisualizer({ stream, isActive }) {
 
           ctx.fillStyle = gradient;
           ctx.beginPath();
-          ctx.roundRect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight, 3);
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight, 3);
+          } else {
+            ctx.rect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight);
+          }
           ctx.fill();
 
           x += barWidth + 2;
@@ -60,8 +72,11 @@ export default function AudioVisualizer({ stream, isActive }) {
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => {});
+      if (sourceNode) {
+        try { sourceNode.disconnect(); } catch (e) {}
+      }
+      if (analyser) {
+        try { analyser.disconnect(); } catch (e) {}
       }
     };
   }, [stream, isActive]);
@@ -69,8 +84,10 @@ export default function AudioVisualizer({ stream, isActive }) {
   if (!stream || !isActive) return null;
 
   return (
-    <div className="audio-visualizer-container">
+    <div className="audio-visualizer-container" aria-hidden="true">
       <canvas ref={canvasRef} width={200} height={36} className="visualizer-canvas" />
     </div>
   );
 }
+
+export default memo(AudioVisualizerComponent);
