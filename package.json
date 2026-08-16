@@ -1,7 +1,7 @@
 {
   "name": "secure-voice",
   "private": true,
-  "version": "2.7.0",
+  "version": "2.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:sim": "node scripts/webrtc-simulation-runner.js",
-    "test:network": "node scripts/simulate-network-impairments.js"
+    "test:network": "node scripts/simulate-network-impairments.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -29,6 +31,7 @@
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^6.0.5",
+    "gh-pages": "^6.3.0",
     "jsdom": "^30.0.1",
     "playwright": "^1.62.1",
     "vite": "^8.2.1",
