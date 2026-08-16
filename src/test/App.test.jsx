@@ -22,7 +22,7 @@ describe('App Integration', () => {
   it('renders branding and main UI elements', () => {
     render(<App />);
     expect(screen.getByText('SecureVoice')).toBeInTheDocument();
-    expect(screen.getByText('v2.10')).toBeInTheDocument();
+    expect(screen.getByText('v3.0')).toBeInTheDocument();
     expect(screen.getByText('Your Peer ID')).toBeInTheDocument();
     expect(screen.getByText('New Call')).toBeInTheDocument();
     expect(screen.getByText('Activity Log')).toBeInTheDocument();
