@@ -4,6 +4,16 @@ import { generatePeerId } from '../utils/webrtc';
 import { ICE_SERVERS, TIMINGS } from '../constants/config';
 import { saveCallHistory } from '../components/RecentCalls';
 
+/**
+ * PeerJS signaling hook managing peer connectivity and incoming calls
+ * @param {Object} options
+ * @param {Function} options.addLog - Logging callback
+ * @param {Function} options.onIncomingCall - Incoming call handler
+ * @param {Function} options.isInActiveCall - Check if currently in a call
+ * @param {Function} options.onRateLimitHit - Rate limit handler
+ * @param {Function} options.onMissedCall - Missed call handler
+ * @returns {Object} Peer instance and control methods
+ */
 export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall }) {
   const [myId, setMyId] = useState('');
   const [status, setStatus] = useState('connecting'); // connecting, ready, reconnecting, error
@@ -19,9 +29,13 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     callbacksRef.current = { addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall };
   }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall]);
 
+  /**
+   * Initialize PeerJS connection with ICE servers
+   */
   const initPeer = useCallback((idToRegister) => {
     if (destroyedRef.current) return;
 
+    // Clean up existing peer
     if (peerRef.current && !peerRef.current.destroyed) {
       try { peerRef.current.destroy(); } catch (e) {}
     }
@@ -45,6 +59,13 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     peer.on('call', (incomingCall) => {
       if (destroyedRef.current) return;
 
+      // Validate incoming call object
+      if (!incomingCall || !incomingCall.peer) {
+        callbacksRef.current.addLog?.('Invalid incoming call (missing peer ID)', 'error');
+        try { incomingCall?.close(); } catch (e) {}
+        return;
+      }
+
       // Auto-reject if already busy in active call & record as Missed Call
       if (callbacksRef.current.isInActiveCall && callbacksRef.current.isInActiveCall()) {
         const callerPeer = incomingCall.peer;
@@ -55,7 +76,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         return;
       }
 
-      // Global Rate limit check (mitigates ID spoofing)
+      // Global Rate limit check (mitigates ID spoofing & spam)
       const now = Date.now();
       if (now - lastIncomingCallTimeRef.current < TIMINGS.RATE_LIMIT_WINDOW_MS) {
         callbacksRef.current.addLog?.(`Global rate limit hit. Rejected spam call from ${incomingCall.peer}`, 'warn');
@@ -79,8 +100,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         setTimeout(() => initPeer(newId), 300 * retryCountRef.current);
       } else if (err.type === 'peer-unavailable') {
         callbacksRef.current.addLog?.('Peer unavailable or not found. Check the ID.', 'error');
+        setStatus('error');
       } else {
-        callbacksRef.current.addLog?.(`PeerJS signaling error: ${err.type || err.message}`, 'error');
+        const errorMsg = err.type || err.message || 'Unknown PeerJS error';
+        callbacksRef.current.addLog?.(`PeerJS signaling error: ${errorMsg}`, 'error');
         setStatus('error');
       }
     });
@@ -90,6 +113,12 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
       setStatus('reconnecting');
       callbacksRef.current.addLog?.('Disconnected from signaling server. Attempting reconnect...', 'warn');
       try { peer.reconnect(); } catch (e) {}
+    });
+
+    peer.on('close', () => {
+      if (destroyedRef.current) return;
+      callbacksRef.current.addLog?.('PeerJS connection closed', 'warn');
+      setStatus('error');
     });
   }, []);
 
