@@ -125,3 +125,8 @@ Object.defineProperty(navigator, 'mediaDevices', {
   },
   writable: true,
 });
+
+// Mock HTMLAudioElement setSinkId
+if (typeof HTMLAudioElement !== 'undefined') {
+  HTMLAudioElement.prototype.setSinkId = vi.fn().mockResolvedValue(undefined);
+}
