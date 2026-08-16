@@ -157,11 +157,6 @@ export default function App() {
           </div>
 
           <div className="header-right">
-            <div className={`status-chip ${currentStatus}`} role="status" aria-live="polite">
-              <span className="dot" aria-hidden="true" />
-              <span>{STATUS_LABELS[currentStatus] || currentStatus}</span>
-            </div>
-
             <button
               type="button"
               className="info-btn"
@@ -196,7 +191,13 @@ export default function App() {
 
         {/* Peer ID Box */}
         <section className="card" aria-labelledby="peer-id-label">
-          <p id="peer-id-label" className="label">Your Peer ID</p>
+          <div className="card-header-row">
+            <p id="peer-id-label" className="label">Your Peer ID</p>
+            <div className={`status-chip ${currentStatus}`} role="status" aria-live="polite">
+              <span className="dot" aria-hidden="true" />
+              <span>{STATUS_LABELS[currentStatus] || currentStatus}</span>
+            </div>
+          </div>
           <div className="id-box">
             <span className={`id-text ${myId ? '' : 'dim'}`} aria-label="Your assigned peer ID">
               {myId || 'Generating...'}
