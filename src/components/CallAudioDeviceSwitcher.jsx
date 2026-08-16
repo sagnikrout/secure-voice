@@ -1,23 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Icon from './Icon';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getAvailableOutputs } from '../utils/audioRouting';
-import { Volume2, Phone, Bluetooth, Mic, Check, X, Sliders } from 'lucide-react';
+import { Volume2, Phone, Bluetooth, Mic, Check, X, Sliders, Speaker, Headphones } from 'lucide-react';
 import './DeviceSelectors.css';
 
 /**
- * Audio Settings & Routing Controller Component for active calls.
- * Provides unified management of Audio Output (Speaker / Earpiece / Bluetooth)
- * and Microphone Input devices with live switching.
+ * Unified Audio Settings & Routing Controller Component.
+ * Lists ALL detected hardware microphones and ALL detected output options
+ * (Speaker, Earpiece, Bluetooth, and discrete Hardware Output Sinks).
  */
 export default function CallAudioDeviceSwitcher({ 
   isSpeakerOn, 
   onToggleSpeaker, 
+  activeOutputId,
+  outputDevices = [],
   micDevices = [], 
   activeMicId, 
   onSwitchMic 
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [availableOutputs, setAvailableOutputs] = useState(['speaker', 'earpiece']);
+  const [nativeOutputs, setNativeOutputs] = useState(['speaker', 'earpiece']);
   const modalRef = useRef(null);
   const triggerRef = useRef(null);
 
@@ -25,34 +26,70 @@ export default function CallAudioDeviceSwitcher({
   useEffect(() => {
     getAvailableOutputs().then(outputs => {
       if (outputs && Array.isArray(outputs)) {
-        setAvailableOutputs(outputs);
+        setNativeOutputs(outputs);
       }
     });
   }, []);
 
-  const outputOptions = [
-    {
-      id: 'speaker',
-      label: 'Speaker',
-      description: 'Loudspeaker playback',
-      icon: Volume2,
-      isActive: isSpeakerOn
-    },
-    {
-      id: 'earpiece',
-      label: 'Earpiece',
-      description: 'Handset receiver with proximity screen-off',
-      icon: Phone,
-      isActive: !isSpeakerOn
-    },
-    ...(availableOutputs.includes('bluetooth') ? [{
-      id: 'bluetooth',
-      label: 'Bluetooth Audio',
-      description: 'Wireless headset or car audio',
-      icon: Bluetooth,
-      isActive: false
-    }] : [])
-  ];
+  // Assemble full list of output options (combining native modes & hardware devices)
+  const combinedOutputOptions = useMemo(() => {
+    const list = [];
+
+    // 1. If discrete hardware outputs are detected (e.g. on Desktop browsers), list them
+    if (outputDevices.length > 0) {
+      outputDevices.forEach((dev, idx) => {
+        const isDefault = dev.deviceId === 'default' || dev.deviceId === '';
+        const isHeadphones = dev.label.toLowerCase().includes('headphone') || dev.label.toLowerCase().includes('headset');
+        const isBluetooth = dev.label.toLowerCase().includes('bluetooth') || dev.label.toLowerCase().includes('hands-free');
+
+        list.push({
+          id: dev.deviceId || `output-${idx}`,
+          label: dev.label || `Output Device ${idx + 1}`,
+          description: isDefault ? 'System Default Audio Output' : 'Hardware Audio Device',
+          icon: isHeadphones ? Headphones : (isBluetooth ? Bluetooth : Speaker),
+          rawDeviceId: dev.deviceId
+        });
+      });
+    }
+
+    // 2. Standard / Native Output Targets
+    // Only add basic Speaker/Earpiece if discrete devices weren't already enumerating specific ones,
+    // or to ensure earpiece / bluetooth native switching is accessible on mobile
+    if (list.length === 0 || nativeOutputs.includes('earpiece') || nativeOutputs.includes('bluetooth')) {
+      const standardOptions = [
+        {
+          id: 'speaker',
+          label: 'Speaker (Loudspeaker)',
+          description: 'High-volume loudspeaker output',
+          icon: Volume2
+        },
+        {
+          id: 'earpiece',
+          label: 'Earpiece (Handset)',
+          description: 'Ear receiver with proximity screen-off',
+          icon: Phone
+        }
+      ];
+
+      if (nativeOutputs.includes('bluetooth')) {
+        standardOptions.push({
+          id: 'bluetooth',
+          label: 'Bluetooth SCO Headset',
+          description: 'Wireless Bluetooth connected peripheral',
+          icon: Bluetooth
+        });
+      }
+
+      // Prepend standard modes if not already in list
+      standardOptions.forEach(std => {
+        if (!list.some(item => item.id === std.id)) {
+          list.push(std);
+        }
+      });
+    }
+
+    return list;
+  }, [outputDevices, nativeOutputs]);
 
   // Close on Escape or click outside
   useEffect(() => {
@@ -74,6 +111,16 @@ export default function CallAudioDeviceSwitcher({
 
   const handleSelectMic = (deviceId) => {
     onSwitchMic(deviceId);
+  };
+
+  // Determine which output is currently active
+  const isOutputActive = (optId) => {
+    if (activeOutputId) {
+      return activeOutputId === optId;
+    }
+    if (optId === 'speaker') return isSpeakerOn;
+    if (optId === 'earpiece') return !isSpeakerOn;
+    return false;
   };
 
   return (
@@ -109,7 +156,7 @@ export default function CallAudioDeviceSwitcher({
             ref={modalRef} 
             className="overlay-card modal-card" 
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '420px' }}
+            style={{ maxWidth: '440px' }}
           >
             {/* Modal Header */}
             <div className="modal-header">
@@ -131,19 +178,20 @@ export default function CallAudioDeviceSwitcher({
             <div className="audio-settings-section">
               <div className="audio-settings-section-title">
                 <Volume2 className="w-4 h-4 text-muted" />
-                <span>Audio Output</span>
+                <span>Audio Output Options ({combinedOutputOptions.length})</span>
               </div>
 
-              <div className="audio-settings-options">
-                {outputOptions.map((opt) => {
+              <div className="audio-settings-options" style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                {combinedOutputOptions.map((opt) => {
                   const IconComp = opt.icon;
+                  const active = isOutputActive(opt.id);
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      className={`audio-settings-option ${opt.isActive ? 'selected' : ''}`}
+                      className={`audio-settings-option ${active ? 'selected' : ''}`}
                       onClick={() => handleSelectOutput(opt.id)}
-                      aria-pressed={opt.isActive}
+                      aria-pressed={active}
                     >
                       <div className="audio-settings-option-left">
                         <div className="audio-settings-option-icon">
@@ -151,10 +199,12 @@ export default function CallAudioDeviceSwitcher({
                         </div>
                         <div className="audio-settings-option-text">
                           <div className="audio-settings-option-name">{opt.label}</div>
-                          <div className="audio-settings-option-desc">{opt.description}</div>
+                          {opt.description && (
+                            <div className="audio-settings-option-desc">{opt.description}</div>
+                          )}
                         </div>
                       </div>
-                      {opt.isActive && (
+                      {active && (
                         <div className="audio-settings-check">
                           <Check className="w-4 h-4" />
                         </div>
@@ -169,10 +219,10 @@ export default function CallAudioDeviceSwitcher({
             <div className="audio-settings-section" style={{ marginTop: '16px' }}>
               <div className="audio-settings-section-title">
                 <Mic className="w-4 h-4 text-muted" />
-                <span>Microphone Input</span>
+                <span>Microphone Input Options ({micDevices.length || 1})</span>
               </div>
 
-              <div className="audio-settings-options">
+              <div className="audio-settings-options" style={{ maxHeight: '180px', overflowY: 'auto' }}>
                 {micDevices.length > 0 ? (
                   micDevices.map((device, idx) => {
                     const isSelected = activeMicId === device.deviceId;
@@ -191,6 +241,9 @@ export default function CallAudioDeviceSwitcher({
                           <div className="audio-settings-option-text">
                             <div className="audio-settings-option-name">
                               {device.label || `Microphone ${idx + 1}`}
+                            </div>
+                            <div className="audio-settings-option-desc">
+                              {isSelected ? 'Active Input Device' : 'Detected Microphone'}
                             </div>
                           </div>
                         </div>
