@@ -91,6 +91,12 @@ class MockAudioContext {
       connect: vi.fn(),
     };
   }
+  createDelay() {
+    return {
+      delayTime: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+  }
   resume() {
     this.state = 'running';
     return Promise.resolve();
@@ -111,6 +117,11 @@ Object.defineProperty(navigator, 'mediaDevices', {
       getAudioTracks: () => [{ stop: vi.fn(), enabled: true }],
       getTracks: () => [{ stop: vi.fn(), enabled: true }],
     }),
+    enumerateDevices: vi.fn().mockResolvedValue([
+      { kind: 'audioinput', deviceId: 'default-mic', label: 'Default Microphone', groupId: 'g1' }
+    ]),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
   },
   writable: true,
 });

@@ -31,23 +31,23 @@ describe('RecentCalls Component', () => {
     const header = screen.getByRole('button', { name: /recent contacts/i });
     fireEvent.click(header);
 
-    expect(screen.getByText('ALICE9')).toBeInTheDocument();
+    expect(screen.getByText('ALI-CE9')).toBeInTheDocument();
 
-    const callBtn = screen.getByLabelText('Call ALICE9');
+    const callBtn = screen.getByLabelText('Call ALI-CE9');
     fireEvent.click(callBtn);
-    expect(selectMock).toHaveBeenCalledWith('ALICE9');
+    expect(selectMock).toHaveBeenCalledWith('ALI-CE9');
   });
 
   it('filters out current user peer ID from the recents list', () => {
     saveCallHistory('MYSELF');
     saveCallHistory('BOB456');
 
-    render(<RecentCalls onSelectPeer={vi.fn()} currentPeerId="MYSELF" />);
+    render(<RecentCalls onSelectPeer={vi.fn()} currentPeerId="MYS-ELF" />);
     const header = screen.getByRole('button', { name: /recent contacts/i });
     fireEvent.click(header);
 
-    expect(screen.queryByText('MYSELF')).not.toBeInTheDocument();
-    expect(screen.getByText('BOB456')).toBeInTheDocument();
+    expect(screen.queryByText('MYS-ELF')).not.toBeInTheDocument();
+    expect(screen.getByText('BOB-456')).toBeInTheDocument();
   });
 
   it('allows clearing call history', () => {
@@ -58,6 +58,6 @@ describe('RecentCalls Component', () => {
     const clearBtn = screen.getByRole('button', { name: /clear history/i });
     fireEvent.click(clearBtn);
 
-    expect(screen.queryByText('CHARLIE')).not.toBeInTheDocument();
+    expect(screen.queryByText('CHA-RLI-E')).not.toBeInTheDocument();
   });
 });

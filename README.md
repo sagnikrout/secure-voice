@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ SecureVoice (v2.6)
+# 🛡️ SecureVoice (v2.7)
 
 ### *High-Performance, Privacy-First, Low-Bandwidth P2P Encrypted Voice Communicator*
 
@@ -116,7 +116,7 @@ secure-voice/
 ├── index.html                       # HTML5 entry with strict CSP headers
 ├── package.json                     # Pinned dependencies & scripts
 ├── vite.config.js                   # Vite bundler & Vitest test runner config
-└── SecureVoice-v2.6.apk              # Compiled production Android APK (4.2 MB)
+└── SecureVoice-v2.7.apk              # Compiled production Android APK (4.2 MB)
 ```
 
 ---
@@ -201,7 +201,7 @@ cd android
 The resulting APK is generated at:
 `android/app/build/outputs/apk/debug/app-debug.apk`
 
-*(A pre-compiled production build **`SecureVoice-v2.6.apk`** is located in the project root directory).*
+*(A pre-compiled production build **`SecureVoice-v2.7.apk`** is located in the project root directory).*
 
 ---
 

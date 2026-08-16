@@ -3,11 +3,13 @@ import { Phone, Trash2, Clock } from 'lucide-react';
 import { sanitizePeerId } from '../utils/webrtc';
 import { STORAGE_KEYS, TIMINGS } from '../constants/config';
 
+const EVENT_RECENT_CALLS_UPDATED = 'securevoice:recent_calls_updated';
+
 function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
   const [recents, setRecents] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
+  const loadRecents = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
       if (saved) {
@@ -15,16 +17,27 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
         if (Array.isArray(parsed)) {
           setRecents(parsed.filter(item => item && typeof item.id === 'string' && item.id.length <= 16));
         }
+      } else {
+        setRecents([]);
       }
     } catch (e) {
       console.warn('Failed to load recent calls:', e);
     }
   }, []);
 
+  useEffect(() => {
+    loadRecents();
+    window.addEventListener(EVENT_RECENT_CALLS_UPDATED, loadRecents);
+    return () => {
+      window.removeEventListener(EVENT_RECENT_CALLS_UPDATED, loadRecents);
+    };
+  }, [loadRecents]);
+
   const saveRecents = useCallback((list) => {
     setRecents(list);
     try {
       localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(list));
+      window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
     } catch (e) {
       console.warn('Failed to save recent calls:', e);
     }
@@ -34,7 +47,10 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
     e.stopPropagation();
     setRecents(prev => {
       const updated = prev.filter(r => r.id !== id);
-      try { localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated)); } catch (err) {}
+      try {
+        localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
+        window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
+      } catch (err) {}
       return updated;
     });
   }, []);
@@ -135,6 +151,7 @@ export function saveCallHistory(peerId) {
     const filtered = Array.isArray(list) ? list.filter(r => r && r.id !== cleanId) : [];
     const updated = [{ id: cleanId, timestamp: Date.now() }, ...filtered.slice(0, TIMINGS.MAX_RECENT_CALLS - 1)];
     localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
+    window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
   } catch (e) {
     console.warn('Failed to save call history:', e);
   }

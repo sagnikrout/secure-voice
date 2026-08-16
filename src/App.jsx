@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import {
   Shield,
   Phone,
@@ -6,14 +8,13 @@ import {
   PhoneOff,
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
   Copy,
   Check,
   Moon,
   Sun,
   Info,
-  Activity
+  Activity,
+  ShieldAlert
 } from 'lucide-react';
 
 import { useTheme } from './hooks/useTheme';
@@ -26,6 +27,11 @@ import { STATUS_LABELS, QUALITY_BADGES } from './constants/config';
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
 import InfoModal from './components/InfoModal';
+import SecurityVerificationModal from './components/SecurityVerificationModal';
+import AudioDeviceSelector from './components/AudioDeviceSelector';
+import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
+import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
+import { useAudioDevices } from './hooks/useAudioDevices';
 
 function formatTimer(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -40,11 +46,18 @@ export default function App() {
   const [calleeInput, setCalleeInput] = useState('');
   const [copied, setCopied] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showRateLimitToast, setShowRateLimitToast] = useState(false);
+  const copyTimeoutRef = useRef(null);
+
+  // Audio Device hook
+  const audioDevices = useAudioDevices();
 
   // Call session hook
   const callSession = useCallSession({
     addLog,
-    onStatusChange: (s) => setPeerStatus(s)
+    onStatusChange: (s) => setPeerStatus(s),
+    selectedInputId: audioDevices.selectedInputId
   });
 
   // PeerJS signaling hook
@@ -56,8 +69,35 @@ export default function App() {
   } = usePeer({
     addLog,
     onIncomingCall: callSession.handleIncomingCall,
-    isInActiveCall: () => callSession.isInCall || callSession.isCalling
+    isInActiveCall: () => callSession.isInCall || callSession.isCalling,
+    onRateLimitHit: () => {
+      setShowRateLimitToast(true);
+      setTimeout(() => setShowRateLimitToast(false), 5000);
+    }
   });
+
+  // Keep WebRTC running in background via Android Foreground Service
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'android') return;
+
+    const startForeground = async () => {
+      try {
+        await ForegroundService.startForegroundService({
+          id: 112,
+          title: 'SecureVoice Active',
+          body: 'Waiting for P2P connections...',
+          smallIcon: 'ic_launcher'
+        });
+      } catch (err) {
+        addLog(`Foreground Service Error: ${err.message}`, 'error');
+      }
+    };
+    startForeground();
+
+    return () => {
+      ForegroundService.stopForegroundService().catch(() => {});
+    };
+  }, [addLog]);
 
   // Derive active UI status
   const currentStatus = callSession.isInCall
@@ -81,7 +121,8 @@ export default function App() {
     }
     setCopied(true);
     addLog('Peer ID copied to clipboard', 'info');
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   }, [myId, addLog]);
 
   // Handle outgoing call trigger
@@ -107,11 +148,11 @@ export default function App() {
         <header className="card header">
           <div className="brand">
             <div className="brand-icon" aria-hidden="true">
-              <Shield className="w-6 h-6" />
+              <img src="/logo.png" alt="SecureVoice Logo" />
             </div>
             <div className="brand-text">
               <h1>SecureVoice</h1>
-              <span className="v2-badge">v2.6</span>
+              <span className="v2-badge">v2.10</span>
             </div>
           </div>
 
@@ -129,6 +170,16 @@ export default function App() {
               title="Toggle theme"
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              type="button"
+              className="info-btn"
+              onClick={() => setShowStats(true)}
+              aria-label="WebRTC Diagnostics & Stats"
+              title="WebRTC Diagnostics"
+            >
+              <Activity className="w-4 h-4" />
             </button>
 
             <button
@@ -178,7 +229,7 @@ export default function App() {
                 disabled={peerStatus !== 'ready'}
                 spellCheck={false}
                 autoComplete="off"
-                maxLength={12}
+                maxLength={16}
                 aria-label="Enter recipient peer ID"
               />
               <button
@@ -191,6 +242,24 @@ export default function App() {
                 <Phone className="w-4 h-4" />
                 <span>Call</span>
               </button>
+            </div>
+            <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-2)', display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'var(--card-2)', border: '1px solid var(--border)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+              <Shield className="w-4 h-4 text-green" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ lineHeight: 1.4 }}>
+                <strong style={{ color: 'var(--text)' }}>Privacy Note:</strong> Your microphone is fully disabled until a call is explicitly answered. Audio is routed P2P and is end-to-end encrypted.
+              </span>
+            </div>
+            
+            <div style={{ marginTop: '16px' }}>
+              <AudioDeviceSelector
+                devices={audioDevices.audioInputs}
+                activeDeviceId={audioDevices.selectedInputId}
+                onSelect={(id) => {
+                  audioDevices.selectAudioInput(id);
+                  addLog(`Default microphone set to: ${id.slice(0,8)}...`, 'info');
+                }}
+                isPending={audioDevices.permissionState === 'prompt'}
+              />
             </div>
           </section>
         ) : callSession.isCalling && !callSession.isInCall ? (
@@ -214,6 +283,7 @@ export default function App() {
             <div className="call-avatar" aria-hidden="true">
               <Mic className="w-8 h-8 text-blue" />
             </div>
+
             <p className="call-peer">
               <span>{callSession.connectedPeer}</span>
               <span className="quality-dot" title={`Quality: ${callSession.quality}`}>
@@ -225,8 +295,22 @@ export default function App() {
               {formatTimer(callSession.callDuration)}
             </div>
 
+            {callSession.isVerified && (
+              <div className="status-chip ready" style={{ marginBottom: '16px', background: 'var(--bg)', border: 'none' }} title="Connection is Verified & End-to-End Encrypted">
+                <Shield className="w-3 h-3" />
+                <span>Verified E2EE</span>
+              </div>
+            )}
+
             {/* Visualizer Canvas */}
             <AudioVisualizer stream={callSession.activeStream} isActive={callSession.isInCall} />
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: callSession.isMuted ? 'var(--red-light)' : 'var(--green-light)', color: callSession.isMuted ? 'var(--red)' : 'var(--green)', borderRadius: '99px', fontSize: '11px', fontWeight: '600' }}>
+                 {callSession.isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                 <span>{callSession.isMuted ? 'Microphone Muted' : 'Microphone Live'}</span>
+              </div>
+            </div>
 
             <div className="call-btns">
               <button
@@ -250,16 +334,16 @@ export default function App() {
                 <PhoneOff className="w-6 h-6" />
               </button>
 
-              <button
-                type="button"
-                className={`icon-btn ${callSession.isSpeakerOn ? 'speaker-on' : ''}`}
-                onClick={callSession.toggleSpeaker}
-                aria-pressed={callSession.isSpeakerOn}
-                aria-label={callSession.isSpeakerOn ? 'Switch to earpiece' : 'Switch to speaker'}
-                title={callSession.isSpeakerOn ? 'Speaker On' : 'Earpiece'}
-              >
-                {callSession.isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </button>
+              <CallAudioDeviceSwitcher
+                isSpeakerOn={callSession.isSpeakerOn}
+                onToggleSpeaker={callSession.toggleSpeaker}
+                micDevices={audioDevices.audioInputs}
+                activeMicId={audioDevices.selectedInputId}
+                onSwitchMic={(deviceId) => {
+                  audioDevices.selectAudioInput(deviceId);
+                  callSession.switchMicrophone(deviceId);
+                }}
+              />
             </div>
           </section>
         )}
@@ -308,49 +392,70 @@ export default function App() {
             </div>
           )}
         </section>
-      </div>
 
-      {/* Incoming Call Dialog Overlay */}
-      {callSession.incomingCall && (
-        <div
-          className="overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="incoming-caller-title"
-        >
-          <div className="overlay-card">
-            <div className="inc-avatar" aria-hidden="true">
-              <PhoneCall className="w-7 h-7 text-blue" />
-            </div>
-            <p className="inc-label">Incoming Call</p>
-            <p className="inc-caller" id="incoming-caller-title">{callSession.incomingCall.peer}</p>
-            <p className="inc-sub">Encrypted Audio · Low Latency P2P</p>
+        {/* Global Rate Limit Toast */}
+        {showRateLimitToast && (
+          <div className="toast toast-warning" role="alert">
+            <ShieldAlert className="w-4 h-4 text-amber" />
+            <span>Spam Prevention: Incoming call throttled</span>
+          </div>
+        )}
 
-            <div className="inc-btns">
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={callSession.declineCall}
-                aria-label="Decline incoming call"
-              >
-                Decline
-              </button>
-              <button
-                type="button"
-                className="btn btn-green"
-                onClick={callSession.answerCall}
-                aria-label="Answer incoming call"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Answer</span>
-              </button>
+        {/* Incoming Call Modal */}
+        {callSession.incomingCall && (
+          <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="incoming-caller-id">
+            <div className="overlay-card incoming-card">
+              <div className="inc-avatar calling-pulse" aria-hidden="true">
+                <Phone className="w-8 h-8 text-blue" />
+              </div>
+              <p className="inc-label">Incoming Encrypted Call</p>
+              <p className="inc-caller" id="incoming-caller-id">{callSession.incomingCall.peer}</p>
+              <div className="inc-btns">
+                <button
+                  type="button"
+                  className="btn btn-red"
+                  onClick={callSession.declineCall}
+                  aria-label="Decline incoming call"
+                >
+                  <PhoneOff className="w-4 h-4" />
+                  <span>Decline</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-green"
+                  onClick={callSession.answerCall}
+                  aria-label="Answer incoming call"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>Answer</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Technical Spec Info Modal */}
-      {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
+        {/* MITM Security Verification Modal */}
+        {callSession.isInCall && callSession.safetyCode && !callSession.isVerified && (
+          <SecurityVerificationModal
+            safetyCode={callSession.safetyCode}
+            connectedPeer={callSession.connectedPeer}
+            onVerify={() => {
+              callSession.setIsVerified(true);
+              addLog('Connection authenticity verified by user', 'ok');
+            }}
+            onReject={() => {
+              addLog('Security alert: Verbal safety code mismatched! Call aborted.', 'error');
+              callSession.endCall();
+            }}
+          />
+        )}
+
+        {/* Specs & Privacy Info Modal */}
+        {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
+
+        {/* WebRTC Diagnostics & Stats Modal */}
+        {showStats && <WebRtcStatsOverlay isOpen={showStats} onClose={() => setShowStats(false)} callSession={callSession} />}
+      </div>
     </div>
   );
 }

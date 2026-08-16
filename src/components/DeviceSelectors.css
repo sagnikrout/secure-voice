@@ -1,0 +1,323 @@
+/* DeviceSelectors.css - Shared CSS for Audio Controls */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- AudioDeviceSelector --- */
+.device-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  width: 100%;
+  min-width: 280px; /* Fluid width down to 280px */
+}
+
+.device-selector__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.device-selector__label {
+  font-family: var(--font);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.device-selector__test-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs, 4px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.device-selector__test-btn:hover {
+  background: var(--bg-surface-raised);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.device-selector__test-btn.active {
+  background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.device-selector__wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.device-selector__trigger {
+  width: 100%;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  min-height: var(--touch-target-min, 44px);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+}
+
+.device-selector__trigger:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.device-selector__trigger--pending {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.device-selector__visual {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: 10px 14px;
+  height: 100%;
+}
+
+.device-selector__text {
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-surface-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-overlay);
+  list-style: none;
+  padding: 4px 0;
+  z-index: 50;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.device-selector__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-height: var(--touch-target-min, 44px);
+}
+
+.device-selector__option.focused,
+.device-selector__option:hover {
+  background: var(--bg-surface-raised);
+}
+
+.device-selector__option.selected {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+}
+
+/* Loopback VU Meter Strip */
+.device-selector__meter-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.device-selector__meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.device-selector__meter-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-surface-raised);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.device-selector__meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-primary) 0%, #2ecc71 70%, #e67e22 90%, #e74c3c 100%);
+  border-radius: 99px;
+  transition: width 0.05s ease-out;
+}
+
+/* --- CallAudioDeviceSwitcher --- */
+.device-switcher {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.device-switcher__trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  min-width: 64px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.device-switcher__trigger:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  background: var(--bg-surface-raised);
+}
+
+.device-switcher__trigger:hover {
+  background: var(--bg-surface-raised);
+}
+
+.device-switcher__icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px; /* Easily exceeds 44px touch target */
+  border-radius: 50%;
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.device-switcher__trigger:hover .device-switcher__icon-container {
+  background: var(--bg-surface);
+}
+
+.device-switcher__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Pop-up Menu */
+.device-switcher__menu {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 12px;
+  background: var(--bg-surface-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+  padding: 8px;
+  width: max-content;
+  max-width: 260px; /* Constraints for 280px minimum viewports */
+  z-index: 100;
+}
+
+.device-switcher__menu:focus-visible {
+  outline: none;
+}
+
+.device-switcher__menu-header {
+  font-family: var(--font);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+  letter-spacing: 0.5px;
+}
+
+.device-switcher__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  min-height: var(--touch-target-min, 44px);
+}
+
+.device-switcher__menu-item.focused,
+.device-switcher__menu-item:hover {
+  background: var(--bg-surface-raised);
+}
+
+.device-switcher__menu-item:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+}
+
+.device-switcher__menu-item.active {
+  background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+  color: var(--color-success);
+}
+
+.device-switcher__menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

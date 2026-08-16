@@ -1,0 +1,142 @@
+import { Capacitor } from '@capacitor/core';
+import { STORAGE_KEYS } from '../constants/config';
+
+const PREFERRED_OUTPUT_KEY = STORAGE_KEYS.PREFERRED_OUTPUT || 'securevoice_output_mode';
+
+/**
+ * Gets reference to the native AudioRouting plugin
+ */
+function getNativePlugin() {
+  if (Capacitor.isPluginAvailable('AudioRouting') && Capacitor.Plugins?.AudioRouting) {
+    return Capacitor.Plugins.AudioRouting;
+  }
+  return null;
+}
+
+/**
+ * Helper to execute commands against our custom Capacitor AudioRouting plugin
+ */
+async function invokeNativeAudioRouting(mode) {
+  const plugin = getNativePlugin();
+  if (!plugin) {
+    console.warn('AudioRouting native plugin not found');
+    return { success: false, mode, error: 'Plugin missing' };
+  }
+  
+  try {
+    return await plugin.setAudioMode({ mode });
+  } catch (err) {
+    console.error('Failed to invoke native audio routing', err);
+    return { success: false, mode, error: err.message };
+  }
+}
+
+/**
+ * Checks if the current environment supports output switching.
+ * @returns {boolean}
+ */
+export function isOutputSwitchingSupported() {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    return true;
+  }
+  
+  // Standard web browser check
+  return typeof HTMLAudioElement !== 'undefined' && 
+         'setSinkId' in HTMLAudioElement.prototype;
+}
+
+/**
+ * Sets the audio output mode (earpiece vs speaker vs bluetooth) across Capacitor Android or standard Web.
+ * @param {'earpiece' | 'speaker' | 'bluetooth'} mode 
+ * @param {HTMLAudioElement} [audioElement]
+ * @returns {Promise<{ success: boolean, mode: string, error?: string }>}
+ */
+export async function setAudioOutputMode(mode, audioElement) {
+  try {
+    localStorage.setItem(PREFERRED_OUTPUT_KEY, mode);
+
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      return await invokeNativeAudioRouting(mode);
+    }
+
+    if (audioElement && typeof audioElement.setSinkId === 'function') {
+      const sinkId = mode === 'earpiece' ? 'communications' : 'default';
+      await audioElement.setSinkId(sinkId);
+      return { success: true, mode };
+    }
+
+    return { success: true, mode };
+  } catch (err) {
+    console.error('Error setting audio output mode:', err);
+    return { success: false, mode, error: err.message };
+  }
+}
+
+/**
+ * Query available native audio outputs (earpiece, speaker, bluetooth)
+ * @returns {Promise<string[]>}
+ */
+export async function getAvailableOutputs() {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const plugin = getNativePlugin();
+    if (plugin && plugin.getAvailableOutputs) {
+      try {
+        const res = await plugin.getAvailableOutputs();
+        return res.outputs || ['earpiece', 'speaker'];
+      } catch (e) {}
+    }
+  }
+  return ['earpiece', 'speaker'];
+}
+
+/**
+ * Request audio focus when a call begins
+ */
+export async function requestAudioFocus() {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const plugin = getNativePlugin();
+    if (plugin && plugin.requestAudioFocus) {
+      try {
+        return await plugin.requestAudioFocus();
+      } catch (e) {}
+    }
+  }
+  return { granted: true };
+}
+
+/**
+ * Abandon audio focus when a call ends
+ */
+export async function abandonAudioFocus() {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const plugin = getNativePlugin();
+    if (plugin && plugin.abandonAudioFocus) {
+      try {
+        return await plugin.abandonAudioFocus();
+      } catch (e) {}
+    }
+  }
+  return { success: true };
+}
+
+/**
+ * Listen for native audio focus events (e.g. cellular phone call interruptions)
+ */
+export function addAudioFocusListener(callback) {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const plugin = getNativePlugin();
+    if (plugin && plugin.addListener) {
+      return plugin.addListener('audioFocusChange', callback);
+    }
+  }
+  return { remove: () => {} };
+}
+
+/**
+ * Retrieves the currently saved audio output mode.
+ * @returns {'earpiece' | 'speaker' | 'bluetooth' | 'default'}
+ */
+export function getAudioOutputMode() {
+  const saved = localStorage.getItem(PREFERRED_OUTPUT_KEY);
+  return (saved === 'speaker' || saved === 'earpiece' || saved === 'bluetooth') ? saved : 'default';
+}

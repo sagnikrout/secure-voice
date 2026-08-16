@@ -1,0 +1,36 @@
+SecureVoice
+Copyright 2026 SecureVoice Contributors
+
+This application incorporates open source software under the following licenses:
+
+======================================================================
+1. React & React DOM
+   License: MIT License
+   Copyright (c) Meta Platforms, Inc. and affiliates.
+   https://github.com/facebook/react
+
+2. PeerJS
+   License: MIT License
+   Copyright (c) 2013-2024 Michelle Bu, Eric Zhang, PeerJS Contributors
+   https://github.com/peers/peerjs
+
+3. Capacitor Core, CLI & Android
+   License: MIT License
+   Copyright 2017-present Drifty Co.
+   https://github.com/ionic-team/capacitor
+
+4. Capawesome Android Foreground Service
+   License: MIT License
+   Copyright 2022-present Robin Genz
+   https://github.com/capawesome-team/capacitor-plugins
+
+5. Lucide Icons
+   License: ISC License
+   Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) 2022-present Lucide Contributors.
+   https://github.com/lucide-icons/lucide
+
+6. Vite & Vite Plugin React
+   License: MIT License
+   Copyright (c) 2019-present Evan You & Vite Contributors
+   https://github.com/vitejs/vite
+======================================================================
