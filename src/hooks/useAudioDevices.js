@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { STORAGE_KEYS } from '../constants/config';
 
 const PREFERRED_INPUT_KEY = STORAGE_KEYS.PREFERRED_INPUT || 'securevoice_preferred_input_id';
+const PREFERRED_OUTPUT_KEY = STORAGE_KEYS.PREFERRED_OUTPUT || 'securevoice_output_mode';
 
 /**
  * @typedef {Object} AudioDeviceInfo
@@ -11,11 +12,14 @@ const PREFERRED_INPUT_KEY = STORAGE_KEYS.PREFERRED_INPUT || 'securevoice_preferr
  */
 
 /**
- * Hook to manage audio devices, enumerating microphones and listening for device changes.
+ * Hook to manage audio devices, enumerating both microphones and audio output devices,
+ * and listening for hardware device changes.
  */
 export function useAudioDevices() {
   const [audioInputs, setAudioInputs] = useState([]);
+  const [audioOutputs, setAudioOutputs] = useState([]);
   const [selectedInputId, setSelectedInputId] = useState(null);
+  const [selectedOutputId, setSelectedOutputId] = useState('default');
   const [isEnumerating, setIsEnumerating] = useState(true);
   const [permissionState, setPermissionState] = useState('prompt');
   
@@ -34,6 +38,7 @@ export function useAudioDevices() {
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const inputs = Array.isArray(devices) ? devices.filter(d => d.kind === 'audioinput') : [];
+      const outputs = Array.isArray(devices) ? devices.filter(d => d.kind === 'audiooutput') : [];
 
       // Check if labels are blank, indicating permissions haven't been fully granted
       if (inputs.length > 0 && inputs[0].label === '') {
@@ -42,28 +47,51 @@ export function useAudioDevices() {
         setPermissionState('granted');
       }
 
-      // Format and sanitize labels
+      // Format and sanitize input labels
       const formattedInputs = inputs.map((d, index) => ({
         deviceId: d.deviceId,
         label: d.label || `Microphone ${index + 1}`,
         groupId: d.groupId
       }));
 
+      // Format and sanitize output labels
+      const formattedOutputs = outputs.map((d, index) => ({
+        deviceId: d.deviceId,
+        label: d.label || `Audio Output ${index + 1}`,
+        groupId: d.groupId
+      }));
+
       setAudioInputs(formattedInputs);
+      setAudioOutputs(formattedOutputs);
 
-      // Restore preferred device from localStorage if it exists
-      const savedId = localStorage.getItem(PREFERRED_INPUT_KEY);
-      const isSavedAvailable = formattedInputs.some(d => d.deviceId === savedId);
+      // Restore preferred microphone from localStorage if available
+      const savedInputId = localStorage.getItem(PREFERRED_INPUT_KEY);
+      const isSavedInputAvailable = formattedInputs.some(d => d.deviceId === savedInputId);
 
-      if (isSavedAvailable) {
-        setSelectedInputId(savedId);
+      if (isSavedInputAvailable) {
+        setSelectedInputId(savedInputId);
       } else if (formattedInputs.length > 0) {
-        // Fallback to default
         setSelectedInputId(formattedInputs[0].deviceId);
         localStorage.setItem(PREFERRED_INPUT_KEY, formattedInputs[0].deviceId);
       } else {
         setSelectedInputId(null);
       }
+
+      // Restore preferred output from localStorage if available
+      const savedOutputId = localStorage.getItem(PREFERRED_OUTPUT_KEY);
+      const isSavedOutputAvailable = savedOutputId === 'speaker' || 
+                                     savedOutputId === 'earpiece' || 
+                                     savedOutputId === 'bluetooth' ||
+                                     formattedOutputs.some(d => d.deviceId === savedOutputId);
+
+      if (isSavedOutputAvailable) {
+        setSelectedOutputId(savedOutputId);
+      } else if (formattedOutputs.length > 0) {
+        setSelectedOutputId(formattedOutputs[0].deviceId);
+      } else {
+        setSelectedOutputId('speaker');
+      }
+
     } catch (err) {
       console.warn('Failed to enumerate audio devices', err);
       setPermissionState('denied');
@@ -79,6 +107,13 @@ export function useAudioDevices() {
       localStorage.setItem(PREFERRED_INPUT_KEY, deviceId);
     } else {
       localStorage.removeItem(PREFERRED_INPUT_KEY);
+    }
+  }, []);
+
+  const selectAudioOutput = useCallback((deviceIdOrMode) => {
+    setSelectedOutputId(deviceIdOrMode);
+    if (deviceIdOrMode) {
+      localStorage.setItem(PREFERRED_OUTPUT_KEY, deviceIdOrMode);
     }
   }, []);
 
@@ -108,10 +143,13 @@ export function useAudioDevices() {
 
   return {
     audioInputs,
+    audioOutputs,
     selectedInputId,
+    selectedOutputId,
     isEnumerating,
     permissionState,
     selectAudioInput,
+    selectAudioOutput,
     refreshDevices
   };
 }

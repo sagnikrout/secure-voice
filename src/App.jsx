@@ -338,6 +338,8 @@ export default function App() {
               <CallAudioDeviceSwitcher
                 isSpeakerOn={callSession.isSpeakerOn}
                 onToggleSpeaker={callSession.toggleSpeaker}
+                activeOutputId={callSession.activeOutputId}
+                outputDevices={audioDevices.audioOutputs}
                 micDevices={audioDevices.audioInputs}
                 activeMicId={audioDevices.selectedInputId}
                 onSwitchMic={(deviceId) => {

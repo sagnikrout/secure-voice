@@ -99,4 +99,23 @@ describe('useAudioDevices Hook', () => {
     // It should generate a default label
     expect(result.current.audioInputs[0].label).toBe('Microphone 1');
   });
+
+  it('enumerates audio outputs and formats labels', async () => {
+    const mockDevices = [
+      { kind: 'audioinput', deviceId: 'mic-1', label: 'Internal Mic', groupId: 'g1' },
+      { kind: 'audiooutput', deviceId: 'out-1', label: 'Speakers', groupId: 'g1' },
+      { kind: 'audiooutput', deviceId: 'out-2', label: 'Headphones', groupId: 'g2' }
+    ];
+    navigator.mediaDevices.enumerateDevices.mockResolvedValue(mockDevices);
+
+    const { result } = renderHook(() => useAudioDevices());
+    
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.audioOutputs).toHaveLength(2);
+    expect(result.current.audioOutputs[0].label).toBe('Speakers');
+    expect(result.current.audioOutputs[1].label).toBe('Headphones');
+  });
 });

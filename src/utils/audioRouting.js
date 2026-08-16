@@ -46,29 +46,44 @@ export function isOutputSwitchingSupported() {
 }
 
 /**
- * Sets the audio output mode (earpiece vs speaker vs bluetooth) across Capacitor Android or standard Web.
- * @param {'earpiece' | 'speaker' | 'bluetooth'} mode 
+ * Sets the audio output mode (earpiece vs speaker vs bluetooth or specific hardware output deviceId)
+ * across Capacitor Android or standard Web.
+ * @param {string} modeOrDeviceId 
  * @param {HTMLAudioElement} [audioElement]
  * @returns {Promise<{ success: boolean, mode: string, error?: string }>}
  */
-export async function setAudioOutputMode(mode, audioElement) {
+export async function setAudioOutputMode(modeOrDeviceId, audioElement) {
   try {
-    localStorage.setItem(PREFERRED_OUTPUT_KEY, mode);
+    localStorage.setItem(PREFERRED_OUTPUT_KEY, modeOrDeviceId);
 
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-      return await invokeNativeAudioRouting(mode);
+      const nativeMode = (modeOrDeviceId === 'earpiece' || modeOrDeviceId === 'bluetooth') ? modeOrDeviceId : 'speaker';
+      return await invokeNativeAudioRouting(nativeMode);
     }
 
     if (audioElement && typeof audioElement.setSinkId === 'function') {
-      const sinkId = mode === 'earpiece' ? 'communications' : 'default';
-      await audioElement.setSinkId(sinkId);
-      return { success: true, mode };
+      let sinkId = modeOrDeviceId;
+      if (modeOrDeviceId === 'earpiece') {
+        sinkId = 'communications';
+      } else if (modeOrDeviceId === 'speaker') {
+        sinkId = 'default';
+      }
+
+      try {
+        await audioElement.setSinkId(sinkId);
+        return { success: true, mode: modeOrDeviceId };
+      } catch (err) {
+        if (sinkId !== 'default') {
+          await audioElement.setSinkId('default').catch(() => {});
+        }
+        return { success: true, mode: 'default' };
+      }
     }
 
-    return { success: true, mode };
+    return { success: true, mode: modeOrDeviceId };
   } catch (err) {
     console.error('Error setting audio output mode:', err);
-    return { success: false, mode, error: err.message };
+    return { success: false, mode: modeOrDeviceId, error: err.message };
   }
 }
 

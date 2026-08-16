@@ -32,12 +32,13 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
   const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
 
-  // States
+  // Call States
   const [isInCall, setIsInCall] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
-  const [connectedPeer, setConnectedPeer] = useState('');
+  const [connectedPeer, setConnectedPeer] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [activeOutputId, setActiveOutputId] = useState('speaker');
   const [quality, setQuality] = useState('good');
   const [callDuration, setCallDuration] = useState(0);
   const [incomingCall, setIncomingCall] = useState(null);
@@ -431,13 +432,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     if (typeof forcedMode === 'string') {
       mode = forcedMode;
       setIsSpeakerOn(mode === 'speaker');
+      setActiveOutputId(mode);
     } else if (typeof forcedMode === 'boolean') {
       mode = forcedMode ? 'speaker' : 'earpiece';
       setIsSpeakerOn(forcedMode);
+      setActiveOutputId(mode);
     } else {
       const nextSpeakerState = !isSpeakerOn;
       setIsSpeakerOn(nextSpeakerState);
       mode = nextSpeakerState ? 'speaker' : 'earpiece';
+      setActiveOutputId(mode);
     }
 
     const result = await setAudioOutputMode(mode, remoteAudioRef.current);
@@ -531,6 +535,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     connectedPeer,
     isMuted,
     isSpeakerOn,
+    activeOutputId,
     quality,
     callDuration,
     incomingCall,
