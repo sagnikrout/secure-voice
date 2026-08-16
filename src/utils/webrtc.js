@@ -1,22 +1,15 @@
 /**
- * WebRTC SDP Transformation & Network Utilities
+ * WebRTC SDP Transformation, Network Scoring & Security Utilities
  */
 import { ICE_SERVERS, PEER_ID_ALPHABET, OPUS_CONFIG } from '../constants/config';
+import { formatPeerId, sanitizePeerId } from './formatters';
 
-export { ICE_SERVERS };
-
-/**
- * Format a raw string into hyphenated chunks of 3 characters (e.g., ABC-DEF-GHI)
- */
-export function formatPeerId(id) {
-  if (typeof id !== 'string') return '';
-  const sanitized = id.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  const chunks = sanitized.match(/.{1,3}/g);
-  return chunks ? chunks.join('-') : sanitized;
-}
+export { ICE_SERVERS, formatPeerId, sanitizePeerId };
 
 /**
  * Generate cryptographically secure uppercase alphanumeric ID with rejection sampling
+ * @param {number} [length=9]
+ * @returns {string} Formatted peer ID (e.g. ABC-DEF-GHI)
  */
 export function generatePeerId(length = 9) {
   if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
@@ -44,14 +37,7 @@ export function generatePeerId(length = 9) {
 }
 
 /**
- * Sanitize user input for Peer IDs
- */
-export function sanitizePeerId(input) {
-  return formatPeerId(input);
-}
-
-/**
- * Transform SDP to force Opus low-bandwidth and packetization parameters:
+ * Transform SDP to enforce Opus low-bandwidth and high-resilience packetization:
  * - maxaveragebitrate = 12000 (12 kbps)
  * - usedtx = 1 (discontinuous transmission / silence suppression)
  * - useinbandfec = 1 (Opus in-band forward error correction)
@@ -59,6 +45,9 @@ export function sanitizePeerId(input) {
  * - stereo = 0, sprop-stereo = 0 (mono voice optimization)
  * - b=AS:16 (bandwidth cap 16 kbps)
  * - a=ptime:40 / a=maxptime:60 (reduced header packetization)
+ * 
+ * @param {string} sdp - Raw SDP string
+ * @returns {string} Munged SDP string
  */
 export function transformOpusSdp(sdp) {
   if (!sdp || typeof sdp !== 'string') return sdp;
@@ -72,7 +61,7 @@ export function transformOpusSdp(sdp) {
   let bandwidthAdded = false;
   let opusPayloadType = null;
 
-  // First pass: extract the Opus payload type
+  // First pass: extract the Opus payload type number from a=rtpmap line
   for (const line of lines) {
     if (line.startsWith('m=audio')) {
       inAudioMedia = true;
@@ -96,7 +85,7 @@ export function transformOpusSdp(sdp) {
       bandwidthAdded = false;
     }
 
-    // Insert b=AS, ptime, and maxptime before the first a= line in the audio section
+    // Insert b=AS bandwidth cap and ptime before the first a= attribute line in audio media section
     if (inAudioMedia && !bandwidthAdded && line.startsWith('a=')) {
       modifiedLines.push(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS}`);
       if (OPUS_CONFIG.PTIME) {
@@ -108,7 +97,7 @@ export function transformOpusSdp(sdp) {
       bandwidthAdded = true;
     }
 
-    // ONLY modify the a=fmtp line that matches the Opus payload type
+    // Modify the a=fmtp line corresponding to Opus payload type
     if (inAudioMedia && opusPayloadType && line.startsWith(`a=fmtp:${opusPayloadType}`)) {
       const match = line.match(/^(a=fmtp:\d+)(?:\s+(.*))?$/);
       if (match) {
@@ -123,7 +112,7 @@ export function transformOpusSdp(sdp) {
           });
         }
 
-        // Apply low-bandwidth and resilient Opus params
+        // Apply low-bandwidth, mono voice, and FEC parameters
         paramMap.set('maxaveragebitrate', OPUS_CONFIG.MAX_AVERAGE_BITRATE);
         paramMap.set('usedtx', OPUS_CONFIG.USE_DTX);
         paramMap.set('useinbandfec', OPUS_CONFIG.USE_INBAND_FEC || '1');
@@ -147,17 +136,22 @@ export function transformOpusSdp(sdp) {
 
 /**
  * Classify network connection quality by round-trip time (RTT in seconds)
+ * @param {number} rttSeconds
+ * @returns {'good' | 'fair' | 'poor'}
  */
 export function getQualityRating(rttSeconds) {
   const rtt = Number(rttSeconds);
   if (isNaN(rtt) || rtt < 0) return 'good';
   if (rtt < 0.15) return 'good'; // < 150ms
   if (rtt < 0.40) return 'fair'; // 150ms - 400ms
-  return 'poor'; // >= 400ms
+  return 'poor';                 // >= 400ms
 }
 
 /**
- * Generate a verbal Safety Code from DTLS-SRTP fingerprints for MITM detection
+ * Generate a deterministic 5-digit verbal Safety Code from DTLS-SRTP fingerprints for MITM detection
+ * @param {string} localSdp - Local session description
+ * @param {string} remoteSdp - Remote session description
+ * @returns {Promise<string|null>} 5-digit code string
  */
 export async function generateSafetyCode(localSdp, remoteSdp) {
   if (!localSdp || !remoteSdp) return null;
@@ -171,16 +165,15 @@ export async function generateSafetyCode(localSdp, remoteSdp) {
   const f2 = extractFingerprint(remoteSdp);
   if (!f1 || !f2) return null;
   
-  // Sort to ensure caller and callee generate the exact same string
+  // Sort fingerprints so both caller and callee produce the identical hash
   const combined = [f1, f2].sort().join('|');
   
-  // Create a quick SHA-256 hash of the combined fingerprints
   const encoder = new TextEncoder();
   const data = encoder.encode(combined);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   
-  // Convert first few bytes to a 5-digit number
+  // Extract 24 bits to form a 5-digit number
   const num = (hashArray[0] << 16) | (hashArray[1] << 8) | hashArray[2];
   return String(num % 100000).padStart(5, '0');
 }

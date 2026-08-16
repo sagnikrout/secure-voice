@@ -21,7 +21,8 @@ import { useTheme } from './hooks/useTheme';
 import { useLogs } from './hooks/useLogs';
 import { usePeer } from './hooks/usePeer';
 import { useCallSession } from './hooks/useCallSession';
-import { sanitizePeerId } from './utils/webrtc';
+import { useAudioDevices } from './hooks/useAudioDevices';
+import { sanitizePeerId, formatTimer } from './utils/formatters';
 import { STATUS_LABELS, QUALITY_BADGES } from './constants/config';
 
 import AudioVisualizer from './components/AudioVisualizer';
@@ -30,14 +31,10 @@ import InfoModal from './components/InfoModal';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
 import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
 import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
-import { useAudioDevices } from './hooks/useAudioDevices';
 
-function formatTimer(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
+/**
+ * SecureVoice Main Application Shell
+ */
 export default function App() {
   const { darkMode, toggleTheme } = useTheme();
   const { logs, showLogs, addLog, toggleLogs } = useLogs();
@@ -49,7 +46,7 @@ export default function App() {
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const copyTimeoutRef = useRef(null);
 
-  // Audio Device hook
+  // Audio Device hook (dynamic inputs & outputs)
   const audioDevices = useAudioDevices();
 
   // Call session hook
@@ -75,7 +72,7 @@ export default function App() {
     }
   });
 
-  // Keep WebRTC running in background via Android Foreground Service
+  // Keep WebRTC background connectivity active via Android Foreground Service
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return;
 
@@ -88,7 +85,7 @@ export default function App() {
           smallIcon: 'ic_launcher'
         });
       } catch (err) {
-        addLog(`Foreground Service Error: ${err.message}`, 'error');
+        addLog(`Foreground Service: ${err.message}`, 'error');
       }
     };
     startForeground();
@@ -105,7 +102,7 @@ export default function App() {
     ? 'calling'
     : peerStatus;
 
-  // Copy Peer ID to clipboard
+  // Copy Peer ID to clipboard with visual feedback
   const copyMyId = useCallback(async () => {
     if (!myId) return;
     try {
@@ -124,7 +121,7 @@ export default function App() {
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
   }, [myId, addLog]);
 
-  // Handle outgoing call trigger
+  // Initiate outgoing encrypted call
   const handleStartCall = useCallback((targetId) => {
     const target = sanitizePeerId(targetId || calleeInput);
     if (!target || !peer) return;
