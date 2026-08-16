@@ -1,7 +1,7 @@
 {
   "name": "secure-voice",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -19,6 +19,7 @@
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
+    "human-signals": "^8.0.1",
     "lucide-react": "^0.344.0",
     "peerjs": "^1.5.4",
     "react": "^18.2.0",

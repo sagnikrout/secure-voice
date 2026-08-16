@@ -7,13 +7,13 @@
 [![Build & Deploy](https://img.shields.io/badge/Deploy-Live%20on%20GitHub%20Pages-brightgreen?style=for-the-badge&logo=github)](https://sagnikrout.github.io/secure-voice)
 [![Vitest Suite](https://img.shields.io/badge/Tests-69%2F69%20Passed-success?style=for-the-badge&logo=vitest)](https://github.com/sagnikrout/secure-voice)
 [![WebRTC E2E Simulation](https://img.shields.io/badge/Simulation-10%2F10%20Verified-blue?style=for-the-badge&logo=webrtc)](https://github.com/sagnikrout/secure-voice)
-[![Android APK](https://img.shields.io/badge/Android%20APK-v3.0.1-orange?style=for-the-badge&logo=android)](SecureVoice-v3.0.apk)
+[![Android APK](https://img.shields.io/badge/Android%20APK-v3.0.1-orange?style=for-the-badge&logo=android)](SecureVoice-v3.0.1.apk)
 [![Bandwidth](https://img.shields.io/badge/Bandwidth-6--16%20kbps%20Adaptive-teal?style=for-the-badge)](https://github.com/sagnikrout/secure-voice)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 <br/>
 
-**🌐 Web App:** [https://sagnikrout.github.io/secure-voice](https://sagnikrout.github.io/secure-voice) &nbsp;|&nbsp; **📱 Android Release:** [`SecureVoice-v3.0.apk`](SecureVoice-v3.0.apk)
+**🌐 Web App:** [https://sagnikrout.github.io/secure-voice](https://sagnikrout.github.io/secure-voice) &nbsp;|&nbsp; **📱 Android Release:** [`SecureVoice-v3.0.1.apk`](SecureVoice-v3.0.1.apk)
 
 </div>
 
@@ -147,7 +147,7 @@ secure-voice/
 ├── vite.config.js
 ├── capacitor.config.json
 ├── index.html
-└── SecureVoice-v3.0.apk
+└── SecureVoice-v3.0.1.apk
 ```
 
 **How it fits together:**
@@ -231,7 +231,7 @@ cd android
 ```
 
 ### Option 2: Use Pre-built APK
-A production-signed APK is available in the root: `SecureVoice-v3.0.apk` (5.77 MB)
+A production-signed APK is available in the root: `SecureVoice-v3.0.1.apk` (5.77 MB)
 
 ### Installation on Device
 1. Transfer APK to Android device
