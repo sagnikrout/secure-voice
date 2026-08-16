@@ -15,6 +15,14 @@ import {
 } from '../utils/audioRouting';
 import { TIMINGS, BITRATE_ADAPTATION } from '../constants/config';
 
+/**
+ * Main call session hook managing call lifecycle, audio streams, and WebRTC state
+ * @param {Object} options
+ * @param {Function} options.addLog - Logging callback
+ * @param {Function} options.onStatusChange - Status change callback
+ * @param {string} options.selectedInputId - Preferred microphone device ID
+ * @returns {Object} Call session controls and state
+ */
 export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   // Active Streams & Refs
   const rawStreamRef = useRef(null);
@@ -24,14 +32,14 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
-    // Timers & Stats Tracking
-    const dialTimeoutRef = useRef(null);
-    const incomingTimeoutRef = useRef(null);
-    const statsIntervalRef = useRef(null);
-    const timerIntervalRef = useRef(null);
-    const disconnectWatchdogRef = useRef(null);
-    const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
-    const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
+  // Timers & Stats Tracking
+  const dialTimeoutRef = useRef(null);
+  const incomingTimeoutRef = useRef(null);
+  const statsIntervalRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+  const disconnectWatchdogRef = useRef(null);
+  const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
+  const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
 
   // Call States
   const [isInCall, setIsInCall] = useState(false);
@@ -76,7 +84,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     }
   }, []);
 
-  // Full teardown & hardware release
+  /**
+   * Complete teardown of call session and hardware release
+   */
   const endCall = useCallback(() => {
     // 1. Abandon Native Audio Focus
     abandonAudioFocus();
@@ -99,7 +109,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       remoteAudioRef.current.srcObject = null;
     }
 
-    // 4. Stop all media tracks explicitly
+    // 4. Stop all media tracks explicitly (prevents hardware indicator leaks)
     stopMediaStream(rawStreamRef.current);
     stopMediaStream(processedStreamRef.current);
     rawStreamRef.current = null;
@@ -107,7 +117,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     // 5. Close Web Audio Context if owned
     if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-      audioCtxRef.current.close().catch(() => {});
+      try {
+        audioCtxRef.current.close();
+      } catch (e) {}
       audioCtxRef.current = null;
     }
 
@@ -117,7 +129,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     if (statsIntervalRef.current) { clearInterval(statsIntervalRef.current); statsIntervalRef.current = null; }
     if (disconnectWatchdogRef.current) { clearTimeout(disconnectWatchdogRef.current); disconnectWatchdogRef.current = null; }
 
-    // 7. Stop Ringtone
+    // 7. Stop Ringtone and clean oscillators
     if (stopRingtoneRef.current) {
       stopRingtoneRef.current();
       stopRingtoneRef.current = null;
@@ -139,7 +151,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     callbacksRef.current.addLog?.('Call terminated and audio pipeline cleanly released', 'info');
   }, [stopTimer]);
 
-  // Request & build microphone stream
+  /**
+   * Request & build microphone stream with Web Audio processing
+   */
   const acquireMicrophone = useCallback(async () => {
     if (processedStreamRef.current && processedStreamRef.current.active) {
       return processedStreamRef.current;
@@ -148,31 +162,40 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     await unlockAudioContext();
     callbacksRef.current.addLog?.('Requesting hardware microphone access...', 'info');
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        deviceId: selectedInputIdRef.current ? { exact: selectedInputIdRef.current } : undefined,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      },
-      video: false
-    });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: selectedInputIdRef.current ? { exact: selectedInputIdRef.current } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      });
 
-    rawStreamRef.current = stream;
-    callbacksRef.current.addLog?.('Microphone access granted', 'ok');
+      rawStreamRef.current = stream;
+      callbacksRef.current.addLog?.('Microphone access granted', 'ok');
 
-    const { processedStream, audioCtx } = createDenoisePipeline(stream);
-    processedStreamRef.current = processedStream;
-    audioCtxRef.current = audioCtx;
+      const { processedStream, audioCtx } = createDenoisePipeline(stream);
+      processedStreamRef.current = processedStream;
+      audioCtxRef.current = audioCtx;
 
-    if (audioCtx) {
-      callbacksRef.current.addLog?.('Web Audio 80Hz filter & noise gate active', 'ok');
+      if (audioCtx) {
+        callbacksRef.current.addLog?.('Web Audio 80Hz filter & noise gate active', 'ok');
+      }
+
+      return processedStream;
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        callbacksRef.current.addLog?.(`Microphone error: ${err.message}`, 'error');
+      }
+      throw err;
     }
-
-    return processedStream;
   }, []);
 
-  // Attach Call Event Listeners
+  /**
+   * Attach WebRTC call event listeners and setup monitoring
+   */
   const bindCallEvents = useCallback((call) => {
     callRef.current = call;
     let streamAttached = false;
@@ -233,6 +256,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           generateSafetyCode(pc.localDescription.sdp, pc.remoteDescription.sdp)
             .then(code => {
               if (code) setSafetyCode(code);
+            })
+            .catch(err => {
+              callbacksRef.current.addLog?.(`Safety code generation failed: ${err.message}`, 'warn');
             });
         }
 
@@ -245,7 +271,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
                 callbacksRef.current.addLog?.('Call ended (peer disconnected)', 'info');
                 endCall();
               }
-            }, 2500);
+            }, TIMINGS.DISCONNECT_WATCHDOG_MS);
           }
         };
 
@@ -290,6 +316,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             let currentPacketsLost = 0;
             let currentPacketsReceived = 0;
 
+            // Filter stats efficiently before processing
             stats.forEach(report => {
               if (report.type === 'candidate-pair' && report.state === 'succeeded') {
                 rtt = report.currentRoundTripTime;
@@ -324,12 +351,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               if (targetBitrate !== currentBitrateRef.current) {
                 const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
                 if (audioSender && audioSender.getParameters) {
-                  const params = audioSender.getParameters();
-                  if (params.encodings && params.encodings[0]) {
-                    params.encodings[0].maxBitrate = targetBitrate;
-                    await audioSender.setParameters(params);
-                    currentBitrateRef.current = targetBitrate;
-                    callbacksRef.current.addLog?.(`Adaptive bitrate adjusted to ${targetBitrate / 1000} kbps (loss: ${(lossRate * 100).toFixed(1)}%)`, 'info');
+                  try {
+                    const params = audioSender.getParameters();
+                    if (params.encodings && params.encodings[0]) {
+                      params.encodings[0].maxBitrate = targetBitrate;
+                      await audioSender.setParameters(params);
+                      currentBitrateRef.current = targetBitrate;
+                      callbacksRef.current.addLog?.(`Adaptive bitrate adjusted to ${targetBitrate / 1000} kbps (loss: ${(lossRate * 100).toFixed(1)}%)`, 'info');
+                    }
+                  } catch (err) {
+                    callbacksRef.current.addLog?.(`Bitrate adaptation error: ${err.message}`, 'warn');
                   }
                 }
               }
@@ -341,7 +372,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               timestamp: Date.now()
             };
 
-          } catch (e) {}
+          } catch (e) {
+            console.warn('Stats polling error:', e);
+          }
         }, TIMINGS.STATS_POLL_INTERVAL_MS);
       }
     });
@@ -499,16 +532,18 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     }
   }, [isSpeakerOn]);
 
-  // Non-destructive Microphone switching with automatic rollback on failure
+  /**
+   * Non-destructive microphone switching with automatic rollback on failure
+   */
   const switchMicrophone = useCallback(async (newDeviceId) => {
     if (!callRef.current || !callRef.current.peerConnection) return false;
-    
+
     let newStream = null;
     let newAudioCtx = null;
 
     try {
       callbacksRef.current.addLog?.('Acquiring replacement microphone track...', 'info');
-      
+
       newStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           deviceId: { exact: newDeviceId },
@@ -517,24 +552,24 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           autoGainControl: true
         }
       });
-      
+
       const newTrack = newStream.getAudioTracks()[0];
       if (!newTrack) throw new Error('No audio track obtained from new device');
-      
+
       // Build new denoise pipeline with isolated AudioContext
       const { processedStream, audioCtx } = createDenoisePipeline(newStream);
       newAudioCtx = audioCtx;
       const processedTrack = processedStream.getAudioTracks()[0];
-      
+
       // Continuity of active mute state
       if (isMuted) {
         newStream.getAudioTracks().forEach(t => { t.enabled = false; });
         processedStream.getAudioTracks().forEach(t => { t.enabled = false; });
       }
-      
+
       const pc = callRef.current.peerConnection;
       const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-      
+
       if (!audioSender) {
         throw new Error('No active audio sender found on RTCPeerConnection');
       }
@@ -547,7 +582,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         stopMediaStream(rawStreamRef.current);
       }
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        audioCtxRef.current.close().catch(() => {});
+        try {
+          audioCtxRef.current.close();
+        } catch (e) {}
       }
 
       rawStreamRef.current = newStream;
@@ -560,8 +597,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     } catch (err) {
       // ROLLBACK: Clean up the aborted attempt, keeping existing active call tracks intact
       if (newStream) stopMediaStream(newStream);
-      if (newAudioCtx && newAudioCtx.state !== 'closed') newAudioCtx.close().catch(() => {});
-      
+      if (newAudioCtx && newAudioCtx.state !== 'closed') {
+        try {
+          newAudioCtx.close();
+        } catch (e) {}
+      }
+
       callbacksRef.current.addLog?.(`Microphone switch aborted (retaining current mic): ${err.message}`, 'error');
       return false;
     }
