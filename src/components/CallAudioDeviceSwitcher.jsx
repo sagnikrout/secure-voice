@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Volume2, Phone, Bluetooth, Speaker, Headphones } from 'lucide-react';
+import { Volume2, Phone, Bluetooth, Speaker, Headphones, ChevronUp } from 'lucide-react';
 import { getAvailableOutputs } from '../utils/audioRouting';
 import AudioSettingsModal from './AudioSettingsModal';
 import './DeviceSelectors.css';
@@ -88,24 +88,29 @@ export default function CallAudioDeviceSwitcher({
 
   const currentOutputId = activeOutputId || (isSpeakerOn ? 'speaker' : 'earpiece');
 
+  // Select appropriate icon for current active output target
+  const ActiveIcon = useMemo(() => {
+    const activeOption = combinedOutputOptions.find(o => o.id === currentOutputId);
+    if (activeOption?.icon) return activeOption.icon;
+    if (currentOutputId === 'earpiece') return Phone;
+    if (currentOutputId === 'bluetooth') return Bluetooth;
+    return Volume2;
+  }, [combinedOutputOptions, currentOutputId]);
+
   return (
     <div className="audio-settings-wrapper">
-      <div aria-live="polite" className="sr-only">
-        {`Audio output set to ${isSpeakerOn ? 'Speaker' : 'Earpiece'}`}
-      </div>
-
-      {/* Action Dock Trigger Button */}
+      {/* Action Dock Trigger Button with chevron toggle indicator */}
       <button 
         ref={triggerRef}
         type="button"
         className={`icon-btn ${modalOpen ? 'active' : ''}`}
-        onClick={() => setModalOpen(true)}
-        aria-label="Audio Settings"
+        onClick={() => setModalOpen(prev => !prev)}
+        aria-label="Audio Settings & Device Switcher"
         title="Audio Settings"
         aria-expanded={modalOpen}
         aria-haspopup="dialog"
       >
-        <Volume2 className="w-5 h-5" />
+        <ActiveIcon className="w-5 h-5" />
       </button>
 
       {/* Audio Settings Modal */}
