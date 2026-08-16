@@ -152,7 +152,7 @@ export default function App() {
             </div>
             <div className="brand-text">
               <h1>SecureVoice</h1>
-              <span className="v2-badge">v2.10</span>
+              <span className="v2-badge">v3.0</span>
             </div>
           </div>
 

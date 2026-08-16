@@ -1,14 +1,14 @@
 <div align="center">
 
-# 🛡️ SecureVoice (v2.7)
+# 🛡️ SecureVoice (v3.0)
 
 ### *High-Performance, Privacy-First, Low-Bandwidth P2P Encrypted Voice Communicator*
 
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge&logo=vite)](https://github.com/sagnikrout/secure-voice)
-[![Vitest Suite](https://img.shields.io/badge/Tests-33%2F33%20Passed-success?style=for-the-badge&logo=vitest)](https://github.com/sagnikrout/secure-voice)
+[![Vitest Suite](https://img.shields.io/badge/Tests-56%2F56%20Passed-success?style=for-the-badge&logo=vitest)](https://github.com/sagnikrout/secure-voice)
 [![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![WebRTC](https://img.shields.io/badge/WebRTC-DTLS--SRTP-333333?style=for-the-badge&logo=webrtc)](https://webrtc.org/)
-[![Bandwidth](https://img.shields.io/badge/Bandwidth-12--16%20kbps-orange?style=for-the-badge)](https://github.com/sagnikrout/secure-voice)
+[![Bandwidth](https://img.shields.io/badge/Bandwidth-6--16%20kbps%20Adaptive-orange?style=for-the-badge)](https://github.com/sagnikrout/secure-voice)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 <br/>
