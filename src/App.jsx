@@ -28,7 +28,6 @@ import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
 import InfoModal from './components/InfoModal';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
-import AudioDeviceSelector from './components/AudioDeviceSelector';
 import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
 import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
 import { useAudioDevices } from './hooks/useAudioDevices';
@@ -249,18 +248,6 @@ export default function App() {
               <span style={{ lineHeight: 1.4 }}>
                 <strong style={{ color: 'var(--text)' }}>Privacy Note:</strong> Your microphone is fully disabled until a call is explicitly answered. Audio is routed P2P and is end-to-end encrypted.
               </span>
-            </div>
-            
-            <div style={{ marginTop: '16px' }}>
-              <AudioDeviceSelector
-                devices={audioDevices.audioInputs}
-                activeDeviceId={audioDevices.selectedInputId}
-                onSelect={(id) => {
-                  audioDevices.selectAudioInput(id);
-                  addLog(`Default microphone set to: ${id.slice(0,8)}...`, 'info');
-                }}
-                isPending={audioDevices.permissionState === 'prompt'}
-              />
             </div>
           </section>
         ) : callSession.isCalling && !callSession.isInCall ? (
