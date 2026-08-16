@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer from 'peerjs';
 import { generatePeerId } from '../utils/webrtc';
 import { ICE_SERVERS, TIMINGS } from '../constants/config';
+import { saveCallHistory } from '../components/RecentCalls';
 
-export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit }) {
+export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall }) {
   const [myId, setMyId] = useState('');
   const [status, setStatus] = useState('connecting'); // connecting, ready, reconnecting, error
   const peerRef = useRef(null);
@@ -13,10 +14,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   const destroyedRef = useRef(false);
 
   // Store callbacks in a ref to avoid infinite re-initialization loops
-  const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit });
+  const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall });
   useEffect(() => {
-    callbacksRef.current = { addLog, onIncomingCall, isInActiveCall, onRateLimitHit };
-  }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit]);
+    callbacksRef.current = { addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall };
+  }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall]);
 
   const initPeer = useCallback((idToRegister) => {
     if (destroyedRef.current) return;
@@ -44,9 +45,12 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     peer.on('call', (incomingCall) => {
       if (destroyedRef.current) return;
 
-      // Auto-reject if already busy in active call
+      // Auto-reject if already busy in active call & record as Missed Call
       if (callbacksRef.current.isInActiveCall && callbacksRef.current.isInActiveCall()) {
-        callbacksRef.current.addLog?.(`Auto-declined incoming call from ${incomingCall.peer} (Line Busy)`, 'warn');
+        const callerPeer = incomingCall.peer;
+        saveCallHistory(callerPeer, 'missed');
+        callbacksRef.current.addLog?.(`Missed call from ${callerPeer} (Line Busy - Call Rejected)`, 'warn');
+        callbacksRef.current.onMissedCall?.(callerPeer);
         try { incomingCall.close(); } catch (e) {}
         return;
       }

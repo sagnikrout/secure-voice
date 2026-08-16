@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Phone, Trash2, Clock } from 'lucide-react';
-import { sanitizePeerId } from '../utils/webrtc';
+import { Phone, PhoneMissed, Trash2, Clock } from 'lucide-react';
+import { sanitizePeerId, formatTimestamp } from '../utils/formatters';
 import { STORAGE_KEYS, TIMINGS } from '../constants/config';
 
 const EVENT_RECENT_CALLS_UPDATED = 'securevoice:recent_calls_updated';
@@ -83,49 +83,60 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
 
       {isOpen && (
         <div className="recents-body">
-          {filteredRecents.map(item => (
-            <div
-              key={item.id}
-              className="recent-item"
-              onClick={() => onSelectPeer(item.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectPeer(item.id)}
-            >
-              <div className="recent-avatar">
-                {item.id.substring(0, 2)}
+          {filteredRecents.map(item => {
+            const isMissed = item.type === 'missed';
+            return (
+              <div
+                key={item.id}
+                className={`recent-item ${isMissed ? 'missed' : ''}`}
+                onClick={() => onSelectPeer(item.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelectPeer(item.id)}
+              >
+                <div className={`recent-avatar ${isMissed ? 'missed' : ''}`}>
+                  {item.id.substring(0, 2)}
+                </div>
+                <div className="recent-info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="recent-id">{item.id}</span>
+                    {isMissed && (
+                      <span className="recent-tag-missed">
+                        <PhoneMissed className="w-3 h-3" />
+                        Missed
+                      </span>
+                    )}
+                  </div>
+                  <span className="recent-time">
+                    {formatTimestamp(item.timestamp) || new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div className="recent-actions">
+                  <button
+                    type="button"
+                    className={`icon-call-btn ${isMissed ? 'icon-call-btn-missed' : ''}`}
+                    title={`Call back ${item.id}`}
+                    aria-label={`Call ${item.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectPeer(item.id);
+                    }}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-delete-btn"
+                    title="Remove from recents"
+                    aria-label={`Remove ${item.id} from recents`}
+                    onClick={(e) => removeCall(item.id, e)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="recent-info">
-                <span className="recent-id">{item.id}</span>
-                <span className="recent-time">
-                  {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              <div className="recent-actions">
-                <button
-                  type="button"
-                  className="icon-call-btn"
-                  title={`Call ${item.id}`}
-                  aria-label={`Call ${item.id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectPeer(item.id);
-                  }}
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="icon-delete-btn"
-                  title="Remove from recents"
-                  aria-label={`Remove ${item.id} from recents`}
-                  onClick={(e) => removeCall(item.id, e)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="recents-footer">
             <button type="button" className="clear-recents-btn" onClick={clearAll}>
               Clear History
@@ -140,7 +151,12 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
 export const RecentCalls = memo(RecentCallsComponent);
 export default RecentCalls;
 
-export function saveCallHistory(peerId) {
+/**
+ * Persist call history record into localStorage.
+ * @param {string} peerId
+ * @param {'connected' | 'missed'} [type='connected']
+ */
+export function saveCallHistory(peerId, type = 'connected') {
   if (!peerId || typeof peerId !== 'string') return;
   const cleanId = sanitizePeerId(peerId);
   if (!cleanId) return;
@@ -149,7 +165,10 @@ export function saveCallHistory(peerId) {
     const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
     const list = saved ? JSON.parse(saved) : [];
     const filtered = Array.isArray(list) ? list.filter(r => r && r.id !== cleanId) : [];
-    const updated = [{ id: cleanId, timestamp: Date.now() }, ...filtered.slice(0, TIMINGS.MAX_RECENT_CALLS - 1)];
+    const updated = [
+      { id: cleanId, timestamp: Date.now(), type },
+      ...filtered.slice(0, TIMINGS.MAX_RECENT_CALLS - 1)
+    ];
     localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
     window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
   } catch (e) {

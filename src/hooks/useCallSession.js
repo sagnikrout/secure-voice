@@ -24,13 +24,14 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
-  // Timers & Stats Tracking
-  const dialTimeoutRef = useRef(null);
-  const incomingTimeoutRef = useRef(null);
-  const statsIntervalRef = useRef(null);
-  const timerIntervalRef = useRef(null);
-  const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
-  const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
+    // Timers & Stats Tracking
+    const dialTimeoutRef = useRef(null);
+    const incomingTimeoutRef = useRef(null);
+    const statsIntervalRef = useRef(null);
+    const timerIntervalRef = useRef(null);
+    const disconnectWatchdogRef = useRef(null);
+    const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
+    const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
 
   // Call States
   const [isInCall, setIsInCall] = useState(false);
@@ -114,6 +115,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     if (dialTimeoutRef.current) { clearTimeout(dialTimeoutRef.current); dialTimeoutRef.current = null; }
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
     if (statsIntervalRef.current) { clearInterval(statsIntervalRef.current); statsIntervalRef.current = null; }
+    if (disconnectWatchdogRef.current) { clearTimeout(disconnectWatchdogRef.current); disconnectWatchdogRef.current = null; }
 
     // 7. Stop Ringtone
     if (stopRingtoneRef.current) {
@@ -202,6 +204,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         });
       }
 
+      // Attach track ended listeners for instant hangup detection
+      if (remoteStream && typeof remoteStream.getAudioTracks === 'function') {
+        remoteStream.getAudioTracks().forEach(track => {
+          track.onended = () => {
+            callbacksRef.current.addLog?.('Remote audio track ended (Peer hung up)', 'info');
+            endCall();
+          };
+        });
+      }
+
       setIsInCall(true);
       setIsCalling(false);
       setConnectedPeer(call.peer);
@@ -224,16 +236,49 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             });
         }
 
+        const handleConnectionInterrupted = (reason) => {
+          if (!disconnectWatchdogRef.current) {
+            callbacksRef.current.addLog?.(`Network link interrupted (${reason}). Waiting for reconnect...`, 'warn');
+            callbacksRef.current.onStatusChange?.('reconnecting');
+            disconnectWatchdogRef.current = setTimeout(() => {
+              if (pc.connectionState === 'disconnected' || pc.iceConnectionState === 'disconnected') {
+                callbacksRef.current.addLog?.('Call ended (peer disconnected)', 'info');
+                endCall();
+              }
+            }, 2500);
+          }
+        };
+
+        const handleConnectionRecovered = () => {
+          if (disconnectWatchdogRef.current) {
+            clearTimeout(disconnectWatchdogRef.current);
+            disconnectWatchdogRef.current = null;
+            callbacksRef.current.onStatusChange?.('in-call');
+            callbacksRef.current.addLog?.('Peer connection re-established', 'ok');
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          const state = pc.connectionState;
+          if (state === 'closed' || state === 'failed') {
+            callbacksRef.current.addLog?.('Remote peer ended call or connection closed', 'info');
+            endCall();
+          } else if (state === 'disconnected') {
+            handleConnectionInterrupted('Peer Disconnected');
+          } else if (state === 'connected') {
+            handleConnectionRecovered();
+          }
+        };
+
         pc.oniceconnectionstatechange = () => {
           const state = pc.iceConnectionState;
-          if (state === 'disconnected') {
-            callbacksRef.current.addLog?.('Network connection unstable (reconnecting)...', 'warn');
-            callbacksRef.current.onStatusChange?.('reconnecting');
-          } else if (state === 'failed') {
-            callbacksRef.current.addLog?.('WebRTC connection failed', 'error');
+          if (state === 'failed' || state === 'closed') {
+            callbacksRef.current.addLog?.('WebRTC ICE connection failed', 'error');
             endCall();
+          } else if (state === 'disconnected') {
+            handleConnectionInterrupted('ICE Disconnected');
           } else if (state === 'connected' || state === 'completed') {
-            callbacksRef.current.onStatusChange?.('in-call');
+            handleConnectionRecovered();
           }
         };
 
@@ -303,9 +348,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     call.on('close', () => {
       if (!streamAttached) {
-        callbacksRef.current.addLog?.(`Peer ${call.peer} is busy or rejected call`, 'warn');
+        callbacksRef.current.addLog?.(`Peer ${call.peer} is busy on another call or unavailable`, 'warn');
         callbacksRef.current.onStatusChange?.('busy');
         setTimeout(() => callbacksRef.current.onStatusChange?.('ready'), 3500);
+      } else {
+        callbacksRef.current.addLog?.(`Call ended by remote peer (${call.peer})`, 'info');
       }
       endCall();
     });

@@ -14,7 +14,8 @@ import {
   Sun,
   Info,
   Activity,
-  ShieldAlert
+  ShieldAlert,
+  PhoneMissed
 } from 'lucide-react';
 
 import { useTheme } from './hooks/useTheme';
@@ -44,7 +45,9 @@ export default function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
+  const [missedCallNotice, setMissedCallNotice] = useState(null);
   const copyTimeoutRef = useRef(null);
+  const missedCallTimeoutRef = useRef(null);
 
   // Audio Device hook (dynamic inputs & outputs)
   const audioDevices = useAudioDevices();
@@ -69,6 +72,11 @@ export default function App() {
     onRateLimitHit: () => {
       setShowRateLimitToast(true);
       setTimeout(() => setShowRateLimitToast(false), 5000);
+    },
+    onMissedCall: (callerPeer) => {
+      setMissedCallNotice(callerPeer);
+      if (missedCallTimeoutRef.current) clearTimeout(missedCallTimeoutRef.current);
+      missedCallTimeoutRef.current = setTimeout(() => setMissedCallNotice(null), 5000);
     }
   });
 
@@ -385,6 +393,14 @@ export default function App() {
           <div className="toast toast-warning" role="alert">
             <ShieldAlert className="w-4 h-4 text-amber" />
             <span>Spam Prevention: Incoming call throttled</span>
+          </div>
+        )}
+
+        {/* Missed Call Banner Toast */}
+        {missedCallNotice && (
+          <div className="toast toast-warning" role="alert" style={{ background: 'var(--red-light)', borderColor: 'var(--red)', color: 'var(--red)' }}>
+            <PhoneMissed className="w-4 h-4 text-red" />
+            <span>Missed Call from <strong>{missedCallNotice}</strong> (Line Busy)</span>
           </div>
         )}
 

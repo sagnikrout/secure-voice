@@ -670,6 +670,40 @@ body {
   align-items: center;
 }
 
+.recent-item.missed {
+  border-color: rgba(255, 59, 48, 0.25);
+  background: color-mix(in srgb, var(--red) 4%, var(--card-2));
+}
+
+.recent-item.missed:hover {
+  border-color: var(--red);
+  background: var(--red-light);
+}
+
+.recent-avatar.missed {
+  background: linear-gradient(135deg, var(--red), #ff7675);
+}
+
+.recent-tag-missed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.icon-call-btn-missed {
+  color: var(--red);
+}
+
+.icon-call-btn-missed:hover {
+  background: var(--red);
+  color: #fff;
+}
+
 .recent-info {
   flex: 1;
   display: flex;

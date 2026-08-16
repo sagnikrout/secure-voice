@@ -50,6 +50,17 @@ describe('RecentCalls Component', () => {
     expect(screen.getByText('BOB-456')).toBeInTheDocument();
   });
 
+  it('renders missed calls with distinct Missed tag', () => {
+    saveCallHistory('CHARLIE99', 'missed');
+
+    render(<RecentCalls onSelectPeer={vi.fn()} currentPeerId="ME123" />);
+    const header = screen.getByRole('button', { name: /recent contacts/i });
+    fireEvent.click(header);
+
+    expect(screen.getByText('CHA-RLI-E99')).toBeInTheDocument();
+    expect(screen.getByText('Missed')).toBeInTheDocument();
+  });
+
   it('allows clearing call history', () => {
     saveCallHistory('CHARLIE');
     render(<RecentCalls onSelectPeer={vi.fn()} currentPeerId="ME123" />);
