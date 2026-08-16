@@ -1,4 +1,4 @@
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { ShieldCheck, X, Cpu, Wifi, Lock, Zap, Sliders, Server } from 'lucide-react';
 
 const SPECS = [
@@ -6,14 +6,18 @@ const SPECS = [
   { key: 'Audio Codec', val: 'Opus · 12 kbps (Low-latency)', icon: Cpu },
   { key: 'Noise Cancellation', val: 'Web Audio Gate + High-Pass 80Hz', icon: Sliders },
   { key: 'Bandwidth Cap', val: '16 kbps max (SDP b=AS)', icon: Zap },
-  { key: 'Silence Suppression', val: 'DTX Active (usedtx=1)', icon: Wifi },
+  { key: 'Packetization', val: 'ptime=40ms (Header-optimized)', icon: Zap },
+  { key: 'Loss Recovery', val: 'In-band FEC + RED Ready', icon: Wifi },
   { key: 'Connection Mode', val: 'Direct Peer-to-Peer (Mesh)', icon: ShieldCheck },
   { key: 'NAT Traversal', val: 'STUN / TURN (Metered Cloud)', icon: Server },
   { key: 'Signaling Protocol', val: 'PeerJS Cloud Engine', icon: Wifi }
 ];
 
 function InfoModalComponent({ onClose }) {
+  const closeBtnRef = useRef(null);
+
   useEffect(() => {
+    closeBtnRef.current?.focus();
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
     };
@@ -36,6 +40,7 @@ function InfoModalComponent({ onClose }) {
             <span id="info-modal-title" className="modal-title">How SecureVoice Works</span>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             className="close-btn"
             onClick={onClose}

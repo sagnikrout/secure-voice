@@ -3,6 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../App';
 
+vi.mock('peerjs', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      on: vi.fn(),
+      call: vi.fn(),
+      destroy: vi.fn()
+    }))
+  };
+});
+
 describe('App Integration', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -12,7 +22,7 @@ describe('App Integration', () => {
   it('renders branding and main UI elements', () => {
     render(<App />);
     expect(screen.getByText('SecureVoice')).toBeInTheDocument();
-    expect(screen.getByText('v2.6')).toBeInTheDocument();
+    expect(screen.getByText('v2.10')).toBeInTheDocument();
     expect(screen.getByText('Your Peer ID')).toBeInTheDocument();
     expect(screen.getByText('New Call')).toBeInTheDocument();
     expect(screen.getByText('Activity Log')).toBeInTheDocument();
@@ -22,7 +32,7 @@ describe('App Integration', () => {
     render(<App />);
     const input = screen.getByPlaceholderText("Enter Friend's Peer ID...");
     fireEvent.change(input, { target: { value: 'test-123!' } });
-    expect(input.value).toBe('TEST123');
+    expect(input.value).toBe('TES-T12-3');
   });
 
   it('toggles theme on dark mode button click', () => {

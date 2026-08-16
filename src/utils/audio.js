@@ -5,7 +5,7 @@
 let globalAudioCtx = null;
 
 /**
- * Get or create a shared AudioContext safely handling autoplay restrictions.
+ * Get or create a shared AudioContext for UI audio / ringtones safely handling autoplay restrictions.
  */
 export function getAudioContext() {
   if (typeof window === 'undefined') return null;
@@ -39,7 +39,8 @@ export async function unlockAudioContext() {
 }
 
 /**
- * Build Denoise pipeline: MediaStreamSource -> HighPass 80Hz -> DynamicsCompressor (Noise Gate) -> Destination
+ * Build isolated Denoise pipeline: MediaStreamSource -> HighPass 80Hz -> DynamicsCompressor (Noise Gate) -> Destination
+ * Uses an isolated AudioContext instance to avoid cross-talk with ringtones.
  */
 export function createDenoisePipeline(stream) {
   if (!stream || typeof stream.getAudioTracks !== 'function' || stream.getAudioTracks().length === 0) {
@@ -47,8 +48,11 @@ export function createDenoisePipeline(stream) {
   }
 
   try {
-    const ctx = getAudioContext();
-    if (!ctx) return { processedStream: stream, audioCtx: null, nodes: null };
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return { processedStream: stream, audioCtx: null, nodes: null };
+    
+    // Dedicated isolated context for the call session
+    const ctx = new AudioCtxClass();
 
     const source = ctx.createMediaStreamSource(stream);
 
@@ -165,6 +169,85 @@ export function playRingtone() {
       try {
         navigator.vibrate(0);
       } catch (e) {}
+    }
+  };
+}
+
+/**
+ * Pre-call hardware mic loopback test with delay node to avoid acoustic feedback.
+ * @param {string|null} deviceId
+ * @param {(level: number) => void} onLevel - Callback with normalized volume (0.0 - 1.0)
+ * @returns {Promise<() => void>} Stop callback
+ */
+export async function createMicLoopbackTest(deviceId, onLevel) {
+  let isRunning = true;
+  let intervalId = null;
+  let audioCtx = null;
+  let stream = null;
+
+  try {
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) throw new Error('AudioContext not supported');
+
+    audioCtx = new AudioCtxClass();
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        echoCancellation: true,
+        noiseSuppression: true
+      },
+      video: false
+    });
+
+    const source = audioCtx.createMediaStreamSource(stream);
+
+    // Delay node (250ms) to prevent acoustic squeal and let user hear loopback
+    const delay = audioCtx.createDelay();
+    delay.delayTime.setValueAtTime(0.25, audioCtx.currentTime);
+
+    // Gentle gain
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+    // Analyser for live VU meter
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    source.connect(delay);
+    delay.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.connect(analyser);
+
+    intervalId = setInterval(() => {
+      if (!isRunning) return;
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avg = sum / dataArray.length;
+      const normalized = Math.min(1, avg / 128);
+      onLevel?.(normalized);
+    }, 50);
+
+  } catch (err) {
+    console.warn('Loopback test setup failed:', err);
+    if (audioCtx && audioCtx.state !== 'closed') audioCtx.close().catch(() => {});
+    if (stream) stopMediaStream(stream);
+    throw err;
+  }
+
+  return function stopLoopbackTest() {
+    isRunning = false;
+    if (intervalId) clearInterval(intervalId);
+    if (stream) stopMediaStream(stream);
+    if (audioCtx && audioCtx.state !== 'closed') {
+      audioCtx.close().catch(() => {});
     }
   };
 }

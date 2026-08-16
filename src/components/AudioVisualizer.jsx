@@ -11,6 +11,7 @@ function AudioVisualizerComponent({ stream, isActive }) {
     if (!stream || !isActive || !canvasRef.current) return;
 
     let animationFrameId;
+    let throttleTimeoutId;
     let analyser;
     let sourceNode;
 
@@ -29,10 +30,17 @@ function AudioVisualizerComponent({ stream, isActive }) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
+      // Pre-create gradient once to eliminate 60fps GC allocations
+      const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+      gradient.addColorStop(0, '#007aff');
+      gradient.addColorStop(1, '#2ecc71');
+
       const render = () => {
         if (document.hidden) {
-          // Skip drawing when page is hidden
-          animationFrameId = requestAnimationFrame(render);
+          // Throttle to 1 poll per second when hidden to conserve mobile CPU & battery
+          throttleTimeoutId = setTimeout(() => {
+            animationFrameId = requestAnimationFrame(render);
+          }, 1000);
           return;
         }
 
@@ -42,15 +50,10 @@ function AudioVisualizerComponent({ stream, isActive }) {
         const barWidth = (canvas.width / bufferLength) * 2;
         let x = 0;
 
+        ctx.fillStyle = gradient;
         for (let i = 0; i < bufferLength; i++) {
           const barHeight = (dataArray[i] / 255) * canvas.height * 0.85;
 
-          // Gradient color: Cyan to Blue
-          const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
-          gradient.addColorStop(0, '#007aff');
-          gradient.addColorStop(1, '#5856d6');
-
-          ctx.fillStyle = gradient;
           ctx.beginPath();
           if (typeof ctx.roundRect === 'function') {
             ctx.roundRect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight, 3);
@@ -72,6 +75,7 @@ function AudioVisualizerComponent({ stream, isActive }) {
 
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (throttleTimeoutId) clearTimeout(throttleTimeoutId);
       if (sourceNode) {
         try { sourceNode.disconnect(); } catch (e) {}
       }

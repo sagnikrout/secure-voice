@@ -1,19 +1,22 @@
 {
   "name": "secure-voice",
   "private": true,
-  "version": "2.6.0",
+  "version": "2.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:sim": "node scripts/webrtc-simulation-runner.js",
+    "test:network": "node scripts/simulate-network-impairments.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
     "lucide-react": "^0.344.0",
     "peerjs": "^1.5.4",
     "react": "^18.2.0",
@@ -27,6 +30,7 @@
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^6.0.5",
     "jsdom": "^30.0.1",
+    "playwright": "^1.62.1",
     "vite": "^8.2.1",
     "vitest": "^1.6.1"
   }
