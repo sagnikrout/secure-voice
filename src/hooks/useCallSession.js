@@ -8,6 +8,9 @@ import {
 import { transformOpusSdp, getQualityRating, generateSafetyCode, applySenderBitrate } from '../utils/webrtc';
 import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../utils/networkAdaptation';
 import { IceRestartManager } from '../utils/iceRestartManager';
+import { JitterBufferController } from '../utils/jitterBufferController';
+import { PacketPacer } from '../utils/packetPacer';
+import { TurnRelayManager } from '../utils/turnManager';
 import { saveCallHistory } from '../components/RecentCalls';
 import {
   setAudioOutputMode,
@@ -36,10 +39,13 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
-  // Milestone 3: Telemetry Monitor, Bitrate Controller, and ICE Restart Manager Refs
+  // Milestone 3 & 4: Telemetry Monitor, Bitrate Controller, ICE Restart, Jitter Buffer, Packet Pacer, and TURN Manager Refs
   const telemetryMonitorRef = useRef(null);
   const bitrateControllerRef = useRef(new AdaptiveBitrateController());
   const iceRestartManagerRef = useRef(null);
+  const jitterControllerRef = useRef(new JitterBufferController({ onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
+  const packetPacerRef = useRef(new PacketPacer({ onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
+  const turnRelayManagerRef = useRef(new TurnRelayManager(null, { onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
 
   // Timers & Stats Tracking
   const dialTimeoutRef = useRef(null);
@@ -320,6 +326,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
         pc.onconnectionstatechange = () => {
           iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
+          if (pc.connectionState === 'connected') {
+            turnRelayManagerRef.current.recordP2PSuccess();
+          } else if (pc.connectionState === 'failed') {
+            turnRelayManagerRef.current.recordP2PFailure();
+          }
           if (pc.connectionState === 'closed') {
             endCall();
           }
@@ -327,6 +338,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
         pc.oniceconnectionstatechange = () => {
           iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
+          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            turnRelayManagerRef.current.recordP2PSuccess();
+          } else if (pc.iceConnectionState === 'failed') {
+            turnRelayManagerRef.current.recordP2PFailure();
+          }
         };
 
         // Instantiate NetworkTelemetryMonitor & wire to AdaptiveBitrateController
@@ -341,7 +357,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             setQuality(getQualityRating(snapshot.rttSeconds));
           }
 
-          // Adaptive Bitrate Evaluation
+          // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation
           const evaluation = bitrateControllerRef.current.evaluate(snapshot);
           if (evaluation.tierChanged) {
             setActiveTier(evaluation.currentTier);
@@ -351,6 +367,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
               callbacksRef.current.addLog?.(evaluation.reason, 'info');
             }
+
+            // 1. Dynamic Jitter Buffer Target Adjustment (NetEQ margin tuning)
+            jitterControllerRef.current.applyForTier(evaluation.currentTier.name, pc);
+
+            // 2. Packet Pacing & Traffic Shaping (router queue overflow prevention)
+            await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
           }
         }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
 

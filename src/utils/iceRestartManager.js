@@ -108,6 +108,32 @@ export class IceRestartManager {
   }
 
   /**
+   * Force relay-only ICE restart by reconfiguring the PeerConnection.
+   * Used when repeated P2P ICE candidates keep failing — skips the
+   * host/srflx gathering phase entirely and goes straight to TURN relay.
+   * @param {RTCPeerConnection} pc
+   * @param {boolean} isCaller
+   * @param {Function} [signalingCallback]
+   */
+  async forceRelayRestart(pc, isCaller = true, signalingCallback) {
+    if (!pc || pc.signalingState === 'closed') return;
+    try {
+      const currentConfig = pc.getConfiguration?.() || {};
+      const relayConfig = {
+        ...currentConfig,
+        iceTransportPolicy: 'relay'
+      };
+      if (typeof pc.setConfiguration === 'function') {
+        pc.setConfiguration(relayConfig);
+        this.onLog?.('Switched to relay-only ICE transport (TURN forced fallback)', 'warn');
+      }
+    } catch (e) {
+      this.onLog?.(`Could not set relay-only config: ${e.message}`, 'warn');
+    }
+    return this.startIceRestart(pc, isCaller, 'Forced relay-only fallback', signalingCallback);
+  }
+
+  /**
    * Execute ICE restart with exponential backoff
    */
   async startIceRestart(pc, isCaller = true, reason = 'ICE Restart', signalingCallback) {
@@ -144,6 +170,17 @@ export class IceRestartManager {
       if (!pc || pc.signalingState === 'closed' || pc.connectionState === 'closed') return;
 
       try {
+        // Automatic escalation to TURN relay if P2P restarts continue failing
+        if (this.retryCount >= 3) {
+          try {
+            const currentConfig = pc.getConfiguration?.() || {};
+            if (currentConfig.iceTransportPolicy !== 'relay' && typeof pc.setConfiguration === 'function') {
+              pc.setConfiguration({ ...currentConfig, iceTransportPolicy: 'relay' });
+              this.onLog?.(`Escalating to relay-only ICE transport (Attempt ${this.retryCount})`, 'warn');
+            }
+          } catch (e) {}
+        }
+
         if (typeof pc.restartIce === 'function') {
           pc.restartIce();
         }
