@@ -78,6 +78,14 @@ export function generatePeerId(length = 9) {
  * @param {number|string} [options.redPayloadType] - Custom dynamic payload type for RED
  * @returns {string} Munged SDP string
  */
+/**
+ * Sanitize SDP string to strip non-printable characters and malformed control bytes
+ */
+export function sanitizeSdp(sdp: string): string {
+  if (!sdp || typeof sdp !== 'string') return '';
+  return sdp.replace(/[^\x20-\x7E\r\n]/g, '').trim();
+}
+
 export function transformOpusSdp(sdp: string, options: any = {}): string {
   if (!sdp || typeof sdp !== 'string') return sdp;
 

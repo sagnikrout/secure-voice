@@ -1,6 +1,4 @@
-/**
- * Application Constants & Configuration
- */
+import { ExtendedLadderTier } from '../types';
 
 export const APP_NAME = 'SecureVoice';
 export const APP_VERSION = 'v3.1.0';
@@ -144,6 +142,172 @@ export const LADDER_TIERS = [
     rttThresholdMs: 99999,        // > 1100ms RTT
     jitterThresholdMs: 99999,     // > 250ms jitter
     concealmentThreshold: 1.0     // > 20% concealment
+  }
+];
+
+// Extended 9-Tier Survival & Wideband Bitrate Ladder
+export const EXTENDED_BITRATE_LADDER: ExtendedLadderTier[] = [
+  {
+    id: 0,
+    name: 'ULTRA_LOW',
+    label: 'Emergency 1.2kbps',
+    maxBitrateBps: 1200,
+    bandwidthCapKbps: 3,
+    ptimeMs: 120,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 50,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.70,
+    rttThresholdMs: 99999,
+    jitterThresholdMs: 99999,
+    concealmentThreshold: 0.50,
+    codec: 'opus',
+    mode: 'celt-only',
+    description: 'Emergency survival mode for extreme 2G/Satellite high-loss links (>50% loss)'
+  },
+  {
+    id: 1,
+    name: 'EXTREME',
+    label: 'Survival 2.4kbps',
+    maxBitrateBps: 2400,
+    bandwidthCapKbps: 4,
+    ptimeMs: 100,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 50,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.50,
+    rttThresholdMs: 1500,
+    jitterThresholdMs: 350,
+    concealmentThreshold: 0.35,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: 'Extreme packet loss survival profile (35-50% loss)'
+  },
+  {
+    id: 2,
+    name: 'ULTRA',
+    label: 'Satellite 3.2kbps',
+    maxBitrateBps: 3200,
+    bandwidthCapKbps: 4,
+    ptimeMs: 100,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 50,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.35,
+    rttThresholdMs: 1100,
+    jitterThresholdMs: 250,
+    concealmentThreshold: 0.20,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: '2G / satellite standard survival tier'
+  },
+  {
+    id: 3,
+    name: 'EXT',
+    label: '2G Survival 3.8kbps',
+    maxBitrateBps: 3800,
+    bandwidthCapKbps: 5,
+    ptimeMs: 80,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 50,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.25,
+    rttThresholdMs: 850,
+    jitterThresholdMs: 200,
+    concealmentThreshold: 0.15,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: 'Congested 2G cell edge'
+  },
+  {
+    id: 4,
+    name: 'HL',
+    label: '2G High Loss 4.5kbps',
+    maxBitrateBps: 4500,
+    bandwidthCapKbps: 6,
+    ptimeMs: 80,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 45,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.15,
+    rttThresholdMs: 600,
+    jitterThresholdMs: 120,
+    concealmentThreshold: 0.08,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: 'Elevated loss 2G tier'
+  },
+  {
+    id: 5,
+    name: 'LB',
+    label: '2G Congested 5.2kbps',
+    maxBitrateBps: 5200,
+    bandwidthCapKbps: 7,
+    ptimeMs: 80,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 35,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.08,
+    rttThresholdMs: 400,
+    jitterThresholdMs: 70,
+    concealmentThreshold: 0.05,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: '2G normal congested link'
+  },
+  {
+    id: 6,
+    name: 'STD',
+    label: '2G Normal 6.5kbps',
+    maxBitrateBps: 6500,
+    bandwidthCapKbps: 8,
+    ptimeMs: 60,
+    maxPtimeMs: 100,
+    fecPacketLossPerc: 25,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.03,
+    rttThresholdMs: 250,
+    jitterThresholdMs: 40,
+    concealmentThreshold: 0.02,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: 'Standard voice quality'
+  },
+  {
+    id: 7,
+    name: 'HQ',
+    label: '2G Stable 8.0kbps',
+    maxBitrateBps: 8000,
+    bandwidthCapKbps: 10,
+    ptimeMs: 60,
+    maxPtimeMs: 80,
+    fecPacketLossPerc: 20,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.01,
+    rttThresholdMs: 150,
+    jitterThresholdMs: 25,
+    concealmentThreshold: 0.01,
+    codec: 'opus',
+    mode: 'silk-only',
+    description: 'High quality narrowband voice'
+  },
+  {
+    id: 8,
+    name: 'HQ_PLUS',
+    label: 'Wideband HD 24kbps',
+    maxBitrateBps: 24000,
+    bandwidthCapKbps: 28,
+    ptimeMs: 40,
+    maxPtimeMs: 60,
+    fecPacketLossPerc: 10,
+    maxPlaybackRate: 16000,
+    lossThreshold: 0.005,
+    rttThresholdMs: 80,
+    jitterThresholdMs: 15,
+    concealmentThreshold: 0.005,
+    codec: 'opus',
+    mode: 'wideband',
+    description: 'Premium wideband voice on robust broadband / 5G / Wi-Fi links'
   }
 ];
 

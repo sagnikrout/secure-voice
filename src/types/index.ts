@@ -99,3 +99,68 @@ export interface CallHistoryItem {
   direction?: 'incoming' | 'outgoing';
   duration?: number;
 }
+
+export interface AudioResourceManagerStats {
+  trackedContexts: number;
+  trackedNodes: number;
+  trackedStreams: number;
+  trackedTracks: number;
+}
+
+export type CircuitBreakerState = 'closed' | 'open' | 'half-open';
+
+export interface IceFailureRecord {
+  timestamp: number;
+  reason: string;
+  stackTrace?: string;
+  attempt?: number;
+}
+
+export interface CircuitBreakerOptions {
+  circuitBreakerThreshold?: number;
+  circuitBreakerResetTime?: number;
+  failureWindowMs?: number;
+}
+
+export interface PacketPacerMetrics {
+  bufferOccupancy?: number;
+  rtt?: number;
+  loss?: number;
+  jitter?: number;
+  concealmentRatio?: number;
+}
+
+export interface StructuredLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'debug' | 'info' | 'warn' | 'error' | 'ok';
+  event: string;
+  sessionId?: string;
+  peerId?: string;
+  data?: Record<string, any>;
+  msg?: string;
+}
+
+export interface StructuredLoggerOptions {
+  maxEntries?: number;
+  persistKey?: string;
+  enableLocalStorage?: boolean;
+  onLog?: (entry: StructuredLogEntry) => void;
+}
+
+export interface ExtendedLadderTier extends LadderTier {
+  codec?: 'opus' | 'silk' | 'celt';
+  mode?: 'celt-only' | 'silk-only' | 'hybrid' | 'wideband';
+  description?: string;
+  targetLossMax?: number;
+}
+
+export interface AuditoryToneConfig {
+  frequency: number | number[];
+  durationMs: number;
+  intervalMs?: number;
+  type?: OscillatorType;
+  gain?: number;
+}
+
+export type CallAudioCue = 'ringing' | 'connected' | 'disconnected' | 'busy' | 'reconnecting' | 'verified';

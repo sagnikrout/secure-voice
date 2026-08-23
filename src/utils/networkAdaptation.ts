@@ -7,10 +7,11 @@
  * - applySenderBitrate: Utility to configure RTCRtpSender encoding parameters.
  */
 
-import { LADDER_TIERS, ADAPTATION_CONFIG, TIMINGS } from '../constants/config';
+import { LADDER_TIERS, EXTENDED_BITRATE_LADDER, ADAPTATION_CONFIG, TIMINGS } from '../constants/config';
+import { ExtendedLadderTier } from '../types';
 import { applySenderBitrate } from './webrtc';
 
-export { applySenderBitrate };
+export { applySenderBitrate, EXTENDED_BITRATE_LADDER };
 
 /**
  * High-Frequency Multi-Dimensional WebRTC Telemetry Monitor
@@ -454,4 +455,58 @@ export class AdaptiveBitrateController {
     this.smoothedConcealment = 0;
     this.initialized = false;
   }
+}
+
+/**
+ * Multi-dimensional tier selector across the 9-tier extended survival ladder
+ * @param {Object} metrics - Telemetry metrics (loss rate, RTT, Jitter)
+ * @returns {ExtendedLadderTier}
+ */
+export function selectExtendedTier(metrics: { packetLossPercent?: number; loss?: number; rtt?: number; jitter?: number }): ExtendedLadderTier {
+  const effectiveLoss = (metrics.loss !== undefined ? metrics.loss : (metrics.packetLossPercent ? metrics.packetLossPercent / 100 : 0));
+  const rtt = metrics.rtt || 0;
+  const jitter = metrics.jitter || 0;
+
+  // Emergency survival (CELT/SILK 1.2kbps)
+  if (effectiveLoss > 0.50 || (effectiveLoss > 0.35 && rtt > 1200)) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'ULTRA_LOW') || EXTENDED_BITRATE_LADDER[0];
+  }
+  // Extreme survival (2.4kbps)
+  if (effectiveLoss > 0.35 || (effectiveLoss > 0.25 && rtt > 900)) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'EXTREME') || EXTENDED_BITRATE_LADDER[1];
+  }
+  // Satellite (3.2kbps)
+  if (effectiveLoss > 0.25 || (effectiveLoss > 0.15 && rtt > 700)) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'ULTRA') || EXTENDED_BITRATE_LADDER[2];
+  }
+  // 2G Survival (3.8kbps)
+  if (effectiveLoss > 0.15 || rtt > 600 || jitter > 180) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'EXT') || EXTENDED_BITRATE_LADDER[3];
+  }
+  // 2G High Loss (4.5kbps)
+  if (effectiveLoss > 0.08 || rtt > 450 || jitter > 100) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'HL') || EXTENDED_BITRATE_LADDER[4];
+  }
+  // 2G Congested (5.2kbps)
+  if (effectiveLoss > 0.05 || rtt > 350 || jitter > 60) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'LB') || EXTENDED_BITRATE_LADDER[5];
+  }
+  // 2G Normal (6.5kbps)
+  if (effectiveLoss > 0.02 || rtt > 200 || jitter > 35) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'STD') || EXTENDED_BITRATE_LADDER[6];
+  }
+  // Wideband HD (24kbps) on premium broadband/5G
+  if (effectiveLoss < 0.005 && rtt < 80 && jitter < 15) {
+    return EXTENDED_BITRATE_LADDER.find(t => t.name === 'HQ_PLUS') || EXTENDED_BITRATE_LADDER[8];
+  }
+
+  // 2G Stable (8.0kbps) standard ceiling
+  return EXTENDED_BITRATE_LADDER.find(t => t.name === 'HQ') || EXTENDED_BITRATE_LADDER[7];
+}
+
+/**
+ * Retrieve an extended tier by name
+ */
+export function getExtendedTierByName(name: string): ExtendedLadderTier | undefined {
+  return EXTENDED_BITRATE_LADDER.find(t => t.name.toUpperCase() === name.toUpperCase());
 }

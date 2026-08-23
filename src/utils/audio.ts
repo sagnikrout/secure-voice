@@ -1,6 +1,4 @@
-/**
- * Web Audio API & Audio Device Helper Utilities
- */
+import { audioResourceManager } from './resourceManager';
 
 let globalAudioCtx = null;
 
@@ -290,14 +288,21 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       dest
     };
 
+    // Register resources with AudioResourceManager
+    audioResourceManager.registerStream(stream);
+    audioResourceManager.registerStream(dest.stream);
+    audioResourceManager.registerContext(ctx);
+    audioResourceManager.registerNodes(ctx, nodes);
+
     const cleanup = () => {
       if (gateIntervalId) {
         clearInterval(gateIntervalId);
         gateIntervalId = null;
       }
+      audioResourceManager.cleanupContext(ctx);
       Object.values(nodes).forEach(node => {
-        if (node && typeof node.disconnect === 'function') {
-          try { node.disconnect(); } catch (e) {}
+        if (node && typeof (node as any).disconnect === 'function') {
+          try { (node as any).disconnect(); } catch (e) {}
         }
       });
       if (ctx && ctx.state !== 'closed') {
@@ -547,6 +552,7 @@ export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
 export function stopMediaStream(stream, audioCtx = null, nodes = null) {
   // 1. Stop all tracks and disable them
   if (stream) {
+    audioResourceManager.cleanupStream(stream);
     const safeStopTrack = (track) => {
       if (!track) return;
       try {
@@ -607,14 +613,17 @@ export function stopMediaStream(stream, audioCtx = null, nodes = null) {
     }
   }
 
-  // 3. Close AudioContext
-  if (audioCtx && audioCtx.state !== 'closed') {
-    try {
-      if (typeof audioCtx.close === 'function') {
-        audioCtx.close().catch(() => {});
+  // 3. Close AudioContext & cleanup from resource manager
+  if (audioCtx) {
+    audioResourceManager.cleanupContext(audioCtx);
+    if (audioCtx.state !== 'closed') {
+      try {
+        if (typeof audioCtx.close === 'function') {
+          audioCtx.close().catch(() => {});
+        }
+      } catch (e) {
+        console.warn('Error closing AudioContext:', e);
       }
-    } catch (e) {
-      console.warn('Error closing AudioContext:', e);
     }
   }
 }

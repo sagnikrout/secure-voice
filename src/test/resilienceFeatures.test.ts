@@ -153,6 +153,23 @@ describe('Advanced Network Resilience Features', () => {
       expect(await pacer.applyForTier('HQ', 20000, null)).toBe(false);
       expect(await pacer.applyForTier('HQ', 20000, { getSenders: () => [] })).toBe(false);
     });
+
+    it('dynamically adapts headroom based on buffer occupancy and loss metrics', () => {
+      const onLog = vi.fn();
+      const pacer = new PacketPacer({ onLog });
+      expect(pacer.getHeadroomPercent()).toBe(15); // 0.85 default
+
+      // High loss / high buffer occupancy -> increase headroom (reduce factor)
+      pacer.updateHeadroom({ bufferOccupancy: 85, loss: 0.18, jitter: 95 });
+      expect(pacer.headroomFactor).toBeLessThan(0.85);
+      expect(pacer.getHeadroomPercent()).toBeGreaterThan(15);
+      expect(onLog).toHaveBeenCalledWith(expect.stringContaining('Pacer headroom dynamically adjusted'), 'debug');
+
+      // Reset & test clean network -> decrease headroom (increase factor)
+      pacer.setHeadroomFactor(0.80);
+      pacer.updateHeadroom({ bufferOccupancy: 10, loss: 0.01, jitter: 15 });
+      expect(pacer.headroomFactor).toBeGreaterThan(0.80);
+    });
   });
 
   describe('4. IceRestartManager — Force Relay Fallback & Escalation', () => {

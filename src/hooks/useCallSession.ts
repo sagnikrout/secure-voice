@@ -19,6 +19,9 @@ import {
   addAudioFocusListener
 } from '../utils/audioRouting';
 import { TIMINGS, LADDER_TIERS } from '../constants/config';
+import { audioResourceManager } from '../utils/resourceManager';
+import { structuredLogger } from '../utils/structuredLogger';
+import { auditoryFeedback } from '../utils/auditoryFeedback';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state
@@ -143,6 +146,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     }
     stopMediaStream(rawStreamRef.current);
     stopMediaStream(processedStreamRef.current, audioCtxRef.current, pipelineNodesRef.current);
+    audioResourceManager.cleanupAll();
     rawStreamRef.current = null;
     processedStreamRef.current = null;
     audioCtxRef.current = null;
@@ -160,7 +164,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     // 8. Reset states
     stopTimer();
-    setIsInCall(false);
+    setIsInCall(prevInCall => {
+      if (prevInCall) {
+        auditoryFeedback.notifyDisconnected();
+      }
+      return false;
+    });
     setIsCalling(false);
     setConnectedPeer('');
     setIsMuted(false);
@@ -268,6 +277,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       setIsCalling(false);
       setConnectedPeer(call.peer);
       callbacksRef.current.onStatusChange?.('in-call');
+      auditoryFeedback.notifyConnected();
       startTimer();
       saveCallHistory(call.peer);
       callbacksRef.current.addLog?.(`P2P encrypted audio stream connected with ${call.peer}`, 'ok');
@@ -296,10 +306,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           onStatusChange: (status) => {
             if (status === 'in-call') {
               setIsInCall(true);
+            } else if (status === 'reconnecting') {
+              auditoryFeedback.notifyReconnecting();
             }
             callbacksRef.current.onStatusChange?.(status);
           },
           onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
+          onDiagnostic: (event, data) => {
+            const level = event.includes('fail') || event.includes('tripped') ? 'warn' : 'info';
+            structuredLogger.log(level, event, data);
+          },
           onFatalDisconnect: () => {
             callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
             endCall();
@@ -358,6 +374,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             setQuality(getQualityRating(snapshot.rttSeconds));
           }
 
+          // Dynamic Adaptive Headroom Scaling for Packet Pacer
+          if (snapshot) {
+            packetPacerRef.current.updateHeadroom({
+              bufferOccupancy: snapshot.avgJitterBufferDelayMs ? Math.min(100, Math.round(snapshot.avgJitterBufferDelayMs / 2)) : undefined,
+              loss: snapshot.effectiveLossRate,
+              jitter: snapshot.jitterMs,
+              rtt: snapshot.rttMs ?? undefined
+            });
+          }
+
           // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation
           const evaluation = bitrateControllerRef.current.evaluate(snapshot);
           if (evaluation.tierChanged) {
@@ -384,6 +410,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     call.on('close', () => {
       if (!streamAttached) {
+        auditoryFeedback.notifyBusy();
         callbacksRef.current.addLog?.(`Peer ${call.peer} is busy on another call or unavailable`, 'warn');
         callbacksRef.current.onStatusChange?.('busy');
         setTimeout(() => callbacksRef.current.onStatusChange?.('ready'), 3500);
@@ -407,6 +434,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       setIsCalling(true);
       callbacksRef.current.onStatusChange?.('calling');
       callbacksRef.current.addLog?.(`Dialing encrypted call to ${targetPeerId}...`, 'info');
+      structuredLogger.setSession(`call_${Date.now().toString(36)}`, targetPeerId);
+      structuredLogger.info('call-dialing', { targetPeer: targetPeerId, initiator: myPeerId });
 
       const stream = await acquireMicrophone();
       const call = peerInstance.call(targetPeerId, stream, {
@@ -437,6 +466,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const handleIncomingCall = useCallback((call) => {
     setIncomingCall(call);
     callbacksRef.current.addLog?.(`Incoming call from ${call.peer}`, 'warn');
+    structuredLogger.setSession(`call_${Date.now().toString(36)}`, call?.peer);
+    structuredLogger.info('call-incoming', { callerPeer: call?.peer });
 
     stopRingtoneRef.current = playRingtone();
 
