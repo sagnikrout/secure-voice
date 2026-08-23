@@ -7,8 +7,14 @@
 
 import { EncryptedSignalPayload } from './types';
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  if (typeof Buffer !== 'undefined') {
+    if (buffer instanceof Uint8Array) {
+      return Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength).toString('base64');
+    }
+    return Buffer.from(buffer).toString('base64');
+  }
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -16,13 +22,17 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
+function base64ToArrayBuffer(base64: string): Uint8Array {
+  if (typeof Buffer !== 'undefined') {
+    const buf = Buffer.from(base64, 'base64');
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  }
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes;
 }
 
 export class E2ESignalingProtocol {
@@ -152,7 +162,7 @@ export class E2ESignalingProtocol {
     }
 
     const sharedKey = await this.deriveSharedKey(encrypted.ephemeralPublicKey);
-    const iv = new Uint8Array(base64ToArrayBuffer(encrypted.iv));
+    const iv = base64ToArrayBuffer(encrypted.iv);
     const ciphertext = base64ToArrayBuffer(encrypted.ciphertext);
 
     const decryptedBuffer = await crypto.subtle.decrypt(

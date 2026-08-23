@@ -33,3 +33,4 @@ android/local.properties
 android/capacitor-cordova-android-plugins/build
 *.apk
 !SecureVoice-v3.1.0.apk
+!SecureVoice-v3.2.0.apk
