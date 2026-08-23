@@ -70,6 +70,22 @@ assert(mungedSdpExt.includes('b=AS:8'), 'SDP session bandwidth constrained to 8 
 assert(mungedSdpExt.includes('a=ptime:60'), 'Opus ptime set to 60ms to reduce header overhead');
 assert(mungedSdpExt.includes('a=maxptime:120'), 'Opus maxptime set to 120ms');
 
+// Ultra 3.2 kbps Narrowband Satellite SDP test
+const mungedSdpUltra = transformOpusSdp(sampleSdp, {
+  bitrate: 3200,
+  bandwidthCapKbps: 4,
+  ptime: 100,
+  maxptime: 120,
+  packetLossPerc: 50,
+  maxPlaybackRate: 8000,
+  enableRed: true,
+  redPayloadType: 63
+});
+
+assert(mungedSdpUltra.includes('maxaveragebitrate=3200'), 'Opus bitrate throttled down to 3200 bps (3.2 kbps ultra floor)');
+assert(mungedSdpUltra.includes('b=AS:4'), 'SDP bandwidth capped to 4 kbps session limit');
+assert(mungedSdpUltra.includes('a=ptime:100'), 'Opus ptime set to 100ms (10 pkts/sec) to minimize header overhead');
+
 // -------------------------------------------------------------
 // Benchmark 2: Network Profile Simulation & Adaptive Ladder
 // -------------------------------------------------------------

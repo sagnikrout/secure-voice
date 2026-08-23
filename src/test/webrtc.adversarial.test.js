@@ -392,24 +392,24 @@ describe('WebRTC Adversarial Stress Suite — Milestone 2 (R1 Transport)', () =>
       }
     });
 
-    it('clamps extreme out-of-range bitrates to [6000, 32000]', async () => {
+    it('clamps extreme out-of-range bitrates to [3000, 32000]', async () => {
       const mockSender = {
         getParameters: vi.fn(() => ({ encodings: [{}] })),
         setParameters: vi.fn().mockResolvedValue(undefined)
       };
 
-      // Sub-6000 bitrates
+      // Sub-3000 bitrates
       await applySenderBitrate(mockSender, -50000);
-      expect(mockSender.setParameters.mock.calls[0][0].encodings[0].maxBitrate).toBe(6000);
+      expect(mockSender.setParameters.mock.calls[0][0].encodings[0].maxBitrate).toBe(3000);
 
       await applySenderBitrate(mockSender, 0);
-      expect(mockSender.setParameters.mock.calls[1][0].encodings[0].maxBitrate).toBe(6000);
+      expect(mockSender.setParameters.mock.calls[1][0].encodings[0].maxBitrate).toBe(3000);
 
       await applySenderBitrate(mockSender, 100);
-      expect(mockSender.setParameters.mock.calls[2][0].encodings[0].maxBitrate).toBe(6000);
+      expect(mockSender.setParameters.mock.calls[2][0].encodings[0].maxBitrate).toBe(3000);
 
-      await applySenderBitrate(mockSender, 5999);
-      expect(mockSender.setParameters.mock.calls[3][0].encodings[0].maxBitrate).toBe(6000);
+      await applySenderBitrate(mockSender, 2999);
+      expect(mockSender.setParameters.mock.calls[3][0].encodings[0].maxBitrate).toBe(3000);
 
       // Above-32000 bitrates
       await applySenderBitrate(mockSender, 32001);

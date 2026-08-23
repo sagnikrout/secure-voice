@@ -335,8 +335,8 @@ export async function applySenderBitrate(sender, bitrateBps, priority = 'high') 
   if (isNaN(bitrate) || bitrate === null) {
     bitrate = 12000;
   }
-  if (bitrate < 6000) {
-    bitrate = 6000;
+  if (bitrate < 3000) {
+    bitrate = 3000;
   } else if (bitrate > 32000) {
     bitrate = 32000;
   }

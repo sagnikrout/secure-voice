@@ -570,7 +570,7 @@ describe('Network Quality Adaptation Engine (src/test/networkAdaptation.test.js)
     it('controller .reset() restores initial tier (Tier 0/HQ), resets EMA filters and recovery counters', () => {
       const controller = new AdaptiveBitrateController({ initialTierIndex: 0 });
       controller.evaluate({ effectiveLossRate: 0.50, rttMs: 900, jitterMs: 200, concealmentRatio: 0.20 });
-      expect(controller.getCurrentTier().name).toBe('EXT');
+      expect(controller.getCurrentTier().name).toBe('ULTRA');
 
       controller.reset(0);
       expect(controller.getCurrentTier().name).toBe('HQ');

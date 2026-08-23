@@ -34,7 +34,7 @@ export const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 // Opus Codec & Packetization Constraints
 export const OPUS_CONFIG = {
   MAX_AVERAGE_BITRATE: '12000', // 12 kbps default target bitrate for mono voice
-  MIN_AVERAGE_BITRATE: '6000',  // 6 kbps extreme low-bandwidth floor
+  MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps ultra-survival bandwidth floor
   HIGH_AVERAGE_BITRATE: '20000', // 20 kbps high-quality ceiling
   USE_DTX: '1',                 // Discontinuous Transmission (silence suppression)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
@@ -50,7 +50,7 @@ export const OPUS_CONFIG = {
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
 };
 
-// 5-Tier Adaptive Bitrate Ladder Configuration
+// 6-Tier Adaptive Bitrate Ladder Configuration (down to 3.2 kbps Ultra-Survival)
 export const LADDER_TIERS = [
   {
     id: 0,
@@ -115,17 +115,32 @@ export const LADDER_TIERS = [
   {
     id: 4,
     name: 'EXT',
-    label: 'Extreme Survival Mode',
+    label: 'Extreme Survival',
     maxBitrateBps: 6000,
     bandwidthCapKbps: 8,
-    ptimeMs: 60,
+    ptimeMs: 80,
     maxPtimeMs: 120,
     fecPacketLossPerc: 50,
     maxPlaybackRate: 8000,        // Narrowband SILK focus
-    lossThreshold: 1.0,           // > 25% loss
-    rttThresholdMs: 99999,        // > 800ms RTT
-    jitterThresholdMs: 99999,     // > 180ms jitter
-    concealmentThreshold: 1.0     // > 15% concealment
+    lossThreshold: 0.35,          // 25% - 35% loss
+    rttThresholdMs: 1000,         // 800ms - 1000ms RTT
+    jitterThresholdMs: 250,       // 180ms - 250ms jitter
+    concealmentThreshold: 0.20    // 15% - 20% concealment
+  },
+  {
+    id: 5,
+    name: 'ULTRA',
+    label: 'Ultra 3kbps Satellite',
+    maxBitrateBps: 3200,
+    bandwidthCapKbps: 4,
+    ptimeMs: 100,
+    maxPtimeMs: 120,
+    fecPacketLossPerc: 50,
+    maxPlaybackRate: 8000,        // 8kHz SILK narrowband telephone speech
+    lossThreshold: 1.0,           // > 35% loss
+    rttThresholdMs: 99999,        // > 1000ms RTT
+    jitterThresholdMs: 99999,     // > 250ms jitter
+    concealmentThreshold: 1.0     // > 20% concealment
   }
 ];
 

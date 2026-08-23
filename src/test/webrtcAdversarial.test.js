@@ -516,21 +516,22 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
   describe('8. Extreme Numerical Clamping & Boundary Tests', () => {
     it('exhaustively clamps sender bitrates across extreme numeric ranges', async () => {
       const cases = [
-        { input: 0, expected: 6000 },
-        { input: 5999, expected: 6000 },
+        { input: 0, expected: 3000 },
+        { input: 2999, expected: 3000 },
+        { input: 3000, expected: 3000 },
+        { input: 3001, expected: 3001 },
         { input: 6000, expected: 6000 },
-        { input: 6001, expected: 6001 },
         { input: 12000, expected: 12000 },
         { input: 31999, expected: 31999 },
         { input: 32000, expected: 32000 },
         { input: 32001, expected: 32000 },
         { input: 100000, expected: 32000 },
-        { input: -5000, expected: 6000 },
+        { input: -5000, expected: 3000 },
         { input: Infinity, expected: 32000 },
-        { input: -Infinity, expected: 6000 },
-        { input: '6000', expected: 6000 },
+        { input: -Infinity, expected: 3000 },
+        { input: '3000', expected: 3000 },
         { input: '32000', expected: 32000 },
-        { input: null, expected: 6000 }, // Number(null) -> 0 -> clamped to 6000
+        { input: null, expected: 3000 }, // Number(null) -> 0 -> clamped to 3000
         { input: undefined, expected: 12000 }, // Number(undefined) -> NaN -> default 12000
         { input: 'not-a-number', expected: 12000 } // NaN -> default 12000
       ];

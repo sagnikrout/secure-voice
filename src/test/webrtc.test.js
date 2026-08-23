@@ -551,7 +551,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       expect(result).toBe(true);
     });
 
-    it('clamps bitrates below 6000 bps up to 6000 bps', async () => {
+    it('clamps bitrates below 3000 bps up to 3000 bps', async () => {
       const mockSender = {
         getParameters: vi.fn().mockReturnValue({
           encodings: [{ maxBitrate: 20000 }]
@@ -559,9 +559,9 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
         setParameters: vi.fn().mockResolvedValue(undefined)
       };
 
-      await applySenderBitrate(mockSender, 3500);
+      await applySenderBitrate(mockSender, 1500);
       const passedParams = mockSender.setParameters.mock.calls[0][0];
-      expect(passedParams.encodings[0].maxBitrate).toBe(6000);
+      expect(passedParams.encodings[0].maxBitrate).toBe(3000);
     });
 
     it('clamps bitrates above 32000 bps down to upper bound', async () => {
