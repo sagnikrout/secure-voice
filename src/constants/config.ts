@@ -307,7 +307,7 @@ export const EXTENDED_BITRATE_LADDER: ExtendedLadderTier[] = [
     concealmentThreshold: 0.005,
     codec: 'opus',
     mode: 'wideband',
-    description: 'Premium wideband voice on robust broadband / 5G / Wi-Fi links'
+    description: 'Premium wideband voice on high-speed broadband / 5G / Wi-Fi links'
   }
 ];
 

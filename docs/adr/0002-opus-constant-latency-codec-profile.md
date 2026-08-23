@@ -15,7 +15,7 @@ We enforce a specialized **Opus Constant Bitrate (CBR) profile with In-Band FEC 
 
 ## Consequences
 ### Positive
-- Robust intelligibility under extreme packet loss (up to 50%+).
+- High intelligibility under extreme packet loss (up to 50%+).
 - Prevents bufferbloat and router queue starvation on satellite links.
 - Mitigates acoustic traffic analysis from variable packet lengths.
 
