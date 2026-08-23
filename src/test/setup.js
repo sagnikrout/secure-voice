@@ -31,70 +31,91 @@ Object.defineProperty(navigator, 'vibrate', {
 });
 
 // Mock Web Audio API
+function createMockAudioParam(defaultValue = 0) {
+  return {
+    value: defaultValue,
+    setValueAtTime: vi.fn().mockReturnThis(),
+    setTargetAtTime: vi.fn().mockReturnThis(),
+    linearRampToValueAtTime: vi.fn().mockReturnThis(),
+    exponentialRampToValueAtTime: vi.fn().mockReturnThis(),
+    cancelScheduledValues: vi.fn().mockReturnThis(),
+  };
+}
+
 class MockAudioContext {
   constructor() {
     this.currentTime = 0;
     this.state = 'running';
-    this.destination = {};
+    this.destination = { connect: vi.fn(), disconnect: vi.fn() };
   }
   createOscillator() {
     return {
       type: 'sine',
-      frequency: { setValueAtTime: vi.fn() },
+      frequency: createMockAudioParam(440),
       connect: vi.fn(),
+      disconnect: vi.fn(),
       start: vi.fn(),
       stop: vi.fn(),
     };
   }
   createGain() {
     return {
-      gain: {
-        setValueAtTime: vi.fn(),
-        exponentialRampToValueAtTime: vi.fn(),
-      },
+      gain: createMockAudioParam(1),
       connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   createBiquadFilter() {
     return {
       type: 'highpass',
-      frequency: { setValueAtTime: vi.fn() },
+      frequency: createMockAudioParam(80),
+      gain: createMockAudioParam(0),
+      Q: createMockAudioParam(1),
       connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   createDynamicsCompressor() {
     return {
-      threshold: { setValueAtTime: vi.fn() },
-      knee: { setValueAtTime: vi.fn() },
-      ratio: { setValueAtTime: vi.fn() },
-      attack: { setValueAtTime: vi.fn() },
-      release: { setValueAtTime: vi.fn() },
+      threshold: createMockAudioParam(-18),
+      knee: createMockAudioParam(12),
+      ratio: createMockAudioParam(4),
+      attack: createMockAudioParam(0.003),
+      release: createMockAudioParam(0.150),
       connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   createMediaStreamSource() {
-    return { connect: vi.fn() };
+    return { connect: vi.fn(), disconnect: vi.fn() };
   }
   createMediaStreamDestination() {
     return {
       stream: {
-        getAudioTracks: () => [{ stop: vi.fn(), enabled: true }],
-        getTracks: () => [{ stop: vi.fn(), enabled: true }],
+        getAudioTracks: vi.fn(() => [{ stop: vi.fn(), enabled: true }]),
+        getTracks: vi.fn(() => [{ stop: vi.fn(), enabled: true }]),
       },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   createAnalyser() {
     return {
-      fftSize: 64,
-      frequencyBinCount: 32,
+      fftSize: 256,
+      frequencyBinCount: 128,
+      smoothingTimeConstant: 0.0,
       getByteFrequencyData: vi.fn(arr => arr.fill(128)),
+      getByteTimeDomainData: vi.fn(arr => arr.fill(128)),
+      getFloatTimeDomainData: vi.fn(arr => arr.fill(0)),
       connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   createDelay() {
     return {
-      delayTime: { setValueAtTime: vi.fn() },
+      delayTime: createMockAudioParam(0.25),
       connect: vi.fn(),
+      disconnect: vi.fn(),
     };
   }
   resume() {
@@ -129,4 +150,23 @@ Object.defineProperty(navigator, 'mediaDevices', {
 // Mock HTMLAudioElement setSinkId
 if (typeof HTMLAudioElement !== 'undefined') {
   HTMLAudioElement.prototype.setSinkId = vi.fn().mockResolvedValue(undefined);
+}
+
+// Mock RTCRtpReceiver capabilities for WebRTC
+if (typeof window !== 'undefined') {
+  window.RTCRtpReceiver = {
+    getCapabilities: vi.fn((kind) => {
+      if (kind === 'audio') {
+        return {
+          codecs: [
+            { mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
+            { mimeType: 'audio/red', clockRate: 48000, channels: 2 },
+            { mimeType: 'audio/telephone-event', clockRate: 8000 },
+            { mimeType: 'audio/PCMU', clockRate: 8000, channels: 1 }
+          ]
+        };
+      }
+      return { codecs: [] };
+    })
+  };
 }

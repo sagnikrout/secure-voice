@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:sim": "node scripts/webrtc-simulation-runner.js",
     "test:network": "node scripts/simulate-network-impairments.js",
+    "benchmark": "node scripts/benchmark-network-resilience.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

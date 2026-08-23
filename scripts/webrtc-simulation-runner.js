@@ -36,7 +36,10 @@ async function runSimulation() {
       console.log(`📡 Detected running Vite server on http://localhost:${PORT}`);
     } catch {
       console.log(`🚀 Starting local Vite server on port ${PORT}...`);
-      viteProcess = spawn('cmd.exe', ['/c', 'npm', 'run', 'dev', '--', '--port', `${PORT}`, '--strictPort'], {
+      const isWin = process.platform === 'win32';
+      const cmd = isWin ? 'cmd.exe' : 'npm';
+      const args = isWin ? ['/c', 'npm', 'run', 'dev', '--', '--port', `${PORT}`, '--strictPort'] : ['run', 'dev', '--', '--port', `${PORT}`, '--strictPort'];
+      viteProcess = spawn(cmd, args, {
         stdio: 'pipe',
         shell: false
       });

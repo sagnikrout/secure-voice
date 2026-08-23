@@ -5,7 +5,9 @@ import {
   playRingtone,
   stopMediaStream
 } from '../utils/audio';
-import { transformOpusSdp, getQualityRating, generateSafetyCode } from '../utils/webrtc';
+import { transformOpusSdp, getQualityRating, generateSafetyCode, applySenderBitrate } from '../utils/webrtc';
+import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../utils/networkAdaptation';
+import { IceRestartManager } from '../utils/iceRestartManager';
 import { saveCallHistory } from '../components/RecentCalls';
 import {
   setAudioOutputMode,
@@ -13,7 +15,7 @@ import {
   abandonAudioFocus,
   addAudioFocusListener
 } from '../utils/audioRouting';
-import { TIMINGS, BITRATE_ADAPTATION } from '../constants/config';
+import { TIMINGS, BITRATE_ADAPTATION, LADDER_TIERS } from '../constants/config';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state
@@ -28,18 +30,22 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const rawStreamRef = useRef(null);
   const processedStreamRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const pipelineNodesRef = useRef(null);
+  const pipelineCleanupRef = useRef(null);
   const callRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
+  // Milestone 3: Telemetry Monitor, Bitrate Controller, and ICE Restart Manager Refs
+  const telemetryMonitorRef = useRef(null);
+  const bitrateControllerRef = useRef(new AdaptiveBitrateController());
+  const iceRestartManagerRef = useRef(null);
+
   // Timers & Stats Tracking
   const dialTimeoutRef = useRef(null);
   const incomingTimeoutRef = useRef(null);
-  const statsIntervalRef = useRef(null);
   const timerIntervalRef = useRef(null);
-  const disconnectWatchdogRef = useRef(null);
-  const prevStatsRef = useRef({ packetsLost: 0, packetsReceived: 0, timestamp: 0 });
-  const currentBitrateRef = useRef(BITRATE_ADAPTATION.MAX_BITRATE_BPS);
+  const currentBitrateRef = useRef(LADDER_TIERS[0].maxBitrateBps);
 
   // Call States
   const [isInCall, setIsInCall] = useState(false);
@@ -53,6 +59,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const [incomingCall, setIncomingCall] = useState(null);
   const [safetyCode, setSafetyCode] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [activeTier, setActiveTier] = useState(LADDER_TIERS[0]);
+  const [liveTelemetry, setLiveTelemetry] = useState(null);
 
   // Ringtone player cleanup ref
   const stopRingtoneRef = useRef(null);
@@ -95,7 +103,20 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       audioFocusListenerRef.current = null;
     }
 
-    // 2. Close PeerJS call
+    // 2. Stop Telemetry Monitor, Reset Bitrate Controller and ICE Restart Manager
+    if (telemetryMonitorRef.current) {
+      telemetryMonitorRef.current.stop();
+      telemetryMonitorRef.current = null;
+    }
+    if (iceRestartManagerRef.current) {
+      iceRestartManagerRef.current.reset();
+      iceRestartManagerRef.current = null;
+    }
+    if (bitrateControllerRef.current) {
+      bitrateControllerRef.current.reset();
+    }
+
+    // 3. Close PeerJS call
     if (callRef.current) {
       try { callRef.current.close(); } catch (e) {}
       callRef.current = null;
@@ -104,30 +125,26 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       window.__SECUREVOICE_ACTIVE_PC__ = null;
     }
 
-    // 3. Clear remote audio
+    // 4. Clear remote audio
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
 
-    // 4. Stop all media tracks explicitly (prevents hardware indicator leaks)
+    // 5. Clean audio pipeline & stop all media tracks explicitly
+    if (pipelineCleanupRef.current) {
+      try { pipelineCleanupRef.current(); } catch (e) {}
+      pipelineCleanupRef.current = null;
+    }
     stopMediaStream(rawStreamRef.current);
-    stopMediaStream(processedStreamRef.current);
+    stopMediaStream(processedStreamRef.current, audioCtxRef.current, pipelineNodesRef.current);
     rawStreamRef.current = null;
     processedStreamRef.current = null;
-
-    // 5. Close Web Audio Context if owned
-    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-      try {
-        audioCtxRef.current.close();
-      } catch (e) {}
-      audioCtxRef.current = null;
-    }
+    audioCtxRef.current = null;
+    pipelineNodesRef.current = null;
 
     // 6. Clear all timeouts and intervals
     if (dialTimeoutRef.current) { clearTimeout(dialTimeoutRef.current); dialTimeoutRef.current = null; }
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
-    if (statsIntervalRef.current) { clearInterval(statsIntervalRef.current); statsIntervalRef.current = null; }
-    if (disconnectWatchdogRef.current) { clearTimeout(disconnectWatchdogRef.current); disconnectWatchdogRef.current = null; }
 
     // 7. Stop Ringtone and clean oscillators
     if (stopRingtoneRef.current) {
@@ -145,8 +162,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     setIncomingCall(null);
     setSafetyCode(null);
     setIsVerified(false);
-    currentBitrateRef.current = BITRATE_ADAPTATION.MAX_BITRATE_BPS;
-    prevStatsRef.current = { packetsLost: 0, packetsReceived: 0, timestamp: 0 };
+    setActiveTier(LADDER_TIERS[0]);
+    setLiveTelemetry(null);
+    currentBitrateRef.current = LADDER_TIERS[0].maxBitrateBps;
     callbacksRef.current.onStatusChange?.('ready');
     callbacksRef.current.addLog?.('Call terminated and audio pipeline cleanly released', 'info');
   }, [stopTimer]);
@@ -176,12 +194,14 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       rawStreamRef.current = stream;
       callbacksRef.current.addLog?.('Microphone access granted', 'ok');
 
-      const { processedStream, audioCtx } = createDenoisePipeline(stream);
+      const { processedStream, audioCtx, nodes, cleanup } = createDenoisePipeline(stream);
       processedStreamRef.current = processedStream;
       audioCtxRef.current = audioCtx;
+      pipelineNodesRef.current = nodes;
+      pipelineCleanupRef.current = cleanup;
 
       if (audioCtx) {
-        callbacksRef.current.addLog?.('Web Audio 80Hz filter & noise gate active', 'ok');
+        callbacksRef.current.addLog?.('Web Audio 6-stage filter & noise gate active', 'ok');
       }
 
       return processedStream;
@@ -262,120 +282,80 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             });
         }
 
-        const handleConnectionInterrupted = (reason) => {
-          if (!disconnectWatchdogRef.current) {
-            callbacksRef.current.addLog?.(`Network link interrupted (${reason}). Waiting for reconnect...`, 'warn');
-            callbacksRef.current.onStatusChange?.('reconnecting');
-            disconnectWatchdogRef.current = setTimeout(() => {
-              if (pc.connectionState === 'disconnected' || pc.iceConnectionState === 'disconnected') {
-                callbacksRef.current.addLog?.('Call ended (peer disconnected)', 'info');
-                endCall();
-              }
-            }, TIMINGS.DISCONNECT_WATCHDOG_MS);
-          }
-        };
+        const isCaller = Boolean(call.options && call.options._isCaller);
 
-        const handleConnectionRecovered = () => {
-          if (disconnectWatchdogRef.current) {
-            clearTimeout(disconnectWatchdogRef.current);
-            disconnectWatchdogRef.current = null;
-            callbacksRef.current.onStatusChange?.('in-call');
-            callbacksRef.current.addLog?.('Peer connection re-established', 'ok');
+        // Instantiate IceRestartManager
+        const iceManager = new IceRestartManager({
+          onStatusChange: (status) => {
+            if (status === 'in-call') {
+              setIsInCall(true);
+            }
+            callbacksRef.current.onStatusChange?.(status);
+          },
+          onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
+          onFatalDisconnect: () => {
+            callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
+            endCall();
+          },
+          sendRenegotiation: async (msg) => {
+            if (call.dataChannel && call.dataChannel.readyState === 'open') {
+              try {
+                call.dataChannel.send(JSON.stringify(msg));
+              } catch (e) {}
+            }
+          },
+          sdpTransform: (sdp) => {
+            const currentTier = bitrateControllerRef.current.getCurrentTier();
+            return transformOpusSdp(sdp, {
+              bitrate: currentTier.maxBitrateBps,
+              bandwidthCapKbps: currentTier.bandwidthCapKbps,
+              ptime: currentTier.ptimeMs,
+              maxptime: currentTier.maxPtimeMs,
+              packetLossPerc: currentTier.fecPacketLossPerc,
+              maxPlaybackRate: currentTier.maxPlaybackRate
+            });
           }
-        };
+        });
+        iceRestartManagerRef.current = iceManager;
 
         pc.onconnectionstatechange = () => {
-          const state = pc.connectionState;
-          if (state === 'closed' || state === 'failed') {
-            callbacksRef.current.addLog?.('Remote peer ended call or connection closed', 'info');
+          iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
+          if (pc.connectionState === 'closed') {
             endCall();
-          } else if (state === 'disconnected') {
-            handleConnectionInterrupted('Peer Disconnected');
-          } else if (state === 'connected') {
-            handleConnectionRecovered();
           }
         };
 
         pc.oniceconnectionstatechange = () => {
-          const state = pc.iceConnectionState;
-          if (state === 'failed' || state === 'closed') {
-            callbacksRef.current.addLog?.('WebRTC ICE connection failed', 'error');
-            endCall();
-          } else if (state === 'disconnected') {
-            handleConnectionInterrupted('ICE Disconnected');
-          } else if (state === 'connected' || state === 'completed') {
-            handleConnectionRecovered();
-          }
+          iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
         };
 
-        if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
-        statsIntervalRef.current = setInterval(async () => {
-          try {
-            const stats = await pc.getStats();
-            let rtt = null;
-            let currentPacketsLost = 0;
-            let currentPacketsReceived = 0;
+        // Instantiate NetworkTelemetryMonitor & wire to AdaptiveBitrateController
+        if (telemetryMonitorRef.current) {
+          telemetryMonitorRef.current.stop();
+          telemetryMonitorRef.current = null;
+        }
 
-            // Filter stats efficiently before processing
-            stats.forEach(report => {
-              if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                rtt = report.currentRoundTripTime;
-              }
-              if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-                currentPacketsLost = report.packetsLost || 0;
-                currentPacketsReceived = report.packetsReceived || 0;
-              }
-            });
-
-            if (rtt !== null) {
-              setQuality(getQualityRating(rtt));
-            }
-
-            // Dynamic Bitrate Adaptation
-            const deltaLost = currentPacketsLost - prevStatsRef.current.packetsLost;
-            const deltaReceived = currentPacketsReceived - prevStatsRef.current.packetsReceived;
-            const totalPackets = deltaLost + deltaReceived;
-
-            if (totalPackets > 15) {
-              const lossRate = Math.max(0, deltaLost / totalPackets);
-              let targetBitrate = currentBitrateRef.current;
-
-              if (lossRate >= BITRATE_ADAPTATION.HIGH_LOSS_THRESHOLD) {
-                targetBitrate = BITRATE_ADAPTATION.MIN_BITRATE_BPS; // 6 kbps
-              } else if (lossRate >= BITRATE_ADAPTATION.MID_LOSS_THRESHOLD) {
-                targetBitrate = BITRATE_ADAPTATION.MID_BITRATE_BPS; // 8 kbps
-              } else if (lossRate <= BITRATE_ADAPTATION.RECOVERY_LOSS_THRESHOLD && rtt !== null && rtt < 0.2) {
-                targetBitrate = BITRATE_ADAPTATION.MAX_BITRATE_BPS; // 16 kbps
-              }
-
-              if (targetBitrate !== currentBitrateRef.current) {
-                const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-                if (audioSender && audioSender.getParameters) {
-                  try {
-                    const params = audioSender.getParameters();
-                    if (params.encodings && params.encodings[0]) {
-                      params.encodings[0].maxBitrate = targetBitrate;
-                      await audioSender.setParameters(params);
-                      currentBitrateRef.current = targetBitrate;
-                      callbacksRef.current.addLog?.(`Adaptive bitrate adjusted to ${targetBitrate / 1000} kbps (loss: ${(lossRate * 100).toFixed(1)}%)`, 'info');
-                    }
-                  } catch (err) {
-                    callbacksRef.current.addLog?.(`Bitrate adaptation error: ${err.message}`, 'warn');
-                  }
-                }
-              }
-            }
-
-            prevStatsRef.current = {
-              packetsLost: currentPacketsLost,
-              packetsReceived: currentPacketsReceived,
-              timestamp: Date.now()
-            };
-
-          } catch (e) {
-            console.warn('Stats polling error:', e);
+        const monitor = new NetworkTelemetryMonitor(pc, async (snapshot) => {
+          setLiveTelemetry(snapshot);
+          if (snapshot && snapshot.rttMs !== null && snapshot.rttMs !== undefined) {
+            setQuality(getQualityRating(snapshot.rttSeconds));
           }
-        }, TIMINGS.STATS_POLL_INTERVAL_MS);
+
+          // Adaptive Bitrate Evaluation
+          const evaluation = bitrateControllerRef.current.evaluate(snapshot);
+          if (evaluation.tierChanged) {
+            setActiveTier(evaluation.currentTier);
+            currentBitrateRef.current = evaluation.targetBitrateBps;
+            const audioSender = pc.getSenders?.()?.find(s => s.track && s.track.kind === 'audio');
+            if (audioSender) {
+              await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
+              callbacksRef.current.addLog?.(evaluation.reason, 'info');
+            }
+          }
+        }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
+
+        monitor.start();
+        telemetryMonitorRef.current = monitor;
       }
     });
 
@@ -414,6 +394,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         throw new Error('Failed to initiate PeerJS call object');
       }
 
+      call.options = { ...call.options, _isCaller: true };
       bindCallEvents(call);
 
       dialTimeoutRef.current = setTimeout(() => {
@@ -462,6 +443,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     try {
       callbacksRef.current.addLog?.(`Answering call from ${call.peer}...`, 'info');
       const stream = await acquireMicrophone();
+      call.options = { ...call.options, _isCaller: false };
       call.answer(stream, {
         sdpTransform: transformOpusSdp
       });
@@ -557,7 +539,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       if (!newTrack) throw new Error('No audio track obtained from new device');
 
       // Build new denoise pipeline with isolated AudioContext
-      const { processedStream, audioCtx } = createDenoisePipeline(newStream);
+      const { processedStream, audioCtx, nodes, cleanup } = createDenoisePipeline(newStream);
       newAudioCtx = audioCtx;
       const processedTrack = processedStream.getAudioTracks()[0];
 
@@ -571,37 +553,35 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
 
       if (!audioSender) {
+        if (cleanup) {
+          try { cleanup(); } catch (e) {}
+        }
+        stopMediaStream(newStream, newAudioCtx, nodes);
         throw new Error('No active audio sender found on RTCPeerConnection');
       }
 
       // Atomically swap track without SDP renegotiation
       await audioSender.replaceTrack(processedTrack);
 
-      // SUCCESS: Clean up old stream and context now that new track is transmitting
-      if (rawStreamRef.current) {
-        stopMediaStream(rawStreamRef.current);
+      // SUCCESS: Clean up old stream, pipeline timers, and context now that new track is transmitting
+      if (pipelineCleanupRef.current) {
+        try { pipelineCleanupRef.current(); } catch (e) {}
       }
-      if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-        try {
-          audioCtxRef.current.close();
-        } catch (e) {}
-      }
+      stopMediaStream(rawStreamRef.current);
+      stopMediaStream(processedStreamRef.current, audioCtxRef.current, pipelineNodesRef.current);
 
       rawStreamRef.current = newStream;
       processedStreamRef.current = processedStream;
       audioCtxRef.current = newAudioCtx;
+      pipelineNodesRef.current = nodes;
+      pipelineCleanupRef.current = cleanup;
 
       callbacksRef.current.addLog?.('Microphone switched seamlessly without renegotiation', 'ok');
       return true;
 
     } catch (err) {
       // ROLLBACK: Clean up the aborted attempt, keeping existing active call tracks intact
-      if (newStream) stopMediaStream(newStream);
-      if (newAudioCtx && newAudioCtx.state !== 'closed') {
-        try {
-          newAudioCtx.close();
-        } catch (e) {}
-      }
+      if (newStream) stopMediaStream(newStream, newAudioCtx);
 
       callbacksRef.current.addLog?.(`Microphone switch aborted (retaining current mic): ${err.message}`, 'error');
       return false;
@@ -630,6 +610,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     safetyCode,
     isVerified,
     setIsVerified,
+    activeTier,
+    liveTelemetry,
     startCall,
     cancelCall,
     answerCall,

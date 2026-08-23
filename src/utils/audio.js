@@ -13,11 +13,18 @@ export function getAudioContext() {
   if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtxClass) return null;
-    globalAudioCtx = new AudioCtxClass();
+    try {
+      globalAudioCtx = new AudioCtxClass();
+    } catch (e) {
+      console.warn('Failed to create AudioContext:', e);
+      return null;
+    }
   }
 
-  if (globalAudioCtx.state === 'suspended') {
-    globalAudioCtx.resume().catch(() => {});
+  if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+    try {
+      globalAudioCtx.resume().catch(() => {});
+    } catch (e) {}
   }
 
   return globalAudioCtx;
@@ -39,50 +46,304 @@ export async function unlockAudioContext() {
 }
 
 /**
- * Build isolated Denoise pipeline: MediaStreamSource -> HighPass 80Hz -> DynamicsCompressor (Noise Gate) -> Destination
- * Uses an isolated AudioContext instance to avoid cross-talk with ringtones.
+ * Build 6-stage isolated Web Audio denoise and voice isolation pipeline:
+ * MediaStreamSource
+ *   -> Stage 1: 80Hz 2nd-order Butterworth Highpass (rumble/HVAC cut)
+ *   -> Stage 2: 2.8kHz Peaking EQ (+3dB gain, Q=1.2) (vocal formant presence)
+ *   -> Stage 3: 4.2kHz 2nd-order Lowpass (Q=0.7071) (hiss/fan cut)
+ *   -> Stage 4: Active downward RMS Noise Gate (AnalyserNode + GainNode envelope follower, threshold -46 dBFS, floor 0.02, attack 10ms, hold 80ms, release 150ms)
+ *   -> Stage 5: Dynamics Compressor (-18dB threshold, 12dB knee, 4:1 ratio, 3ms attack, 150ms release)
+ *   -> Stage 6: 1.2x Makeup Gain (+1.58 dB)
+ *   -> MediaStreamDestination
+ *
+ * @param {MediaStream} stream - Input microphone MediaStream
+ * @param {Object} [options] - Configuration overrides
+ * @param {number} [options.gateThreshold=-46] - Noise gate threshold in dBFS
+ * @param {number} [options.noiseGateThreshold=-46] - Alias for gateThreshold
+ * @param {number} [options.gateFloor=0.02] - Attenuation floor when gate is closed
+ * @param {boolean} [options.gateEnabled=true] - Initial noise gate state
+ * @param {boolean} [options.noiseGateEnabled=true] - Alias for gateEnabled
+ * @returns {{
+ *   processedStream: MediaStream,
+ *   audioCtx: AudioContext|null,
+ *   nodes: Object|null,
+ *   setNoiseGateEnabled: (enabled: boolean) => void,
+ *   setNoiseGateThreshold: (db: number) => void,
+ *   cleanup: () => void
+ * }}
  */
-export function createDenoisePipeline(stream) {
-  if (!stream || typeof stream.getAudioTracks !== 'function' || stream.getAudioTracks().length === 0) {
-    return { processedStream: stream, audioCtx: null, nodes: null };
+export function createDenoisePipeline(stream, options = {}) {
+  const fallbackResult = {
+    processedStream: stream,
+    audioCtx: null,
+    nodes: null,
+    setNoiseGateEnabled: () => {},
+    setNoiseGateThreshold: () => {},
+    cleanup: () => {}
+  };
+
+  if (!stream || typeof stream.getAudioTracks !== 'function') {
+    return fallbackResult;
+  }
+  try {
+    const audioTracks = stream.getAudioTracks();
+    if (!Array.isArray(audioTracks) || audioTracks.length === 0) {
+      return fallbackResult;
+    }
+  } catch (e) {
+    return fallbackResult;
   }
 
+  let ctx = null;
+  let gateIntervalId = null;
+
   try {
-    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtxClass) return { processedStream: stream, audioCtx: null, nodes: null };
-    
+    const AudioCtxClass = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+    if (!AudioCtxClass) return fallbackResult;
+
     // Dedicated isolated context for the call session
-    const ctx = new AudioCtxClass();
+    ctx = new AudioCtxClass();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
     const source = ctx.createMediaStreamSource(stream);
 
-    // High-pass filter to remove low-frequency background rumble (below 80 Hz)
+    // Stage 1: 80Hz 2nd-order Butterworth Highpass filter (cuts mic rumble / HVAC)
     const highPass = ctx.createBiquadFilter();
     highPass.type = 'highpass';
     highPass.frequency.setValueAtTime(80, ctx.currentTime);
+    if (highPass.Q && highPass.Q.setValueAtTime) {
+      highPass.Q.setValueAtTime(0.7071, ctx.currentTime);
+    }
 
-    // DynamicsCompressor acting as a subtle noise gate & level normalizer
+    // Stage 2: 2.8kHz Peaking EQ (+3dB gain, Q=1.2) for vocal formant clarity
+    const presenceEQ = ctx.createBiquadFilter();
+    presenceEQ.type = 'peaking';
+    presenceEQ.frequency.setValueAtTime(2800, ctx.currentTime);
+    if (presenceEQ.gain && presenceEQ.gain.setValueAtTime) {
+      presenceEQ.gain.setValueAtTime(3.0, ctx.currentTime);
+    }
+    if (presenceEQ.Q && presenceEQ.Q.setValueAtTime) {
+      presenceEQ.Q.setValueAtTime(1.2, ctx.currentTime);
+    }
+
+    // Stage 3: 4.2kHz 2nd-order Lowpass filter (Q=0.7071) to eliminate ambient hiss
+    const hissCut = ctx.createBiquadFilter();
+    hissCut.type = 'lowpass';
+    hissCut.frequency.setValueAtTime(4200, ctx.currentTime);
+    if (hissCut.Q && hissCut.Q.setValueAtTime) {
+      hissCut.Q.setValueAtTime(0.7071, ctx.currentTime);
+    }
+
+    // Stage 4: Active Downward RMS Noise Gate
+    const noiseGateGain = ctx.createGain();
+    noiseGateGain.gain.setValueAtTime(1.0, ctx.currentTime);
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.0;
+
+    let gateEnabled = options.gateEnabled !== false && options.noiseGateEnabled !== false;
+    let gateThreshold = (typeof options.gateThreshold === 'number' && Number.isFinite(options.gateThreshold))
+      ? options.gateThreshold
+      : ((typeof options.noiseGateThreshold === 'number' && Number.isFinite(options.noiseGateThreshold))
+          ? options.noiseGateThreshold
+          : -46);
+    const gateFloor = (typeof options.gateFloor === 'number' && Number.isFinite(options.gateFloor))
+      ? options.gateFloor
+      : 0.02;
+    const attackTime = 0.010;  // 10ms
+    const holdTimeMs = 80;     // 80ms
+    const releaseTime = 0.150; // 150ms
+
+    let lastSpeechTime = Date.now();
+    const timeBuffer = new Float32Array(analyser.fftSize);
+    const byteBuffer = new Uint8Array(analyser.frequencyBinCount);
+
+    const evaluateNoiseGate = () => {
+      try {
+        if (!gateEnabled) {
+          const now = ctx.currentTime;
+          if (noiseGateGain.gain.cancelScheduledValues) {
+            noiseGateGain.gain.cancelScheduledValues(now);
+          }
+          if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(noiseGateGain.gain.value, now);
+          }
+          if (noiseGateGain.gain.setTargetAtTime) {
+            noiseGateGain.gain.setTargetAtTime(1.0, now, 0.01);
+          } else if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(1.0, now);
+          }
+          return;
+        }
+
+        let rms = 0;
+        if (typeof analyser.getFloatTimeDomainData === 'function') {
+          analyser.getFloatTimeDomainData(timeBuffer);
+          let sumSq = 0;
+          for (let i = 0; i < timeBuffer.length; i++) {
+            const sample = timeBuffer[i];
+            if (Number.isFinite(sample)) {
+              sumSq += sample * sample;
+            }
+          }
+          rms = Math.sqrt(sumSq / timeBuffer.length);
+        } else if (typeof analyser.getByteTimeDomainData === 'function') {
+          analyser.getByteTimeDomainData(byteBuffer);
+          let sumSq = 0;
+          for (let i = 0; i < byteBuffer.length; i++) {
+            const norm = (byteBuffer[i] - 128) / 128;
+            sumSq += norm * norm;
+          }
+          rms = Math.sqrt(sumSq / byteBuffer.length);
+        } else if (typeof analyser.getByteFrequencyData === 'function') {
+          analyser.getByteFrequencyData(byteBuffer);
+          let sum = 0;
+          for (let i = 0; i < byteBuffer.length; i++) {
+            sum += byteBuffer[i];
+          }
+          rms = (sum / byteBuffer.length) / 255;
+        }
+
+        if (!Number.isFinite(rms)) {
+          rms = 0;
+        }
+
+        const db = 20 * Math.log10(Math.max(rms, 1e-5));
+        const nowMs = Date.now();
+        const currentAudioTime = ctx.currentTime;
+
+        if (db >= gateThreshold) {
+          lastSpeechTime = nowMs;
+          if (noiseGateGain.gain.cancelScheduledValues) {
+            noiseGateGain.gain.cancelScheduledValues(currentAudioTime);
+          }
+          if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(noiseGateGain.gain.value, currentAudioTime);
+          }
+          if (noiseGateGain.gain.setTargetAtTime) {
+            noiseGateGain.gain.setTargetAtTime(1.0, currentAudioTime, attackTime);
+          } else if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(1.0, currentAudioTime);
+          }
+        } else if (nowMs - lastSpeechTime < holdTimeMs) {
+          if (noiseGateGain.gain.setTargetAtTime) {
+            noiseGateGain.gain.setTargetAtTime(1.0, currentAudioTime, 0.01);
+          }
+        } else {
+          if (noiseGateGain.gain.cancelScheduledValues) {
+            noiseGateGain.gain.cancelScheduledValues(currentAudioTime);
+          }
+          if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(noiseGateGain.gain.value, currentAudioTime);
+          }
+          if (noiseGateGain.gain.setTargetAtTime) {
+            noiseGateGain.gain.setTargetAtTime(gateFloor, currentAudioTime, releaseTime);
+          } else if (noiseGateGain.gain.setValueAtTime) {
+            noiseGateGain.gain.setValueAtTime(gateFloor, currentAudioTime);
+          }
+        }
+      } catch (e) {
+        // Defensive: silence DSP tick evaluation errors
+      }
+    };
+
+    gateIntervalId = setInterval(evaluateNoiseGate, 16);
+
+    // Stage 5: Dynamics Compressor (-18dB threshold, 12dB knee, 4:1 ratio, 3ms attack, 150ms release)
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-50, ctx.currentTime);
-    compressor.knee.setValueAtTime(40, ctx.currentTime);
-    compressor.ratio.setValueAtTime(12, ctx.currentTime);
-    compressor.attack.setValueAtTime(0.005, ctx.currentTime);
-    compressor.release.setValueAtTime(0.25, ctx.currentTime);
+    compressor.threshold.setValueAtTime(-18, ctx.currentTime);
+    compressor.knee.setValueAtTime(12, ctx.currentTime);
+    compressor.ratio.setValueAtTime(4, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+    compressor.release.setValueAtTime(0.150, ctx.currentTime);
 
+    // Stage 6: 1.2x Makeup Gain (+1.58 dB)
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.setValueAtTime(1.2, ctx.currentTime);
+
+    // Destination
     const dest = ctx.createMediaStreamDestination();
 
+    // Signal Routing Chain
     source.connect(highPass);
-    highPass.connect(compressor);
-    compressor.connect(dest);
+    highPass.connect(presenceEQ);
+    presenceEQ.connect(hissCut);
+    hissCut.connect(noiseGateGain);
+    hissCut.connect(analyser); // Sidechain tap
+    noiseGateGain.connect(compressor);
+    compressor.connect(makeupGain);
+    makeupGain.connect(dest);
+
+    const nodes = {
+      source,
+      highPass,
+      presenceEQ,
+      hissCut,
+      noiseGateGain,
+      analyser,
+      gateAnalyser: analyser,
+      compressor,
+      makeupGain,
+      dest
+    };
+
+    const cleanup = () => {
+      if (gateIntervalId) {
+        clearInterval(gateIntervalId);
+        gateIntervalId = null;
+      }
+      Object.values(nodes).forEach(node => {
+        if (node && typeof node.disconnect === 'function') {
+          try { node.disconnect(); } catch (e) {}
+        }
+      });
+      if (ctx && ctx.state !== 'closed') {
+        try { ctx.close().catch(() => {}); } catch (e) {}
+      }
+    };
 
     return {
       processedStream: dest.stream,
       audioCtx: ctx,
-      nodes: { source, highPass, compressor, dest }
+      nodes,
+      setNoiseGateEnabled: (enabled) => {
+        gateEnabled = Boolean(enabled);
+        if (!gateEnabled && ctx && noiseGateGain) {
+          try {
+            const now = ctx.currentTime;
+            if (noiseGateGain.gain.cancelScheduledValues) {
+              noiseGateGain.gain.cancelScheduledValues(now);
+            }
+            if (noiseGateGain.gain.setValueAtTime) {
+              noiseGateGain.gain.setValueAtTime(noiseGateGain.gain.value, now);
+            }
+            if (noiseGateGain.gain.setTargetAtTime) {
+              noiseGateGain.gain.setTargetAtTime(1.0, now, 0.01);
+            } else if (noiseGateGain.gain.setValueAtTime) {
+              noiseGateGain.gain.setValueAtTime(1.0, now);
+            }
+          } catch (e) {
+            // Defensive: context may be closed or audio params destroyed
+          }
+        }
+      },
+      setNoiseGateThreshold: (thresholdDb) => {
+        if (typeof thresholdDb === 'number' && Number.isFinite(thresholdDb)) {
+          gateThreshold = thresholdDb;
+        }
+      },
+      cleanup
     };
   } catch (err) {
     console.warn('Failed to build Web Audio denoise pipeline, falling back to raw stream:', err);
-    return { processedStream: stream, audioCtx: null, nodes: null };
+    if (gateIntervalId) clearInterval(gateIntervalId);
+    if (ctx && ctx.state !== 'closed') {
+      try { ctx.close().catch(() => {}); } catch (e) {}
+    }
+    return fallbackResult;
   }
 }
 
@@ -225,14 +486,18 @@ export async function createMicLoopbackTest(deviceId, onLevel) {
 
     intervalId = setInterval(() => {
       if (!isRunning) return;
-      analyser.getByteFrequencyData(dataArray);
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
+      try {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        const normalized = Math.min(1, avg / 128);
+        onLevel?.(normalized);
+      } catch (e) {
+        // Defensive: catch sampling/analyser/callback exceptions
       }
-      const avg = sum / dataArray.length;
-      const normalized = Math.min(1, avg / 128);
-      onLevel?.(normalized);
     }, 50);
 
   } catch (err) {
@@ -272,16 +537,84 @@ export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
 }
 
 /**
- * Completely stop all tracks on a MediaStream to avoid hardware mic light leaking.
+ * Completely stop all tracks on a MediaStream and cleanly tear down AudioContext and audio nodes
+ * to prevent hardware microphone indicator light leaking or audio thread memory leaks.
+ *
+ * @param {MediaStream|null} stream
+ * @param {AudioContext|null} [audioCtx]
+ * @param {Object|Array|null} [nodes]
  */
-export function stopMediaStream(stream) {
-  if (!stream || typeof stream.getTracks !== 'function') return;
-  try {
-    stream.getTracks().forEach(track => {
-      track.stop();
-      track.enabled = false;
-    });
-  } catch (e) {
-    console.warn('Error stopping stream tracks:', e);
+export function stopMediaStream(stream, audioCtx = null, nodes = null) {
+  // 1. Stop all tracks and disable them
+  if (stream) {
+    const safeStopTrack = (track) => {
+      if (!track) return;
+      try {
+        if (typeof track.stop === 'function') {
+          track.stop();
+        }
+      } catch (e) {
+        console.warn('Error stopping track:', e);
+      }
+      try {
+        track.enabled = false;
+      } catch (e) {}
+    };
+
+    try {
+      if (typeof stream.getTracks === 'function') {
+        const tracks = stream.getTracks();
+        if (Array.isArray(tracks)) {
+          tracks.forEach(safeStopTrack);
+        }
+      }
+    } catch (e) {
+      console.warn('Error accessing stream.getTracks():', e);
+    }
+
+    try {
+      if (typeof stream.getAudioTracks === 'function') {
+        const audioTracks = stream.getAudioTracks();
+        if (Array.isArray(audioTracks)) {
+          audioTracks.forEach(safeStopTrack);
+        }
+      }
+    } catch (e) {
+      console.warn('Error accessing stream.getAudioTracks():', e);
+    }
+  }
+
+  // 2. Disconnect nodes & invoke cleanup if present
+  if (nodes) {
+    if (typeof nodes.cleanup === 'function') {
+      try {
+        nodes.cleanup();
+      } catch (e) {
+        console.warn('Error calling nodes.cleanup():', e);
+      }
+    }
+    try {
+      const nodeList = Array.isArray(nodes) ? nodes : Object.values(nodes);
+      nodeList.forEach(node => {
+        if (node && typeof node.disconnect === 'function') {
+          try {
+            node.disconnect();
+          } catch (e) {}
+        }
+      });
+    } catch (e) {
+      console.warn('Error disconnecting audio nodes:', e);
+    }
+  }
+
+  // 3. Close AudioContext
+  if (audioCtx && audioCtx.state !== 'closed') {
+    try {
+      if (typeof audioCtx.close === 'function') {
+        audioCtx.close().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Error closing AudioContext:', e);
+    }
   }
 }

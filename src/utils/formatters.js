@@ -1,7 +1,7 @@
 /**
  * String, Time, and Identifier Formatting Utilities
  */
-import { PEER_ID_ALPHABET } from '../constants/config';
+import { PEER_ID_ALPHABET } from '../constants/config.js';
 
 /**
  * Format active call seconds into a readable MM:SS string
