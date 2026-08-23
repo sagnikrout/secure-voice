@@ -12,14 +12,15 @@
 import { ICE_SERVERS } from '../constants/config.js';
 
 export class TurnRelayManager {
-  /**
-   * @param {Array<Object>} [iceServerConfigs] - Array of ICE server configs
-   * @param {Object} [options]
-   * @param {Function} [options.onLog] - Optional logging callback
-   * @param {number} [options.pingTimeoutMs=4000] - Gathering timeout per server
-   * @param {number} [options.preferRelayOnFailCount=2] - Failures before forcing relay
-   */
-  constructor(iceServerConfigs, options = {}) {
+  iceServers: any[];
+  onLog?: (msg: string, level?: string) => void;
+  pingTimeoutMs: number;
+  preferRelayOnFailCount: number;
+  consecutiveP2PFailures: number;
+  rankedTurnServers: any[] | null;
+  lastRankTime: number;
+
+  constructor(iceServerConfigs?: any[], options: any = {}) {
     this.iceServers = Array.isArray(iceServerConfigs)
       ? iceServerConfigs
       : (ICE_SERVERS?.iceServers || []);
@@ -121,11 +122,11 @@ export class TurnRelayManager {
 
     try {
       const probePromises = turnServers.map(s => this.probeTurnServer(s));
-      const results = await Promise.all(probePromises);
+      const results: any = await Promise.all(probePromises);
 
       // Sort TURN servers by lowest latency
-      results.sort((a, b) => a.latencyMs - b.latencyMs);
-      this.rankedTurnServers = results.map(r => r.server);
+      results.sort((a: any, b: any) => a.latencyMs - b.latencyMs);
+      this.rankedTurnServers = results.map((r: any) => r.server);
       this.lastRankTime = Date.now();
 
       const fastest = results[0];

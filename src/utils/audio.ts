@@ -72,7 +72,7 @@ export async function unlockAudioContext() {
  *   cleanup: () => void
  * }}
  */
-export function createDenoisePipeline(stream, options = {}) {
+export function createDenoisePipeline(stream: any, options: any = {}) {
   const fallbackResult = {
     processedStream: stream,
     audioCtx: null,

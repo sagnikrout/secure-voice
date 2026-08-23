@@ -13,10 +13,13 @@
 import { LADDER_TIERS } from '../constants/config.js';
 
 export class JitterBufferController {
+  onLog?: (msg: string, level?: string) => void;
+  currentTargetMs: number;
+
   /**
    * Target jitter buffer delays (ms) mapped per adaptive tier
    */
-  static TIER_TARGETS = {
+  static TIER_TARGETS: Record<string, number> = {
     HQ: 120,    // 2G Stable — smooth buffer eliminating micro-jitter
     STD: 160,   // 2G Normal
     LB: 200,    // 2G Congested
@@ -25,11 +28,7 @@ export class JitterBufferController {
     ULTRA: 400  // Satellite / Extreme Loss — maximum NetEQ packet concealment window
   };
 
-  /**
-   * @param {Object} [options]
-   * @param {Function} [options.onLog] - Optional logging callback
-   */
-  constructor(options = {}) {
+  constructor(options: any = {}) {
     this.onLog = options.onLog;
     this.currentTargetMs = 80;
   }

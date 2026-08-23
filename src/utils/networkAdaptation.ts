@@ -16,12 +16,25 @@ export { applySenderBitrate };
  * High-Frequency Multi-Dimensional WebRTC Telemetry Monitor
  */
 export class NetworkTelemetryMonitor {
-  /**
-   * @param {RTCPeerConnection} pc - Active WebRTC PeerConnection
-   * @param {Function} [onSnapshot] - Callback invoked on each polling tick with snapshot
-   * @param {Object} [options] - Configuration options
-   */
-  constructor(pc, onSnapshot, options = {}) {
+  pc: any;
+  onSnapshot?: (snapshot: any) => void;
+  intervalMs: number;
+  minPackets: number;
+  timerId: any;
+  isRunning: boolean;
+  prevStats: {
+    timestamp: number;
+    packetsLost: number;
+    packetsReceived: number;
+    concealedSamples: number;
+    totalSamplesReceived: number;
+    jitterBufferDelay: number;
+    jitterBufferEmittedCount: number;
+    bytesReceived: number;
+    bytesSent: number;
+  };
+
+  constructor(pc: any, onSnapshot?: (snapshot: any) => void, options: any = {}) {
     this.pc = pc;
     this.onSnapshot = onSnapshot;
     this.intervalMs = options.intervalMs || TIMINGS.STATS_POLL_INTERVAL_MS || 1000;
@@ -47,7 +60,7 @@ export class NetworkTelemetryMonitor {
    * Start periodic stats polling
    * @param {number} [intervalMs] - Optional override interval
    */
-  start(intervalMs) {
+  start(intervalMs?: number) {
     if (intervalMs) {
       this.intervalMs = intervalMs;
     }
@@ -272,13 +285,18 @@ export class NetworkTelemetryMonitor {
  * 5-Tier Adaptive Bitrate Controller with Asymmetric Hysteresis & EMA Smoothing
  */
 export class AdaptiveBitrateController {
-  /**
-   * @param {Object} [options]
-   * @param {Array} [options.tiers] - Custom tier ladder (defaults to LADDER_TIERS)
-   * @param {number} [options.initialTierIndex] - Initial tier index (defaults to 0: HQ)
-   * @param {Object} [options.config] - Custom adaptation parameters
-   */
-  constructor(options = {}) {
+  tiers: any[];
+  currentTierIndex: number;
+  config: any;
+  consecutiveHealthyTicks: number;
+  lastUpgradeTime: number;
+  smoothedLoss: number;
+  smoothedRtt: number;
+  smoothedJitter: number;
+  smoothedConcealment: number;
+  initialized: boolean;
+
+  constructor(options: any = {}) {
     this.tiers = options.tiers || LADDER_TIERS;
     this.currentTierIndex = options.initialTierIndex !== undefined ? options.initialTierIndex : 0;
     this.config = { ...ADAPTATION_CONFIG, ...options.config };

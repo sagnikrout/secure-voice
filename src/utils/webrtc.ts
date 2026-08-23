@@ -78,10 +78,10 @@ export function generatePeerId(length = 9) {
  * @param {number|string} [options.redPayloadType] - Custom dynamic payload type for RED
  * @returns {string} Munged SDP string
  */
-export function transformOpusSdp(sdp, options = {}) {
+export function transformOpusSdp(sdp: string, options: any = {}): string {
   if (!sdp || typeof sdp !== 'string') return sdp;
 
-  const opts = options && typeof options === 'object' ? options : {};
+  const opts: any = options && typeof options === 'object' ? options : {};
 
   // Options normalization with fallbacks to OPUS_CONFIG
   const targetBitrate = String(opts.bitrate ?? opts.maxaveragebitrate ?? OPUS_CONFIG.MAX_AVERAGE_BITRATE ?? '12000');

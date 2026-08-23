@@ -7,8 +7,8 @@ const PREFERRED_OUTPUT_KEY = STORAGE_KEYS.PREFERRED_OUTPUT || 'securevoice_outpu
  * Gets reference to the native AudioRouting plugin
  */
 function getNativePlugin() {
-  if (Capacitor.isPluginAvailable('AudioRouting') && Capacitor.Plugins?.AudioRouting) {
-    return Capacitor.Plugins.AudioRouting;
+  if (Capacitor.isPluginAvailable('AudioRouting') && (Capacitor as any).Plugins?.AudioRouting) {
+    return (Capacitor as any).Plugins.AudioRouting;
   }
   return null;
 }

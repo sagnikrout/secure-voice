@@ -11,10 +11,13 @@
  */
 
 export class PacketPacer {
+  onLog?: (msg: string, level?: string) => void;
+  headroomFactor: number;
+
   /**
    * Sender priority mappings per tier
    */
-  static TIER_PRIORITIES = {
+  static TIER_PRIORITIES: Record<string, { priority: RTCPriorityType; networkPriority: RTCPriorityType }> = {
     HQ: { priority: 'high', networkPriority: 'high' },
     STD: { priority: 'high', networkPriority: 'high' },
     LB: { priority: 'high', networkPriority: 'high' },
@@ -23,12 +26,7 @@ export class PacketPacer {
     ULTRA: { priority: 'high', networkPriority: 'high' }
   };
 
-  /**
-   * @param {Object} [options]
-   * @param {Function} [options.onLog] - Optional logging callback
-   * @param {number} [options.headroomFactor=0.85] - Usable bandwidth headroom fraction
-   */
-  constructor(options = {}) {
+  constructor(options: any = {}) {
     this.onLog = options.onLog;
     this.headroomFactor = typeof options.headroomFactor === 'number' ? options.headroomFactor : 0.85;
   }

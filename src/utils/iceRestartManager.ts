@@ -12,16 +12,19 @@
 import { ICE_RECONNECT_CONFIG } from '../constants/config.js';
 
 export class IceRestartManager {
-  /**
-   * @param {Object} [options]
-   * @param {Function} [options.onStatusChange] - Callback to update UI status ('reconnecting' | 'in-call' | 'ready')
-   * @param {Function} [options.onLog] - Callback to log activity entries
-   * @param {Function} [options.onFatalDisconnect] - Callback invoked when reconnection attempts are exhausted
-   * @param {Function} [options.sendRenegotiation] - Callback to transmit SDP offer to remote peer
-   * @param {Function} [options.sdpTransform] - Callback to munge renegotiation SDP
-   * @param {Object} [options.config] - Override ICE reconnect parameters
-   */
-  constructor(options = {}) {
+  onStatusChange?: (status: string) => void;
+  onLog?: (msg: string, level?: string) => void;
+  onFatalDisconnect?: () => void;
+  sendRenegotiation?: (msg: any) => Promise<void> | void;
+  sdpTransform?: (sdp: string) => string;
+  config: any;
+  retryCount: number;
+  state: string;
+  graceTimer: any;
+  retryTimer: any;
+  totalWatchdogTimer: any;
+
+  constructor(options: any = {}) {
     this.onStatusChange = options.onStatusChange;
     this.onLog = options.onLog;
     this.onFatalDisconnect = options.onFatalDisconnect;
@@ -44,7 +47,7 @@ export class IceRestartManager {
    * @param {boolean} [isCaller=true] - Whether local peer is call initiator
    * @param {Function} [signalingCallback] - Optional custom signaling callback
    */
-  handleStateChange(connectionState, iceConnectionState, pc, isCaller = true, signalingCallback) {
+  handleStateChange(connectionState: any, iceConnectionState: any, pc: any, isCaller: boolean = true, signalingCallback?: any) {
     const isDisconnected = connectionState === 'disconnected' || iceConnectionState === 'disconnected';
     const isFailed = connectionState === 'failed' || iceConnectionState === 'failed';
     const isConnected = (connectionState === 'connected' || iceConnectionState === 'connected' || iceConnectionState === 'completed') &&
