@@ -55,11 +55,11 @@ describe('Advanced Network Resilience Features', () => {
   describe('2. JitterBufferController — Dynamic NetEQ Target Tuning', () => {
     it('provides correct tier target delays across the 6-tier ladder', () => {
       const controller = new JitterBufferController();
-      expect(controller.getTargetForTier('HQ')).toBe(20);
-      expect(controller.getTargetForTier('STD')).toBe(40);
-      expect(controller.getTargetForTier('LB')).toBe(80);
-      expect(controller.getTargetForTier('HL')).toBe(150);
-      expect(controller.getTargetForTier('EXT')).toBe(250);
+      expect(controller.getTargetForTier('HQ')).toBe(120);
+      expect(controller.getTargetForTier('STD')).toBe(160);
+      expect(controller.getTargetForTier('LB')).toBe(200);
+      expect(controller.getTargetForTier('HL')).toBe(250);
+      expect(controller.getTargetForTier('EXT')).toBe(300);
       expect(controller.getTargetForTier('ULTRA')).toBe(400);
       expect(controller.getTargetForTier('UNKNOWN')).toBe(80);
     });

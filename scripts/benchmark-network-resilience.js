@@ -104,39 +104,39 @@ const normalSnap = {
   concealmentRatio: 0.002
 };
 let res = controller.evaluate(normalSnap);
-assert(res.currentTier.name === 'HQ', 'Normal broadband maintains HQ (20 kbps)');
+assert(res.currentTier.name === 'HQ', '2G Stable profile maintains HQ (8 kbps)');
 
-// Profile 2: Impaired 3G (4% loss, 220ms RTT, 45ms jitter)
-console.log('   - Simulating 3G impairment transition...');
+// Profile 2: Impaired 3G/2G (9% loss, 320ms RTT, 65ms jitter)
+console.log('   - Simulating 3G/2G impairment transition...');
 const impaired3GSnap = {
-  effectiveLossRate: 0.045,
-  inboundLossRate: 0.045,
-  outboundLossRate: 0.02,
-  rttMs: 220,
-  jitterMs: 45,
-  concealmentRatio: 0.025
+  effectiveLossRate: 0.09,
+  inboundLossRate: 0.09,
+  outboundLossRate: 0.05,
+  rttMs: 320,
+  jitterMs: 65,
+  concealmentRatio: 0.035
 };
 res = controller.evaluate(impaired3GSnap);
-assert(res.tierChanged && res.currentTier.name === 'STD', '3G degradation triggers instant 1-tick downgrade to STD (14 kbps)');
+assert(res.tierChanged && res.currentTier.name === 'STD', 'Degradation triggers instant 1-tick downgrade to STD (6.5 kbps)');
 
-// Profile 3: Degraded 2G / EDGE (15% loss, 550ms RTT, 120ms jitter)
+// Profile 3: Degraded 2G / EDGE (20% loss, 650ms RTT, 140ms jitter)
 console.log('   - Simulating 2G/EDGE severe congestion (Tick 1 -> LB)...');
 const degraded2GSnap = {
-  effectiveLossRate: 0.15,
-  inboundLossRate: 0.15,
-  outboundLossRate: 0.10,
-  rttMs: 550,
-  jitterMs: 120,
-  concealmentRatio: 0.08
+  effectiveLossRate: 0.20,
+  inboundLossRate: 0.20,
+  outboundLossRate: 0.15,
+  rttMs: 650,
+  jitterMs: 140,
+  concealmentRatio: 0.10
 };
 res = controller.evaluate(degraded2GSnap);
-assert(res.tierChanged && res.currentTier.name === 'LB', '2G degradation tick 1 downgrades smoothly to Low Bandwidth LB (10 kbps)');
+assert(res.tierChanged && res.currentTier.name === 'LB', '2G degradation tick 1 downgrades smoothly to Low Bandwidth LB (5.2 kbps)');
 
-// Tick 3 of 2G/EDGE (EMA accumulates loss > 12% -> HL)
+// Tick 3 of 2G/EDGE (EMA accumulates loss > 15% -> HL)
 console.log('   - Simulating 2G/EDGE sustained congestion (Tick 2 & 3 -> HL)...');
 controller.evaluate(degraded2GSnap); // Tick 2
 res = controller.evaluate(degraded2GSnap); // Tick 3
-assert(res.tierChanged && res.currentTier.name === 'HL', '2G sustained degradation tick 3 downgrades to High Loss Resilience HL (7.5 kbps)');
+assert(res.tierChanged && res.currentTier.name === 'HL', '2G sustained degradation tick 3 downgrades to High Loss Resilience HL (4.5 kbps)');
 
 // Profile 4: Extreme Satellite / Extreme Congestion (35% loss, 900ms RTT, 200ms jitter)
 console.log('   - Simulating Extreme Satellite / 35% packet loss (EMA accumulating to EXT)...');
@@ -150,8 +150,8 @@ const extremeLossSnap = {
 };
 controller.evaluate(extremeLossSnap); // Tick 1
 res = controller.evaluate(extremeLossSnap); // Tick 2 (smoothed loss > 25%)
-assert(res.tierChanged && res.currentTier.name === 'EXT', 'Extreme loss triggers Survival Mode EXT (6.0 kbps, 50% FEC, narrowband SILK)');
-assert(res.targetBitrateBps === 6000, 'Target bitrate is 6000 bps');
+assert(res.tierChanged && res.currentTier.name === 'EXT', 'Extreme loss triggers Survival Mode EXT (3.8 kbps, 50% FEC, narrowband SILK)');
+assert(res.targetBitrateBps === 3800, 'Target bitrate is 3800 bps');
 
 // Profile 5: Asymmetric Recovery (Requires 4 consecutive healthy ticks)
 console.log('   - Simulating network recovery with asymmetric hysteresis...');

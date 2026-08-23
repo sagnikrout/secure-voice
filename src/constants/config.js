@@ -31,106 +31,106 @@ export const ICE_SERVERS = {
 // Character set for generating readable 9-character Peer IDs (omits confusing 0/O, 1/I, L)
 export const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Opus Codec & Packetization Constraints
+// Opus Codec & Packetization Constraints (Ultra-Low 2G/Satellite Constant Latency Engine)
 export const OPUS_CONFIG = {
-  MAX_AVERAGE_BITRATE: '12000', // 12 kbps default target bitrate for mono voice
+  MAX_AVERAGE_BITRATE: '6000',  // 6 kbps default target bitrate (tailored for 2G / edge-of-cell)
   MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps ultra-survival bandwidth floor
-  HIGH_AVERAGE_BITRATE: '20000', // 20 kbps high-quality ceiling
-  USE_DTX: '1',                 // Discontinuous Transmission (silence suppression)
+  HIGH_AVERAGE_BITRATE: '8000', // 8 kbps maximum ceiling (prevents bufferbloat & latency spikes)
+  USE_DTX: '1',                 // Discontinuous Transmission (silence suppression to drain queues)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
-  PACKET_LOSS_PERC: '20',       // Expected packet loss target for FEC tuning (10-50%)
+  PACKET_LOSS_PERC: '30',       // Expected packet loss target for FEC tuning (10-50%)
   STEREO: '0',                  // Mono voice optimization (1 channel)
-  CBR: '0',                     // Constrained VBR (0 = VBR, 1 = CBR)
-  MAX_PLAYBACK_RATE: '16000',   // 16 kHz Wideband limit (focuses bit budget on voice)
-  SPROP_MAX_CAPTURE_RATE: '16000', // Capture rate matching playback rate
-  BANDWIDTH_CAP_KBPS: 16,       // SDP b=AS session bandwidth constraint
-  PTIME: '60',                  // Default 60ms packetization (reduces header overhead by 67%)
+  CBR: '1',                     // Constant Bit Rate (CBR) to guarantee uniform latency and zero jitter
+  MAX_PLAYBACK_RATE: '8000',    // 8 kHz Narrowband SILK limit (focuses 100% of bit budget on speech)
+  SPROP_MAX_CAPTURE_RATE: '8000', // Capture rate matching playback rate
+  BANDWIDTH_CAP_KBPS: 8,        // SDP b=AS session bandwidth constraint
+  PTIME: '80',                  // 80ms packetization (reduces packet count to 12.5 pkts/sec)
   MAX_PTIME: '120',             // 120ms maximum acceptable packetization time
   RED_PAYLOAD_TYPE: 63,         // RFC 2198 RED dynamic payload type
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
 };
 
-// 6-Tier Adaptive Bitrate Ladder Configuration (down to 3.2 kbps Ultra-Survival)
+// 6-Tier 2G/Satellite Survival Ladder Configuration (Constant Latency Profile)
 export const LADDER_TIERS = [
   {
     id: 0,
     name: 'HQ',
-    label: 'High Quality',
-    maxBitrateBps: 20000,
-    bandwidthCapKbps: 24,
-    ptimeMs: 40,
-    maxPtimeMs: 60,
-    fecPacketLossPerc: 10,
-    maxPlaybackRate: 16000,
-    lossThreshold: 0.02,          // < 2% loss
-    rttThresholdMs: 150,          // < 150ms RTT
-    jitterThresholdMs: 30,        // < 30ms jitter
-    concealmentThreshold: 0.01    // < 1% concealment
+    label: '2G Stable',
+    maxBitrateBps: 8000,
+    bandwidthCapKbps: 10,
+    ptimeMs: 60,
+    maxPtimeMs: 80,
+    fecPacketLossPerc: 20,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.03,          // < 3% loss
+    rttThresholdMs: 250,          // < 250ms RTT
+    jitterThresholdMs: 40,        // < 40ms jitter
+    concealmentThreshold: 0.02    // < 2% concealment
   },
   {
     id: 1,
     name: 'STD',
-    label: 'Standard Voice',
-    maxBitrateBps: 14000,
-    bandwidthCapKbps: 18,
-    ptimeMs: 40,
-    maxPtimeMs: 60,
-    fecPacketLossPerc: 15,
-    maxPlaybackRate: 16000,
-    lossThreshold: 0.06,          // 2% - 6% loss
-    rttThresholdMs: 300,          // 150ms - 300ms RTT
-    jitterThresholdMs: 60,        // 30ms - 60ms jitter
-    concealmentThreshold: 0.03    // 1% - 3% concealment
+    label: '2G Normal',
+    maxBitrateBps: 6500,
+    bandwidthCapKbps: 8,
+    ptimeMs: 60,
+    maxPtimeMs: 100,
+    fecPacketLossPerc: 25,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.08,          // 3% - 8% loss
+    rttThresholdMs: 400,          // 250ms - 400ms RTT
+    jitterThresholdMs: 70,        // 40ms - 70ms jitter
+    concealmentThreshold: 0.05    // 2% - 5% concealment
   },
   {
     id: 2,
     name: 'LB',
-    label: 'Low Bandwidth',
-    maxBitrateBps: 10000,
-    bandwidthCapKbps: 14,
-    ptimeMs: 60,
+    label: '2G Congested',
+    maxBitrateBps: 5200,
+    bandwidthCapKbps: 7,
+    ptimeMs: 80,
     maxPtimeMs: 120,
-    fecPacketLossPerc: 25,
-    maxPlaybackRate: 16000,
-    lossThreshold: 0.12,          // 6% - 12% loss
-    rttThresholdMs: 500,          // 300ms - 500ms RTT
-    jitterThresholdMs: 100,       // 60ms - 100ms jitter
-    concealmentThreshold: 0.07    // 3% - 7% concealment
+    fecPacketLossPerc: 35,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.15,          // 8% - 15% loss
+    rttThresholdMs: 600,          // 400ms - 600ms RTT
+    jitterThresholdMs: 120,       // 70ms - 120ms jitter
+    concealmentThreshold: 0.08    // 5% - 8% concealment
   },
   {
     id: 3,
     name: 'HL',
-    label: 'High Loss Resilience',
-    maxBitrateBps: 7500,
-    bandwidthCapKbps: 10,
-    ptimeMs: 60,
+    label: '2G High Loss',
+    maxBitrateBps: 4500,
+    bandwidthCapKbps: 6,
+    ptimeMs: 80,
     maxPtimeMs: 120,
-    fecPacketLossPerc: 40,
-    maxPlaybackRate: 16000,
-    lossThreshold: 0.25,          // 12% - 25% loss
-    rttThresholdMs: 800,          // 500ms - 800ms RTT
-    jitterThresholdMs: 180,       // 100ms - 180ms jitter
-    concealmentThreshold: 0.15    // 7% - 15% concealment
+    fecPacketLossPerc: 45,
+    maxPlaybackRate: 8000,
+    lossThreshold: 0.25,          // 15% - 25% loss
+    rttThresholdMs: 850,          // 600ms - 850ms RTT
+    jitterThresholdMs: 200,       // 120ms - 200ms jitter
+    concealmentThreshold: 0.15    // 8% - 15% concealment
   },
   {
     id: 4,
     name: 'EXT',
-    label: 'Extreme Survival',
-    maxBitrateBps: 6000,
-    bandwidthCapKbps: 8,
+    label: '2G Survival',
+    maxBitrateBps: 3800,
+    bandwidthCapKbps: 5,
     ptimeMs: 80,
     maxPtimeMs: 120,
     fecPacketLossPerc: 50,
     maxPlaybackRate: 8000,        // Narrowband SILK focus
     lossThreshold: 0.35,          // 25% - 35% loss
-    rttThresholdMs: 1000,         // 800ms - 1000ms RTT
-    jitterThresholdMs: 250,       // 180ms - 250ms jitter
+    rttThresholdMs: 1100,         // 850ms - 1100ms RTT
+    jitterThresholdMs: 250,       // 200ms - 250ms jitter
     concealmentThreshold: 0.20    // 15% - 20% concealment
   },
   {
     id: 5,
     name: 'ULTRA',
-    label: 'Ultra 3kbps Satellite',
+    label: 'Satellite 3.2kbps',
     maxBitrateBps: 3200,
     bandwidthCapKbps: 4,
     ptimeMs: 100,
@@ -138,7 +138,7 @@ export const LADDER_TIERS = [
     fecPacketLossPerc: 50,
     maxPlaybackRate: 8000,        // 8kHz SILK narrowband telephone speech
     lossThreshold: 1.0,           // > 35% loss
-    rttThresholdMs: 99999,        // > 1000ms RTT
+    rttThresholdMs: 99999,        // > 1100ms RTT
     jitterThresholdMs: 99999,     // > 250ms jitter
     concealmentThreshold: 1.0     // > 20% concealment
   }

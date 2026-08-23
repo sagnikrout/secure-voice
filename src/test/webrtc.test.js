@@ -93,9 +93,9 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       expect(transformed).toContain('usedtx=1');
       expect(transformed).toContain('stereo=0');
       expect(transformed).toContain('sprop-stereo=0');
-      expect(transformed).toContain('cbr=0');
-      expect(transformed).toContain('maxplaybackrate=16000');
-      expect(transformed).toContain('sprop-maxcapturerate=16000');
+      expect(transformed).toContain(`cbr=${OPUS_CONFIG.CBR || '1'}`);
+      expect(transformed).toContain(`maxplaybackrate=${OPUS_CONFIG.MAX_PLAYBACK_RATE || '8000'}`);
+      expect(transformed).toContain(`sprop-maxcapturerate=${OPUS_CONFIG.SPROP_MAX_CAPTURE_RATE || '8000'}`);
       expect(transformed).toContain('minptime=10'); // Preserves existing params
 
       // Ordering check: b=AS and a=ptime appear before a=rtpmap
@@ -395,7 +395,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       ].join('\r\n');
 
       const transformed = transformOpusSdp(mockSdp);
-      expect((transformed.match(/b=AS:16/g) || []).length).toBe(2);
+      expect((transformed.match(new RegExp(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS || 8}`, 'g')) || []).length).toBe(2);
       expect((transformed.match(/a=rtpmap:63 red\/48000\/2/g) || []).length).toBe(2);
     });
   });

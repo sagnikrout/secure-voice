@@ -128,7 +128,7 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
       expect(transformed).toContain('b=CT:128'); // Session-level bandwidth unchanged
       expect(transformed).toContain('a=ice-lite');
       expect(transformed).toContain('m=audio 9 UDP/TLS/RTP/SAVPF 63 111');
-      expect(transformed).toContain('b=AS:16'); // Media-level audio bandwidth injected
+      expect(transformed).toContain(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS || 8}`); // Media-level audio bandwidth injected
     });
   });
 
@@ -213,7 +213,7 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
       expect(disabled).not.toContain('red/48000');
       expect(disabled).toContain('m=audio 9 UDP/TLS/RTP/SAVPF 111 101');
       expect(disabled).toContain('a=rtpmap:111 opus/48000/2');
-      expect(disabled).toContain('maxaveragebitrate=12000');
+      expect(disabled).toContain(`maxaveragebitrate=${OPUS_CONFIG.MAX_AVERAGE_BITRATE || 6000}`);
     });
 
     it('handles multiple secondary codecs in m= line (G.711, G.722, telephone-event)', () => {
@@ -494,7 +494,7 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
 
       const transformed = transformOpusSdp(oddCasedSdp);
 
-      expect(transformed).toContain('maxaveragebitrate=12000');
+      expect(transformed).toContain(`maxaveragebitrate=${OPUS_CONFIG.MAX_AVERAGE_BITRATE || 6000}`);
       expect(transformed).toContain('a=rtpmap:63 red/48000/2');
     });
 
@@ -509,7 +509,7 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
 
       const transformed = transformOpusSdp(dupSdp);
       expect(transformed).toContain('m=audio 9 UDP/TLS/RTP/SAVPF 63 111');
-      expect(transformed).toContain('maxaveragebitrate=12000');
+      expect(transformed).toContain(`maxaveragebitrate=${OPUS_CONFIG.MAX_AVERAGE_BITRATE || 6000}`);
     });
   });
 

@@ -28,7 +28,7 @@ describe('WebRTC Adversarial Stress Suite — Milestone 2 (R1 Transport)', () =>
       }).not.toThrow();
 
       if (result) {
-        expect(result).toContain('maxaveragebitrate=12000');
+        expect(result).toContain(`maxaveragebitrate=${OPUS_CONFIG.MAX_AVERAGE_BITRATE || 6000}`);
         expect(result).toContain('useinbandfec=1');
       }
     });
@@ -123,7 +123,7 @@ describe('WebRTC Adversarial Stress Suite — Milestone 2 (R1 Transport)', () =>
       ].join('\r\n');
 
       const res = transformOpusSdp(sdp, { bitrate: 8000 });
-      expect(res).toContain('b=AS:16');
+      expect(res).toContain(`b=AS:${OPUS_CONFIG.BANDWIDTH_CAP_KBPS || 8}`);
       expect(res).toContain('a=rtpmap:63 red/48000/2');
       expect(res).toContain('a=rtpmap:9 G722/8000');
       expect(res).toContain('a=rtpmap:96 VP8/90000');

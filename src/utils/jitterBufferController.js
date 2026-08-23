@@ -17,12 +17,12 @@ export class JitterBufferController {
    * Target jitter buffer delays (ms) mapped per adaptive tier
    */
   static TIER_TARGETS = {
-    HQ: 20,     // Low jitter network — tightest buffer for optimal conversational interactivity
-    STD: 40,    // Standard broadband
-    LB: 80,     // Mobile 3G / mild jitter
-    HL: 150,    // High Loss / 2G EDGE
-    EXT: 250,   // Extreme survival / satellite link
-    ULTRA: 400  // Ultra 3.2kbps survival — maximum packet concealment window
+    HQ: 120,    // 2G Stable — smooth buffer eliminating micro-jitter
+    STD: 160,   // 2G Normal
+    LB: 200,    // 2G Congested
+    HL: 250,    // 2G High Loss
+    EXT: 300,   // 2G Survival
+    ULTRA: 400  // Satellite / Extreme Loss — maximum NetEQ packet concealment window
   };
 
   /**

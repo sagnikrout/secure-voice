@@ -365,23 +365,23 @@ describe('Network Quality Adaptation Engine (src/test/networkAdaptation.test.js)
   // SUITE 4: 5-Tier Adaptation Ladder & Asymmetric Hysteresis
   // -------------------------------------------------------------
   describe('4. 5-Tier Adaptation Ladder & Asymmetric Hysteresis', () => {
-    it('initializes at High Quality (Tier 0: HQ 20kbps) by default', () => {
+    it('initializes at High Quality (Tier 0: HQ 8kbps) by default', () => {
       const controller = new AdaptiveBitrateController();
       expect(controller.getCurrentTier().id).toBe(0);
       expect(controller.getCurrentTier().name).toBe('HQ');
-      expect(controller.getCurrentTier().maxBitrateBps).toBe(20000);
+      expect(controller.getCurrentTier().maxBitrateBps).toBe(8000);
     });
 
     it('Fast Downgrade: downgrades immediately by 1 tier on 1st tick of degraded metrics', () => {
       const controller = new AdaptiveBitrateController({ initialTierIndex: 0 }); // Tier 0 (HQ)
       controller.evaluate({ effectiveLossRate: 0, rttMs: 50, jitterMs: 10, concealmentRatio: 0 });
 
-      // Tick: smoothedLoss jumps to 4.5% (exceeds Tier 0 threshold of 2%, fits Tier 1)
+      // Tick: smoothedLoss jumps to 4.5% (exceeds Tier 0 threshold of 3%, fits Tier 1)
       const res = controller.evaluate({ effectiveLossRate: 0.1125, rttMs: 50, jitterMs: 10, concealmentRatio: 0 }); // 0.4 * 0.1125 = 0.045
 
       expect(res.tierChanged).toBe(true);
       expect(res.currentTier.name).toBe('STD');
-      expect(res.currentTier.maxBitrateBps).toBe(14000);
+      expect(res.currentTier.maxBitrateBps).toBe(6500);
     });
 
     it('Multi-Tier Emergency Downgrade: drops directly from HQ (Tier 0) to EXT (Tier 4) on catastrophic loss', () => {
@@ -393,7 +393,7 @@ describe('Network Quality Adaptation Engine (src/test/networkAdaptation.test.js)
 
       expect(res.tierChanged).toBe(true);
       expect(res.currentTier.name).toBe('EXT');
-      expect(res.currentTier.maxBitrateBps).toBe(6000);
+      expect(res.currentTier.maxBitrateBps).toBe(3800);
     });
 
     it('Slow Upgrade: requires 4 consecutive clean ticks (4s) before upgrading by 1 tier', () => {
@@ -453,7 +453,7 @@ describe('Network Quality Adaptation Engine (src/test/networkAdaptation.test.js)
       }
 
       expect(controller.getCurrentTier().name).toBe('HQ');
-      expect(controller.getCurrentTier().maxBitrateBps).toBe(20000);
+      expect(controller.getCurrentTier().maxBitrateBps).toBe(8000);
       vi.useRealTimers();
     });
 
@@ -490,7 +490,7 @@ describe('Network Quality Adaptation Engine (src/test/networkAdaptation.test.js)
 
       expect(res.tierChanged).toBe(true);
       expect(res.currentTier.name).toBe('EXT');
-      expect(res.currentTier.maxBitrateBps).toBe(6000);
+      expect(res.currentTier.maxBitrateBps).toBe(3800);
     });
   });
 
