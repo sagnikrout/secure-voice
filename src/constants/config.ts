@@ -2,6 +2,9 @@
  * Application Constants & Configuration
  */
 
+export const APP_NAME = 'SecureVoice';
+export const APP_VERSION = 'v3.1.0';
+
 // WebRTC ICE Servers Configuration (Google STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
   iceServers: [

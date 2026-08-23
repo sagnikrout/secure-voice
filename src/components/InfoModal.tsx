@@ -3,14 +3,14 @@ import { ShieldCheck, X, Cpu, Wifi, Lock, Zap, Sliders, Server } from 'lucide-re
 
 const SPECS = [
   { key: 'Encryption', val: 'DTLS-SRTP (WebRTC E2EE)', icon: Lock },
-  { key: 'Audio Codec', val: 'Opus · 12 kbps (Low-latency)', icon: Cpu },
-  { key: 'Noise Cancellation', val: 'Web Audio Gate + High-Pass 80Hz', icon: Sliders },
-  { key: 'Bandwidth Cap', val: '16 kbps max (SDP b=AS)', icon: Zap },
-  { key: 'Packetization', val: 'ptime=40ms (Header-optimized)', icon: Zap },
-  { key: 'Loss Recovery', val: 'In-band FEC + RED Ready', icon: Wifi },
-  { key: 'Connection Mode', val: 'Direct Peer-to-Peer (Mesh)', icon: ShieldCheck },
-  { key: 'NAT Traversal', val: 'STUN / TURN (Metered Cloud)', icon: Server },
-  { key: 'Signaling Protocol', val: 'PeerJS Cloud Engine', icon: Wifi }
+  { key: 'Audio Codec', val: 'Opus SILK · 3.2–8.0 kbps (CBR 8kHz)', icon: Cpu },
+  { key: 'Voice Pre-Processing', val: '6-Stage Vocal Formant DSP + RMS Gate', icon: Sliders },
+  { key: 'Bandwidth Cap', val: '8.0 kbps session ceiling (b=AS:8)', icon: Zap },
+  { key: 'Packet Aggregation', val: 'ptime=80–100ms (10–12.5 pkts/sec)', icon: Zap },
+  { key: 'Loss Recovery', val: 'In-band FEC + RFC 2198 RED (50% recovery)', icon: Wifi },
+  { key: 'Jitter Buffer', val: 'Locked NetEQ Controller (120–400ms)', icon: Sliders },
+  { key: 'Connection Mode', val: 'Direct P2P with Adaptive TURN Failover', icon: ShieldCheck },
+  { key: 'Signaling Protocol', val: 'PeerJS Cloud Engine', icon: Server }
 ];
 
 function InfoModalComponent({ onClose }) {

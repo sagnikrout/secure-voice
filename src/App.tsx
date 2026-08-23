@@ -24,7 +24,7 @@ import { usePeer } from './hooks/usePeer';
 import { useCallSession } from './hooks/useCallSession';
 import { useAudioDevices } from './hooks/useAudioDevices';
 import { sanitizePeerId, formatTimer } from './utils/formatters';
-import { STATUS_LABELS, QUALITY_BADGES } from './constants/config';
+import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION } from './constants/config';
 
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
@@ -156,7 +156,7 @@ export default function App() {
             </div>
             <div className="brand-text">
               <h1>SecureVoice</h1>
-              <span className="v2-badge">v3.0.1</span>
+              <span className="v2-badge">{APP_VERSION}</span>
             </div>
           </div>
 

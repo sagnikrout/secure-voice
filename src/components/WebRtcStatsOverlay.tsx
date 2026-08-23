@@ -16,12 +16,12 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
     jitterMs: 0,
     jitterBufferDelayMs: 0,
     concealmentPct: '0.0',
-    tierName: 'STD',
-    tierBitrateKbps: 14,
+    tierName: 'HQ',
+    tierBitrateKbps: 8,
     candidateType: 'HOST (UDP)',
     audioLevel: 0,
-    codec: 'Opus 48kHz Mono',
-    ptime: `${OPUS_CONFIG.PTIME || 40}ms`,
+    codec: 'Opus 8kHz SILK Mono (CBR)',
+    ptime: `${OPUS_CONFIG.PTIME || 80}ms`,
     fec: OPUS_CONFIG.USE_INBAND_FEC === '1' ? 'Enabled' : 'Disabled',
     red: OPUS_CONFIG.ENABLE_RED ? 'Active (RFC 2198)' : 'Disabled'
   });
