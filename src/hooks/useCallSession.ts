@@ -18,7 +18,7 @@ import {
   abandonAudioFocus,
   addAudioFocusListener
 } from '../utils/audioRouting';
-import { TIMINGS, BITRATE_ADAPTATION, LADDER_TIERS } from '../constants/config';
+import { TIMINGS, LADDER_TIERS } from '../constants/config';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state

@@ -214,6 +214,6 @@ export class TurnRelayManager {
    * Reset failure counter
    */
   reset() {
-    this.consecutiveP2PFailures = 0;
+    this.recordP2PSuccess();
   }
 }

@@ -252,13 +252,6 @@ export class IceRestartManager {
   }
 
   /**
-   * Alias for handleRemoteRestartOffer
-   */
-  handleRemoteOffer(pc, offerSdp, sdpTransform) {
-    return this.handleRemoteRestartOffer(pc, offerSdp, sdpTransform);
-  }
-
-  /**
    * Handle incoming remote ICE restart answer
    * @param {RTCPeerConnection} pc
    * @param {string} answerSdp
@@ -277,13 +270,6 @@ export class IceRestartManager {
       this.onLog?.(`Failed to handle remote ICE restart answer: ${err.message}`, 'error');
       return false;
     }
-  }
-
-  /**
-   * Alias for handleRemoteRestartAnswer
-   */
-  handleRemoteAnswer(pc, answerSdp) {
-    return this.handleRemoteRestartAnswer(pc, answerSdp);
   }
 
   /**

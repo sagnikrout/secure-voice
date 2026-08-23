@@ -164,16 +164,6 @@ export const ICE_RECONNECT_CONFIG = {
   TOTAL_WATCHDOG_TIMEOUT_MS: 25000                   // 25s total reconnect timeout
 };
 
-// Dynamic Bitrate Adaptation Legacy Thresholds (maintained for backwards compatibility)
-export const BITRATE_ADAPTATION = {
-  HIGH_LOSS_THRESHOLD: 0.12,    // ≥12% packet loss → emergency drop to 6kbps
-  MID_LOSS_THRESHOLD: 0.05,     // ≥5% packet loss → step down to 8kbps
-  RECOVERY_LOSS_THRESHOLD: 0.01,// <1% packet loss & RTT <200ms → restore to 16kbps
-  MIN_BITRATE_BPS: 6000,        // Minimum bitrate (6 kbps)
-  MID_BITRATE_BPS: 8000,        // Mid-tier bitrate (8 kbps)
-  MAX_BITRATE_BPS: 16000        // Maximum bitrate (16 kbps)
-};
-
 // Timing Constants (in milliseconds) - Optimized for low-bandwidth and high-latency networks
 export const TIMINGS = {
   OUTGOING_CALL_TIMEOUT_MS: 30000, // 30s no-answer timeout

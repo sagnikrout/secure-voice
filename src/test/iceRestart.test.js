@@ -279,7 +279,7 @@ describe('WebRTC ICE Restart & Non-Destructive Fast Reconnect (src/test/iceResta
       const manager = new IceRestartManager();
 
       const answerSdp = 'v=0\r\na=ice-ufrag:remoteUfragNew\r\na=ice-pwd:remotePwdNew\r\na=fingerprint:sha-256 EE:FF:00:11\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n';
-      const success = await manager.handleRemoteAnswer(pc, answerSdp);
+      const success = await manager.handleRemoteRestartAnswer(pc, answerSdp);
 
       expect(success).toBe(true);
       expect(pc.setRemoteDescription).toHaveBeenCalledWith(expect.objectContaining({
