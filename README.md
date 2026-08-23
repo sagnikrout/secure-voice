@@ -14,7 +14,7 @@
 
 <br/>
 
-**🌐 Web App:** [https://sagnikrout.github.io/secure-voice](https://sagnikrout.github.io/secure-voice) &nbsp;|&nbsp; **📱 Android Release:** [`SecureVoice-v3.1.0.apk`](SecureVoice-v3.1.0.apk)
+**🌐 Web App:** [https://sagnikrout.github.io/secure-voice](https://sagnikrout.github.io/secure-voice) &nbsp;|&nbsp; **📱 Android Release:** [`SecureVoice-v3.1.0.apk`](SecureVoice-v3.1.0.apk) &nbsp;|&nbsp; **📋 [Changelog](CHANGELOG.md)** &nbsp;|&nbsp; **🏗️ [Architecture](docs/ARCHITECTURE.md)** &nbsp;|&nbsp; **🧪 [Testing](docs/TESTING.md)**
 
 </div>
 
