@@ -64,7 +64,7 @@ function InfoModalComponent({ onClose }) {
 
         <div className="modal-note">
           <Lock className="w-4 h-4 text-green inline-block mr-1" aria-hidden="true" />
-          <span>Calls are end-to-end encrypted. Audio streams peer-to-peer and never traverses any intermediate server.</span>
+          <span>Calls are end-to-end encrypted. Audio streams directly peer-to-peer and never passes through an intermediate server.</span>
         </div>
       </div>
     </div>

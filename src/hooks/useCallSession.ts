@@ -39,7 +39,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
-  // Milestone 3 & 4: Telemetry Monitor, Bitrate Controller, ICE Restart, Jitter Buffer, Packet Pacer, and TURN Manager Refs
+  // Telemetry monitor, bitrate controller, ICE restart, jitter buffer, packet pacer, and TURN manager refs
   const telemetryMonitorRef = useRef(null);
   const bitrateControllerRef = useRef(new AdaptiveBitrateController());
   const iceRestartManagerRef = useRef(null);

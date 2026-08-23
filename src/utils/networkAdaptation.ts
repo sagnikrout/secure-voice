@@ -2,8 +2,8 @@
  * Network Quality Telemetry Monitor & Adaptive Bitrate Controller
  * 
  * Provides:
- * - NetworkTelemetryMonitor: 1000ms high-frequency multi-dimensional WebRTC stats sampling.
- * - AdaptiveBitrateController: 5-tier asymmetric hysteresis ladder with EMA smoothing.
+ * - NetworkTelemetryMonitor: Multi-dimensional WebRTC stats sampling.
+ * - AdaptiveBitrateController: 6-tier asymmetric hysteresis ladder with EMA smoothing.
  * - applySenderBitrate: Utility to configure RTCRtpSender encoding parameters.
  */
 

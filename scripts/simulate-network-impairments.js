@@ -22,9 +22,7 @@ function checkServerReady(port = 5173, timeout = 15000) {
 }
 
 async function runImpairmentSimulation() {
-  console.log('\n======================================================');
-  console.log('⚡ WebRTC Network Impairment & Adaptive Bitrate Test');
-  console.log('======================================================\n');
+  console.log('\nWebRTC network impairment simulation\n');
 
   let viteProcess = null;
   const PORT = 5173;
@@ -140,9 +138,7 @@ async function runImpairmentSimulation() {
     await pageA.click('button[title="Hang up"]');
     await browser.close();
 
-    console.log('\n======================================================');
-    console.log('🎉 \x1b[32mIMPAIRMENT & RESILIENCE SIMULATION COMPLETE!\x1b[0m');
-    console.log('======================================================\n');
+    console.log('\nNetwork impairment simulation completed successfully.\n');
     process.exit(0);
 
   } catch (err) {

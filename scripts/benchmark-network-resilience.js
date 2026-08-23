@@ -14,9 +14,7 @@ import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../src/utils
 import { IceRestartManager } from '../src/utils/iceRestartManager.ts';
 import { OPUS_CONFIG, LADDER_TIERS, ADAPTATION_CONFIG, ICE_RECONNECT_CONFIG } from '../src/constants/config.ts';
 
-console.log('\n===============================================================');
-console.log('⚡ SecureVoice Extreme Low-Bandwidth & Resilience Benchmark');
-console.log('===============================================================\n');
+console.log('\nSecureVoice low-bandwidth resilience benchmark\n');
 
 let passedAssertions = 0;
 let totalAssertions = 0;
@@ -229,7 +227,5 @@ assert(/^\d{5}$/.test(code1), 'Safety code consists strictly of 5 numeric digits
 // -------------------------------------------------------------
 // Final Results
 // -------------------------------------------------------------
-console.log('\n===============================================================');
-console.log(`🎉 ALL BENCHMARKS PASSED: ${passedAssertions}/${totalAssertions} assertions verified!`);
-console.log('===============================================================\n');
+console.log(`\nAll benchmarks passed: ${passedAssertions}/${totalAssertions} assertions verified.\n`);
 process.exit(0);

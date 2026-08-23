@@ -22,9 +22,7 @@ function checkServerReady(port = 5173, timeout = 15000) {
 }
 
 async function runSimulation() {
-  console.log('\n======================================================');
-  console.log('🧪 WebRTC End-to-End Simulation Harness (2-Peer Test)');
-  console.log('======================================================\n');
+  console.log('\nWebRTC end-to-end simulation (2-peer test)\n');
 
   let viteProcess = null;
   const PORT = 5173;
@@ -149,13 +147,8 @@ async function runSimulation() {
     await pageA.click('button[title="Hang up"]');
     await pageA.waitForSelector('.status-chip.ready', { timeout: 5000 });
     await pageB.waitForSelector('.status-chip.ready', { timeout: 5000 });
-    console.log('✅ \x1b[32m[Call Terminated Cleanly]\x1b[0m All tracks stopped and states restored to Ready.');
-
     await browser.close();
-
-    console.log('\n======================================================');
-    console.log('🎉 \x1b[32mSIMULATION PASSED: All 10 verification steps succeeded!\x1b[0m');
-    console.log('======================================================\n');
+    console.log('\nSimulation completed: all 10 steps succeeded.\n');
     process.exit(0);
 
   } catch (err) {
