@@ -8,6 +8,12 @@
 import { EncryptedSignalPayload } from './types';
 
 function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  if (typeof globalThis !== 'undefined' && (globalThis as any).Buffer) {
+    if (buffer instanceof Uint8Array) {
+      return (globalThis as any).Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength).toString('base64');
+    }
+    return (globalThis as any).Buffer.from(buffer).toString('base64');
+  }
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   const len = bytes.byteLength;
@@ -17,7 +23,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   return btoa(binary);
 }
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
+function base64ToBytes(base64: string): Uint8Array {
+  if (typeof globalThis !== 'undefined' && (globalThis as any).Buffer) {
+    return (globalThis as any).Buffer.from(base64, 'base64');
+  }
   const binary = atob(base64);
   const len = binary.length;
   const buffer = new ArrayBuffer(len);
@@ -25,7 +34,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   for (let i = 0; i < len; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return buffer;
+  return bytes;
 }
 
 export class E2ESignalingProtocol {
@@ -131,16 +140,16 @@ export class E2ESignalingProtocol {
     const ciphertextBuffer = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
-        iv
+        iv: iv as unknown as BufferSource
       },
       sharedKey,
-      encodedData
+      encodedData as unknown as BufferSource
     );
 
     return {
       version: 1,
       ephemeralPublicKey: localPublicKeyJwk,
-      iv: arrayBufferToBase64(iv.buffer),
+      iv: arrayBufferToBase64(iv),
       ciphertext: arrayBufferToBase64(ciphertextBuffer),
       senderFingerprint
     };
@@ -155,16 +164,16 @@ export class E2ESignalingProtocol {
     }
 
     const sharedKey = await this.deriveSharedKey(encrypted.ephemeralPublicKey);
-    const iv = base64ToArrayBuffer(encrypted.iv);
-    const ciphertext = base64ToArrayBuffer(encrypted.ciphertext);
+    const iv = base64ToBytes(encrypted.iv);
+    const ciphertext = base64ToBytes(encrypted.ciphertext);
 
     const decryptedBuffer = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv
+        iv: iv as unknown as BufferSource
       },
       sharedKey,
-      ciphertext
+      ciphertext as unknown as BufferSource
     );
 
     const decoder = new TextDecoder();
