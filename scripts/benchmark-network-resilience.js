@@ -9,10 +9,10 @@
  * 5. Web Audio DSP Noise Gate RMS & Frequency Curve Assertions
  */
 
-import { transformOpusSdp, generateSafetyCode, getQualityRating } from '../src/utils/webrtc.js';
-import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../src/utils/networkAdaptation.js';
-import { IceRestartManager } from '../src/utils/iceRestartManager.js';
-import { OPUS_CONFIG, LADDER_TIERS, ADAPTATION_CONFIG, ICE_RECONNECT_CONFIG } from '../src/constants/config.js';
+import { transformOpusSdp, generateSafetyCode, getQualityRating } from '../src/utils/webrtc.ts';
+import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../src/utils/networkAdaptation.ts';
+import { IceRestartManager } from '../src/utils/iceRestartManager.ts';
+import { OPUS_CONFIG, LADDER_TIERS, ADAPTATION_CONFIG, ICE_RECONNECT_CONFIG } from '../src/constants/config.ts';
 
 console.log('\n===============================================================');
 console.log('⚡ SecureVoice Extreme Low-Bandwidth & Resilience Benchmark');

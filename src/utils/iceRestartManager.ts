@@ -9,7 +9,7 @@
  * - Eventual teardown after retry exhaustion or 25s watchdog expiration.
  */
 
-import { ICE_RECONNECT_CONFIG } from '../constants/config.js';
+import { ICE_RECONNECT_CONFIG } from '../constants/config';
 
 export class IceRestartManager {
   onStatusChange?: (status: string) => void;

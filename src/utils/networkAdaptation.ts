@@ -7,8 +7,8 @@
  * - applySenderBitrate: Utility to configure RTCRtpSender encoding parameters.
  */
 
-import { LADDER_TIERS, ADAPTATION_CONFIG, TIMINGS } from '../constants/config.js';
-import { applySenderBitrate } from './webrtc.js';
+import { LADDER_TIERS, ADAPTATION_CONFIG, TIMINGS } from '../constants/config';
+import { applySenderBitrate } from './webrtc';
 
 export { applySenderBitrate };
 

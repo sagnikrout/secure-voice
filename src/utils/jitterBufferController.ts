@@ -10,7 +10,7 @@
  * without stuttering or audio underruns.
  */
 
-import { LADDER_TIERS } from '../constants/config.js';
+import { LADDER_TIERS } from '../constants/config';
 
 export class JitterBufferController {
   onLog?: (msg: string, level?: string) => void;

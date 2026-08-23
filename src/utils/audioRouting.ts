@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { STORAGE_KEYS } from '../constants/config.js';
+import { STORAGE_KEYS } from '../constants/config';
 
 const PREFERRED_OUTPUT_KEY = STORAGE_KEYS.PREFERRED_OUTPUT || 'securevoice_output_mode';
 

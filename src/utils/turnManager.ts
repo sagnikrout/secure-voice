@@ -9,7 +9,7 @@
  * (iceTransportPolicy: 'relay') to bypass symmetric NAT or UDP blockage.
  */
 
-import { ICE_SERVERS } from '../constants/config.js';
+import { ICE_SERVERS } from '../constants/config';
 
 export class TurnRelayManager {
   iceServers: any[];

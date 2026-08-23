@@ -1,8 +1,8 @@
 /**
  * WebRTC SDP Transformation, Network Scoring & Security Utilities
  */
-import { ICE_SERVERS, PEER_ID_ALPHABET, OPUS_CONFIG } from '../constants/config.js';
-import { formatPeerId, sanitizePeerId } from './formatters.js';
+import { ICE_SERVERS, PEER_ID_ALPHABET, OPUS_CONFIG } from '../constants/config';
+import { formatPeerId, sanitizePeerId } from './formatters';
 
 export { ICE_SERVERS, formatPeerId, sanitizePeerId };
 
