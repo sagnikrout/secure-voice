@@ -190,6 +190,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           deviceId: selectedInputIdRef.current ? { exact: selectedInputIdRef.current } : undefined,
+          channelCount: { ideal: 1 },
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
