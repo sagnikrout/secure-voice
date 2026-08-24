@@ -71,7 +71,7 @@ jobs:
         with:
           name: SecureVoice ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          body_path: RELEASE_NOTES_v3.2.0.md
+          generate_release_notes: true
           make_latest: "true"
           files: |
             SecureVoice-*.apk
