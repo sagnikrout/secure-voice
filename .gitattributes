@@ -1,0 +1,15 @@
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Force Unix line endings for shell scripts and Gradle wrappers
+*.sh text eol=lf
+gradlew text eol=lf
+android/gradlew text eol=lf
+
+# Binary files
+*.apk binary
+*.keystore binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.jar binary
