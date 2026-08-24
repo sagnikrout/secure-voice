@@ -51,12 +51,14 @@ jobs:
 
       - name: Create or Update GitHub Release
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete ${{ github.ref_name }} -y || true
           gh release create ${{ github.ref_name }} \
             --title "SecureVoice ${{ github.ref_name }}" \
             --notes-file RELEASE_NOTES_v3.2.0.md \
             --latest \
             SecureVoice-*.apk \
-            SHA256SUMS.txt
+            SHA256SUMS.txt || \
+          (gh release upload ${{ github.ref_name }} SecureVoice-*.apk SHA256SUMS.txt --clobber && \
+           gh release edit ${{ github.ref_name }} --title "SecureVoice ${{ github.ref_name }}" --notes-file RELEASE_NOTES_v3.2.0.md --latest)
