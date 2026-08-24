@@ -81,6 +81,13 @@ export default function App() {
     }
   });
 
+  // Reset verification dismissed flag when not in active call
+  useEffect(() => {
+    if (!callSession.isInCall) {
+      setVerificationDismissed(false);
+    }
+  }, [callSession.isInCall]);
+
   // Keep WebRTC background connectivity active via Android Foreground Service
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return;

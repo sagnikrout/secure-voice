@@ -389,8 +389,8 @@ export async function generateSafetyCode(localSdp, remoteSdp) {
   if (!localSdp || !remoteSdp || typeof localSdp !== 'string' || typeof remoteSdp !== 'string') return null;
   
   const extractFingerprint = (sdp) => {
-    const match = sdp.match(/a=fingerprint:sha-256\s+([A-F0-9:]+)/i);
-    return match ? match[1] : '';
+    const match = sdp.match(/a=fingerprint:\S+\s+([A-F0-9:]+)/i);
+    return match ? match[1].toUpperCase().trim() : '';
   };
   
   const f1 = extractFingerprint(localSdp);

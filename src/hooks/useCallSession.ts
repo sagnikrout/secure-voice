@@ -261,6 +261,22 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         window.__SECUREVOICE_ACTIVE_PC__ = pc;
       }
 
+      // Direct DataChannel creation for instantaneous Safety Code synchronization
+      try {
+        if (!(pc as any)._safetyChannel) {
+          const dc = pc.createDataChannel('securevoice_security_sync', { negotiated: true, id: 0 });
+          (pc as any)._safetyChannel = dc;
+          dc.onmessage = (event: any) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data && data.type === 'safety_code' && data.code) {
+                setSafetyCode(prev => prev || data.code);
+              }
+            } catch (e) {}
+          };
+        }
+      } catch (e) {}
+
       // Generate MITM Safety Code from DTLS Fingerprints with multi-event settlement checks
       const computeAndSetSafetyCode = async () => {
         const localSdp = pc.currentLocalDescription?.sdp || pc.localDescription?.sdp;
@@ -270,6 +286,14 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             const code = await generateSafetyCode(localSdp, remoteSdp);
             if (code) {
               setSafetyCode(code);
+              const dc = (pc as any)._safetyChannel;
+              if (dc && dc.readyState === 'open') {
+                try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e) {}
+              } else if (dc) {
+                dc.onopen = () => {
+                  try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e) {}
+                };
+              }
             }
           } catch (err: any) {
             callbacksRef.current.addLog?.(`Safety code generation failed: ${err.message}`, 'warn');
@@ -277,12 +301,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         }
       };
 
-      // Try immediately and on asynchronous SDP handshake settlement
+      // Try immediately and on continuous interval during handshake
       computeAndSetSafetyCode();
-      setTimeout(computeAndSetSafetyCode, 200);
-      setTimeout(computeAndSetSafetyCode, 500);
-      setTimeout(computeAndSetSafetyCode, 1000);
-      setTimeout(computeAndSetSafetyCode, 2500);
+      const safetyInterval = setInterval(computeAndSetSafetyCode, 250);
+      setTimeout(() => clearInterval(safetyInterval), 8000);
 
       if (pcInitialized) return;
       pcInitialized = true;
