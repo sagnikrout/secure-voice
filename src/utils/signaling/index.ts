@@ -7,7 +7,6 @@
 
 export * from './types';
 export * from './e2eSignaling';
-export * from './qrCodeSignaling';
 export * from './peerJsTransport';
 export * from './dataChannelTransport';
 

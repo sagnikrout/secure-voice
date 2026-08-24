@@ -73,4 +73,22 @@ describe('E2ESignalingProtocol (Web Crypto ECDH + AES-256-GCM)', () => {
 
     await expect(bob.decryptSignal(corrupted)).rejects.toThrow();
   });
+  it('detects MITM tampering of the ephemeral public key', async () => {
+    const bobPubJwk = await bob.exportPublicKey();
+    const payload = { sdp: 'secret-sdp' };
+
+    const encrypted = await alice.encryptSignal(bobPubJwk, payload);
+
+    // Eve the attacker intercepts and modifies the ephemeral public key
+    const eve = new E2ESignalingProtocol();
+    const evePubJwk = await eve.exportPublicKey();
+    const tampered = {
+      ...encrypted,
+      ephemeralPublicKey: evePubJwk
+    };
+
+    // Bob attempts to decrypt the tampered payload. The ciphertext was encrypted with Alice's key,
+    // but the payload claims it's from Eve. The derived shared key will not match, causing GCM auth failure.
+    await expect(bob.decryptSignal(tampered)).rejects.toThrow();
+  });
 });

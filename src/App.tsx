@@ -471,18 +471,17 @@ export default function App() {
         )}
 
         {/* MITM Security Verification Modal */}
-        {callSession.isInCall && callSession.safetyCode && (!callSession.isVerified && !verificationDismissed) && (
+        {callSession.isInCall && callSession.safetyCode && !callSession.isVerified && (
           <SecurityVerificationModal
             safetyCode={callSession.safetyCode}
             connectedPeer={callSession.connectedPeer}
             onVerify={() => {
               callSession.setIsVerified(true);
-              setVerificationDismissed(true);
               addLog('Connection authenticity verified by user', 'ok');
             }}
             onReject={() => {
-              setVerificationDismissed(true);
-              addLog('Security verification dismissed by user', 'info');
+              addLog('Security verification rejected. Terminating call.', 'error');
+              callSession.endCall();
             }}
           />
         )}
