@@ -75,7 +75,7 @@ describe('StructuredLogger (Diagnostics & Zero-Server Logging)', () => {
 
     expect(parsed).toHaveLength(1);
     expect(parsed[0].data.server).toBe('turn:openrelay.metered.ca');
-    expect(parsed[0].data.username).toBe('openrelayproject');
+    expect(parsed[0].data.username).toBeUndefined();
     expect(parsed[0].data.credential).toBeUndefined();
     expect(parsed[0].data.authKey).toBeUndefined();
     expect(parsed[0].data.password).toBeUndefined();

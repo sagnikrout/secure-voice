@@ -670,7 +670,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       const code2 = await generateSafetyCode(sdpB, sdpA);
       
       expect(code1).toBe(code2);
-      expect(code1).toMatch(/^\d{5}$/); // 5 digits
+      expect(code1).toMatch(/^\d{6}$/); // 5 digits
     });
 
     it('returns null if fingerprint is missing', async () => {
@@ -709,7 +709,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       const mungedCode = await generateSafetyCode(mungedA, mungedB);
 
       expect(mungedCode).toBe(originalCode);
-      expect(mungedCode).toMatch(/^\d{5}$/);
+      expect(mungedCode).toMatch(/^\d{6}$/);
     });
   });
 });

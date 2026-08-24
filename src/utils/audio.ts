@@ -142,15 +142,16 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.0;
-
-    let gateEnabled = options.gateEnabled !== false && options.noiseGateEnabled !== false;
-    let gateThreshold = (typeof options.gateThreshold === 'number' && Number.isFinite(options.gateThreshold))
-      ? options.gateThreshold
-      : ((typeof options.noiseGateThreshold === 'number' && Number.isFinite(options.noiseGateThreshold))
-          ? options.noiseGateThreshold
+    
+    const opts = options || {};
+    let gateEnabled = opts.gateEnabled !== false && opts.noiseGateEnabled !== false;
+    let gateThreshold = (typeof opts.gateThreshold === 'number' && Number.isFinite(opts.gateThreshold))
+      ? opts.gateThreshold
+      : ((typeof opts.noiseGateThreshold === 'number' && Number.isFinite(opts.noiseGateThreshold))
+          ? opts.noiseGateThreshold
           : -46);
-    const gateFloor = (typeof options.gateFloor === 'number' && Number.isFinite(options.gateFloor))
-      ? options.gateFloor
+    const gateFloor = (typeof opts.gateFloor === 'number' && Number.isFinite(opts.gateFloor))
+      ? opts.gateFloor
       : 0.02;
     const attackTime = 0.010;  // 10ms
     const holdTimeMs = 80;     // 80ms
