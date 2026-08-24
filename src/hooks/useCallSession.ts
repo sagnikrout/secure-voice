@@ -235,6 +235,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const bindCallEvents = useCallback((call) => {
     callRef.current = call;
     let streamAttached = false;
+    let pcInitialized = false;
 
     // Request native audio focus on active connection
     requestAudioFocus();
@@ -251,6 +252,159 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         }
       }
     });
+
+    const setupPeerConnection = () => {
+      const pc = call.peerConnection || (call as any)._peerConnection;
+      if (!pc) return;
+
+      if (typeof window !== 'undefined') {
+        window.__SECUREVOICE_ACTIVE_PC__ = pc;
+      }
+
+      // Generate MITM Safety Code from DTLS Fingerprints with multi-event settlement checks
+      const computeAndSetSafetyCode = async () => {
+        const localSdp = pc.currentLocalDescription?.sdp || pc.localDescription?.sdp;
+        const remoteSdp = pc.currentRemoteDescription?.sdp || pc.remoteDescription?.sdp;
+        if (localSdp && remoteSdp) {
+          try {
+            const code = await generateSafetyCode(localSdp, remoteSdp);
+            if (code) {
+              setSafetyCode(code);
+            }
+          } catch (err: any) {
+            callbacksRef.current.addLog?.(`Safety code generation failed: ${err.message}`, 'warn');
+          }
+        }
+      };
+
+      // Try immediately and on asynchronous SDP handshake settlement
+      computeAndSetSafetyCode();
+      setTimeout(computeAndSetSafetyCode, 200);
+      setTimeout(computeAndSetSafetyCode, 500);
+      setTimeout(computeAndSetSafetyCode, 1000);
+      setTimeout(computeAndSetSafetyCode, 2500);
+
+      if (pcInitialized) return;
+      pcInitialized = true;
+
+      const isCaller = Boolean(call.options && call.options._isCaller);
+
+      // Instantiate IceRestartManager
+      const iceManager = new IceRestartManager({
+        onStatusChange: (status) => {
+          if (status === 'in-call') {
+            setIsInCall(true);
+          } else if (status === 'reconnecting') {
+            auditoryFeedback.notifyReconnecting();
+          }
+          callbacksRef.current.onStatusChange?.(status);
+        },
+        onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
+        onDiagnostic: (event, data) => {
+          const level = event.includes('fail') || event.includes('tripped') ? 'warn' : 'info';
+          structuredLogger.log(level, event, data);
+        },
+        onFatalDisconnect: () => {
+          callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
+          endCall();
+        },
+        sendRenegotiation: async (msg) => {
+          if (call.dataChannel && call.dataChannel.readyState === 'open') {
+            try {
+              call.dataChannel.send(JSON.stringify(msg));
+            } catch (e) {}
+          }
+        },
+        sdpTransform: (sdp) => {
+          const currentTier = bitrateControllerRef.current.getCurrentTier();
+          return transformOpusSdp(sdp, {
+            bitrate: currentTier.maxBitrateBps,
+            bandwidthCapKbps: currentTier.bandwidthCapKbps,
+            ptime: currentTier.ptimeMs,
+            maxptime: currentTier.maxPtimeMs,
+            packetLossPerc: currentTier.fecPacketLossPerc,
+            maxPlaybackRate: currentTier.maxPlaybackRate
+          });
+        }
+      });
+      iceRestartManagerRef.current = iceManager;
+
+      pc.onsignalingstatechange = () => {
+        computeAndSetSafetyCode();
+      };
+
+      pc.onconnectionstatechange = () => {
+        computeAndSetSafetyCode();
+        iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
+        if (pc.connectionState === 'connected') {
+          turnRelayManagerRef.current.recordP2PSuccess();
+        } else if (pc.connectionState === 'failed') {
+          turnRelayManagerRef.current.recordP2PFailure();
+        }
+        if (pc.connectionState === 'closed') {
+          endCall();
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        computeAndSetSafetyCode();
+        iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          turnRelayManagerRef.current.recordP2PSuccess();
+        } else if (pc.iceConnectionState === 'failed') {
+          turnRelayManagerRef.current.recordP2PFailure();
+        }
+      };
+
+      // Instantiate NetworkTelemetryMonitor & wire to AdaptiveBitrateController
+      if (telemetryMonitorRef.current) {
+        telemetryMonitorRef.current.stop();
+        telemetryMonitorRef.current = null;
+      }
+
+      const monitor = new NetworkTelemetryMonitor(pc, async (snapshot) => {
+        setLiveTelemetry(snapshot);
+        if (snapshot && snapshot.rttMs !== null && snapshot.rttMs !== undefined) {
+          setQuality(getQualityRating(snapshot.rttSeconds));
+        }
+
+        // Dynamic Adaptive Headroom Scaling for Packet Pacer
+        if (snapshot) {
+          packetPacerRef.current.updateHeadroom({
+            bufferOccupancy: snapshot.avgJitterBufferDelayMs ? Math.min(100, Math.round(snapshot.avgJitterBufferDelayMs / 2)) : undefined,
+            loss: snapshot.effectiveLossRate,
+            jitter: snapshot.jitterMs,
+            rtt: snapshot.rttMs ?? undefined
+          });
+        }
+
+        // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation
+        const evaluation = bitrateControllerRef.current.evaluate(snapshot);
+        if (evaluation.tierChanged) {
+          setActiveTier(evaluation.currentTier);
+          currentBitrateRef.current = evaluation.targetBitrateBps;
+          const audioSender = pc.getSenders?.()?.find(s => s.track && s.track.kind === 'audio');
+          if (audioSender) {
+            await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
+            callbacksRef.current.addLog?.(evaluation.reason, 'info');
+          }
+
+          // 1. Dynamic Jitter Buffer Target Adjustment (NetEQ margin tuning)
+          jitterControllerRef.current.applyForTier(evaluation.currentTier.name, pc);
+
+          // 2. Packet Pacing & Traffic Shaping (router queue overflow prevention)
+          await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
+        }
+      }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
+
+      monitor.start();
+      telemetryMonitorRef.current = monitor;
+    };
+
+    // Initialize immediately if peer connection already exists on call object
+    setupPeerConnection();
+    setTimeout(setupPeerConnection, 100);
+    setTimeout(setupPeerConnection, 500);
 
     call.on('stream', (remoteStream) => {
       streamAttached = true;
@@ -282,130 +436,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       saveCallHistory(call.peer);
       callbacksRef.current.addLog?.(`P2P encrypted audio stream connected with ${call.peer}`, 'ok');
 
-      // WebRTC RTT stats monitor, Bitrate Adaptation & Safety Code generation
-      const pc = call.peerConnection;
-      if (pc) {
-        if (typeof window !== 'undefined') {
-          window.__SECUREVOICE_ACTIVE_PC__ = pc;
-        }
-        // Generate MITM Safety Code from DTLS Fingerprints
-        if (pc.localDescription && pc.remoteDescription) {
-          generateSafetyCode(pc.localDescription.sdp, pc.remoteDescription.sdp)
-            .then(code => {
-              if (code) setSafetyCode(code);
-            })
-            .catch(err => {
-              callbacksRef.current.addLog?.(`Safety code generation failed: ${err.message}`, 'warn');
-            });
-        }
-
-        const isCaller = Boolean(call.options && call.options._isCaller);
-
-        // Instantiate IceRestartManager
-        const iceManager = new IceRestartManager({
-          onStatusChange: (status) => {
-            if (status === 'in-call') {
-              setIsInCall(true);
-            } else if (status === 'reconnecting') {
-              auditoryFeedback.notifyReconnecting();
-            }
-            callbacksRef.current.onStatusChange?.(status);
-          },
-          onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
-          onDiagnostic: (event, data) => {
-            const level = event.includes('fail') || event.includes('tripped') ? 'warn' : 'info';
-            structuredLogger.log(level, event, data);
-          },
-          onFatalDisconnect: () => {
-            callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
-            endCall();
-          },
-          sendRenegotiation: async (msg) => {
-            if (call.dataChannel && call.dataChannel.readyState === 'open') {
-              try {
-                call.dataChannel.send(JSON.stringify(msg));
-              } catch (e) {}
-            }
-          },
-          sdpTransform: (sdp) => {
-            const currentTier = bitrateControllerRef.current.getCurrentTier();
-            return transformOpusSdp(sdp, {
-              bitrate: currentTier.maxBitrateBps,
-              bandwidthCapKbps: currentTier.bandwidthCapKbps,
-              ptime: currentTier.ptimeMs,
-              maxptime: currentTier.maxPtimeMs,
-              packetLossPerc: currentTier.fecPacketLossPerc,
-              maxPlaybackRate: currentTier.maxPlaybackRate
-            });
-          }
-        });
-        iceRestartManagerRef.current = iceManager;
-
-        pc.onconnectionstatechange = () => {
-          iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
-          if (pc.connectionState === 'connected') {
-            turnRelayManagerRef.current.recordP2PSuccess();
-          } else if (pc.connectionState === 'failed') {
-            turnRelayManagerRef.current.recordP2PFailure();
-          }
-          if (pc.connectionState === 'closed') {
-            endCall();
-          }
-        };
-
-        pc.oniceconnectionstatechange = () => {
-          iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
-          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-            turnRelayManagerRef.current.recordP2PSuccess();
-          } else if (pc.iceConnectionState === 'failed') {
-            turnRelayManagerRef.current.recordP2PFailure();
-          }
-        };
-
-        // Instantiate NetworkTelemetryMonitor & wire to AdaptiveBitrateController
-        if (telemetryMonitorRef.current) {
-          telemetryMonitorRef.current.stop();
-          telemetryMonitorRef.current = null;
-        }
-
-        const monitor = new NetworkTelemetryMonitor(pc, async (snapshot) => {
-          setLiveTelemetry(snapshot);
-          if (snapshot && snapshot.rttMs !== null && snapshot.rttMs !== undefined) {
-            setQuality(getQualityRating(snapshot.rttSeconds));
-          }
-
-          // Dynamic Adaptive Headroom Scaling for Packet Pacer
-          if (snapshot) {
-            packetPacerRef.current.updateHeadroom({
-              bufferOccupancy: snapshot.avgJitterBufferDelayMs ? Math.min(100, Math.round(snapshot.avgJitterBufferDelayMs / 2)) : undefined,
-              loss: snapshot.effectiveLossRate,
-              jitter: snapshot.jitterMs,
-              rtt: snapshot.rttMs ?? undefined
-            });
-          }
-
-          // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation
-          const evaluation = bitrateControllerRef.current.evaluate(snapshot);
-          if (evaluation.tierChanged) {
-            setActiveTier(evaluation.currentTier);
-            currentBitrateRef.current = evaluation.targetBitrateBps;
-            const audioSender = pc.getSenders?.()?.find(s => s.track && s.track.kind === 'audio');
-            if (audioSender) {
-              await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
-              callbacksRef.current.addLog?.(evaluation.reason, 'info');
-            }
-
-            // 1. Dynamic Jitter Buffer Target Adjustment (NetEQ margin tuning)
-            jitterControllerRef.current.applyForTier(evaluation.currentTier.name, pc);
-
-            // 2. Packet Pacing & Traffic Shaping (router queue overflow prevention)
-            await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
-          }
-        }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
-
-        monitor.start();
-        telemetryMonitorRef.current = monitor;
-      }
+      setupPeerConnection();
     });
 
     call.on('close', () => {
@@ -501,6 +532,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       call.answer(stream, {
         sdpTransform: transformOpusSdp
       });
+      setIsInCall(true);
+      setIsCalling(false);
+      setConnectedPeer(call.peer);
+      callbacksRef.current.onStatusChange?.('in-call');
+      startTimer();
+      saveCallHistory(call.peer);
       bindCallEvents(call);
     } catch (err) {
       if (err.name !== 'NotAllowedError') {

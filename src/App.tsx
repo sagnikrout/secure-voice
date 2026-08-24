@@ -46,6 +46,7 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const [missedCallNotice, setMissedCallNotice] = useState(null);
+  const [verificationDismissed, setVerificationDismissed] = useState(false);
   const copyTimeoutRef = useRef(null);
   const missedCallTimeoutRef = useRef(null);
 
@@ -288,10 +289,35 @@ export default function App() {
               {formatTimer(callSession.callDuration)}
             </div>
 
-            {callSession.isVerified && (
-              <div className="status-chip ready" style={{ marginBottom: '16px', background: 'var(--bg)', border: 'none' }} title="Connection is Verified & End-to-End Encrypted">
-                <Shield className="w-3 h-3" />
-                <span>Verified E2EE</span>
+            {/* Interactive Security Verification Code Badge */}
+            {callSession.safetyCode && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+                <button
+                  type="button"
+                  onClick={() => setVerificationDismissed(false)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    borderRadius: '99px',
+                    background: callSession.isVerified ? 'var(--green-light)' : 'var(--blue-light)',
+                    color: callSession.isVerified ? 'var(--green)' : 'var(--blue)',
+                    border: `1px solid ${callSession.isVerified ? 'var(--green)' : 'var(--blue)'}`,
+                    cursor: 'pointer'
+                  }}
+                  title="Click to view full security verification dialog"
+                  aria-label="Security Verification Code"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>
+                    {callSession.isVerified
+                      ? `Verified (${callSession.safetyCode.slice(0, 2)}-${callSession.safetyCode.slice(2)})`
+                      : `Code: ${callSession.safetyCode.slice(0, 2)}-${callSession.safetyCode.slice(2)}`}
+                  </span>
+                </button>
               </div>
             )}
 
@@ -438,17 +464,18 @@ export default function App() {
         )}
 
         {/* MITM Security Verification Modal */}
-        {callSession.isInCall && callSession.safetyCode && !callSession.isVerified && (
+        {callSession.isInCall && callSession.safetyCode && (!callSession.isVerified && !verificationDismissed) && (
           <SecurityVerificationModal
             safetyCode={callSession.safetyCode}
             connectedPeer={callSession.connectedPeer}
             onVerify={() => {
               callSession.setIsVerified(true);
+              setVerificationDismissed(true);
               addLog('Connection authenticity verified by user', 'ok');
             }}
             onReject={() => {
-              addLog('Security alert: Verbal safety code mismatched! Call aborted.', 'error');
-              callSession.endCall();
+              setVerificationDismissed(true);
+              addLog('Security verification dismissed by user', 'info');
             }}
           />
         )}
