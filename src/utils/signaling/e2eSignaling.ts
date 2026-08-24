@@ -168,6 +168,11 @@ export class E2ESignalingProtocol {
       throw new Error('IV reuse detected. Possible replay attack.');
     }
     this.usedIvs.add(encrypted.iv);
+    
+    // Prevent unbounded memory growth
+    if (this.usedIvs.size > 1000) {
+      this.usedIvs.delete(this.usedIvs.values().next().value);
+    }
 
     const sharedKey = await this.deriveSharedKey(encrypted.ephemeralPublicKey);
     const iv = base64ToBytes(encrypted.iv);

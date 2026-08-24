@@ -116,12 +116,21 @@ export class StructuredLogger {
     const sanitized = this.entries.map(entry => {
       const copy = { ...entry };
       if (copy.data) {
-        // Redact any possible credential fields if present
-        const sanitizedData = { ...copy.data };
-        ['credential', 'password', 'authKey', 'privateKey', 'token', 'secret', 'turn', 'username', 'x', 'y', 'd', 'dp', 'dq', 'qi', 'k', 'ephemeralPublicKey'].forEach(key => {
-          delete sanitizedData[key];
-        });
-        copy.data = sanitizedData;
+        const redactRecursive = (obj: any): any => {
+          if (!obj || typeof obj !== 'object') return obj;
+          if (Array.isArray(obj)) return obj.map(redactRecursive);
+          const sanitized = { ...obj };
+          ['credential', 'password', 'authKey', 'privateKey', 'token', 'secret', 'turn', 'username', 'x', 'y', 'd', 'dp', 'dq', 'qi', 'k', 'ephemeralPublicKey'].forEach(key => {
+            delete sanitized[key];
+          });
+          Object.keys(sanitized).forEach(key => {
+            if (typeof sanitized[key] === 'object') {
+              sanitized[key] = redactRecursive(sanitized[key]);
+            }
+          });
+          return sanitized;
+        };
+        copy.data = redactRecursive(copy.data);
       }
       return copy;
     });
