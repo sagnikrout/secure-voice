@@ -96,7 +96,8 @@ export class E2ESignalingProtocol {
       await this.generateKeyPair();
     }
 
-    const cacheKey = JSON.stringify(remotePublicKeyJwk);
+    // Prevent cache collisions or manipulation by using strict coordinates
+    const cacheKey = `${remotePublicKeyJwk.x}|${remotePublicKeyJwk.y}`;
     const cached = this.sharedKeyCache.get(cacheKey);
     if (cached) return cached;
 

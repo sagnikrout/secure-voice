@@ -102,7 +102,7 @@ export class SignalingManager {
             handler(msg.payload, msg);
           }
         } catch (e) {
-          // Decryption failed or unencrypted payload
+          console.error('[SignalingManager] Failed to decrypt incoming signal:', e);
         }
       });
     });
