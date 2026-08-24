@@ -160,7 +160,7 @@ export default function App() {
         <header className="card header">
           <div className="brand">
             <div className="brand-icon" aria-hidden="true">
-              <img src="./logo.png" alt="SecureVoice Logo" />
+              <img src="./logo.png" alt="" />
             </div>
             <div className="brand-text">
               <h1>SecureVoice</h1>
@@ -321,8 +321,8 @@ export default function App() {
                   <Shield className="w-3.5 h-3.5" />
                   <span>
                     {callSession.isVerified
-                      ? `Verified (${callSession.safetyCode.slice(0, 2)}-${callSession.safetyCode.slice(2)})`
-                      : `Code: ${callSession.safetyCode.slice(0, 2)}-${callSession.safetyCode.slice(2)}`}
+                      ? `Verified (${callSession.safetyCode.slice(0, 3)}-${callSession.safetyCode.slice(3)})`
+                      : `Code: ${callSession.safetyCode.slice(0, 3)}-${callSession.safetyCode.slice(3)}`}
                   </span>
                 </button>
               </div>

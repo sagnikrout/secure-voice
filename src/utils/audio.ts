@@ -1,24 +1,25 @@
 import { audioResourceManager } from './resourceManager';
 
-let globalAudioCtx = null;
-
 /**
  * Get or create a shared AudioContext for UI audio / ringtones safely handling autoplay restrictions.
  */
 export function getAudioContext() {
   if (typeof window === 'undefined') return null;
 
-  if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
+  if (!audioResourceManager.sharedContext || audioResourceManager.sharedContext.state === 'closed') {
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtxClass) return null;
     try {
-      globalAudioCtx = new AudioCtxClass();
+      const ctx = new AudioCtxClass();
+      audioResourceManager.registerContext(ctx);
+      audioResourceManager.sharedContext = ctx;
     } catch (e) {
       console.warn('Failed to create AudioContext:', e);
       return null;
     }
   }
 
+  const globalAudioCtx = audioResourceManager.sharedContext;
   if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
     try {
       globalAudioCtx.resume().catch(() => {});

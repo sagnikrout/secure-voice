@@ -118,10 +118,9 @@ export class StructuredLogger {
       if (copy.data) {
         // Redact any possible credential fields if present
         const sanitizedData = { ...copy.data };
-        delete sanitizedData.credential;
-        delete sanitizedData.password;
-        delete sanitizedData.authKey;
-        delete sanitizedData.privateKey;
+        ['credential', 'password', 'authKey', 'privateKey', 'token', 'secret', 'turn', 'username', 'x', 'y', 'd', 'dp', 'dq', 'qi', 'k', 'ephemeralPublicKey'].forEach(key => {
+          delete sanitizedData[key];
+        });
         copy.data = sanitizedData;
       }
       return copy;

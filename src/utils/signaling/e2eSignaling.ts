@@ -164,6 +164,11 @@ export class E2ESignalingProtocol {
       throw new Error('Malformed EncryptedSignalPayload');
     }
 
+    if (this.usedIvs.has(encrypted.iv)) {
+      throw new Error('IV reuse detected. Possible replay attack.');
+    }
+    this.usedIvs.add(encrypted.iv);
+
     const sharedKey = await this.deriveSharedKey(encrypted.ephemeralPublicKey);
     const iv = base64ToBytes(encrypted.iv);
     const ciphertext = base64ToBytes(encrypted.ciphertext);
@@ -182,12 +187,15 @@ export class E2ESignalingProtocol {
     return JSON.parse(jsonStr);
   }
 
+  private usedIvs: Set<string> = new Set();
+
   /**
    * Reset key cache and session keys
    */
   reset(): void {
     this.keyPair = null;
     this.sharedKeyCache.clear();
+    this.usedIvs.clear();
   }
 }
 

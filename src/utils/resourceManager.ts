@@ -9,6 +9,7 @@
 import { AudioResourceManagerStats } from '../types';
 
 export class AudioResourceManager {
+  public sharedContext: AudioContext | null = null;
   private contextNodeMap: Map<AudioContext, Set<AudioNode>> = new Map();
   private trackedContexts: Set<AudioContext> = new Set();
   private trackedStreams: Set<MediaStream> = new Set();

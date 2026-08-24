@@ -405,7 +405,7 @@ export async function generateSafetyCode(localSdp, remoteSdp) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   
-  // Extract 24 bits to form a 5-digit number
-  const num = (hashArray[0] << 16) | (hashArray[1] << 8) | hashArray[2];
-  return String(num % 100000).padStart(5, '0');
+  // Extract 32 bits to form a 6-digit number
+  const num = ((hashArray[0] << 24) | (hashArray[1] << 16) | (hashArray[2] << 8) | hashArray[3]) >>> 0;
+  return String(num % 1000000).padStart(6, '0');
 }

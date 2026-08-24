@@ -56,7 +56,7 @@ SecureVoice is designed from first principles as a **zero-knowledge, zero-log, e
 ---
 
 ### 3.4 Diagnostics & Privacy Guarantees
-- **Zero Remote Logging**: Diagnostic events and connection metrics are processed strictly client-side by [`StructuredLogger`](file:///c:/Users/sagni/OneDrive/Desktop/Secure%20Voice/src/utils/structuredLogger.ts).
+- **Zero Remote Logging**: Diagnostic events and connection metrics are processed strictly client-side by [`StructuredLogger`](file:///c:/Users/sagni/OneDrive/Desktop/Secure%20Voice/src/utils/structuredLogger.ts). Note: If you configure a third-party TURN server, the TURN provider may log connection IP metadata, though media remains encrypted.
 - **Sanitized Export**: User-requested diagnostic export automatically redacts passwords, credentials, TURN tokens, and DTLS keys.
 
 ---
