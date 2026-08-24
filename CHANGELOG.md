@@ -2,6 +2,24 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.2.0] - 2026-08-24
+
+### Added
+- Client-Side E2E Encrypted Signaling Layer using Web Crypto ECDH (P-256) and AES-256-GCM.
+- Pluggable Transports subsystem including serverless Air-Gapped QR Code and Clipboard signaling (`SV1:...`).
+- Dedicated P2P WebRTC DataChannel synchronization for instantaneous verbal safety code verification.
+- Centralized `AudioResourceManager` preventing Web Audio parameter memory leaks and dangling node references.
+- `IceRestartManager` circuit breaker preventing reconnection storms on dead networks.
+- 9-tier extended bitrate ladder (1.2 kbps `ULTRA_LOW` to 24.0 kbps `HQ_PLUS`) with adaptive headroom packet pacing.
+- Synthetic oscillator auditory feedback and speech accessibility announcements.
+
+### Security & Hardening
+- Hardened Content Security Policy (removed `unsafe-eval`, scoped `connect-src` to valid signaling & media endpoints).
+- Disabled Android WebView mixed content (`allowMixedContent: false`).
+- Updated Android package identifier to `io.github.sagnikrout.securevoice` to avoid ecosystem naming conflicts.
+- Removed pinch-to-zoom restriction from viewport meta for WCAG 2.1 accessibility compliance.
+- Removed tracked `.apk` binaries from git index in favor of signed GitHub Releases.
+
 ## [v3.1.0] - 2026-08-23
 
 ### Added

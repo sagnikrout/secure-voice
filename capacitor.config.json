@@ -1,12 +1,12 @@
 {
-  "appId": "com.securevoice.app",
+  "appId": "io.github.sagnikrout.securevoice",
   "appName": "SecureVoice",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
   },
   "android": {
-    "allowMixedContent": true,
+    "allowMixedContent": false,
     "webContentsDebuggingEnabled": false
   }
 }

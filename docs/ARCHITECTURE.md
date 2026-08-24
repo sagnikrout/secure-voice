@@ -6,12 +6,13 @@ SecureVoice is a peer-to-peer VoIP client built with WebRTC. It prioritizes conn
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                 PeerJS cloud signaling                 │
-│              (ephemeral session discovery)             │
+│            Signaling Relay / Transports                │
+│    (PeerJS / Custom WebSocket / Air-Gapped QR Code)    │
 └───────────────▲────────────────────────▲───────────────┘
                 │                        │
-  1. Peer ID    │                        │ 2. Encrypted SDP
-  registration  │                        │    & ICE candidates
+  1. Ephemeral  │                        │ 2. E2E Encrypted SDP
+  ECDH PubKey   │                        │    (AES-256-GCM)
+  & Ciphertext  │                        │    & ICE Candidates
                 │                        │
     ┌───────────▼──────────┐ ┌───────────▼──────────┐
     │    Local client      │ │    Remote client     │

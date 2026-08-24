@@ -1,24 +1,27 @@
-# SecureVoice (v3.1.0)
+# SecureVoice (v3.2.0)
 
-Peer-to-peer encrypted voice calling app designed for weak networks (2G, EDGE, high latency, and high packet loss). Runs in modern browsers or as an Android app with no accounts, phone numbers, or central servers.
+Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE, high latency, and high packet loss) and privacy-focused communication. Voice media streams connect directly between devices via WebRTC DTLS-SRTP with zero media relays by default.
 
-[Web app](https://sagnikrout.github.io/secure-voice) | [Android APK](SecureVoice-v3.1.0.apk) | [Changelog](CHANGELOG.md) | [Architecture](docs/ARCHITECTURE.md) | [Testing](docs/TESTING.md)
+[Web app](https://sagnikrout.github.io/secure-voice) | [Android Releases](https://github.com/sagnikrout/secure-voice/releases/latest) | [Changelog](CHANGELOG.md) | [Architecture](docs/ARCHITECTURE.md) | [Testing](docs/TESTING.md)
 
 ## Overview
 
-SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It uses Opus narrowband encoding and aggressive packet aggregation to keep audio legible at bitrates as low as 3.2 kbps and packet loss up to 50%.
+SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It uses Opus narrowband encoding, adaptive packet pacing, and packet aggregation to keep voice legible at bitrates from 1.2 to 24.0 kbps and packet loss up to 50%.
 
-Good fit for:
-- 2G and EDGE mobile connections
-- Satellite and high-latency links (RTT > 600ms)
-- Congested or throttled Wi-Fi
-- Private peer-to-peer calls without accounts or server logging
+Key design principles:
+- **Direct P2P Media**: Voice streams travel directly between peers using DTLS-SRTP; zero central media servers handle audio.
+- **Client-Side Encrypted Signaling**: Signaling payloads (SDP and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM before passing through any signaling relay.
+- **Pluggable & Air-Gapped Transports**: Supports serverless Air-Gapped QR Code / Clipboard discovery as well as ephemeral WebSocket relays.
+- **Zero Server Logs**: Call history and diagnostic logs remain exclusively on the user's local device sandbox (localStorage) and are never transmitted to any telemetry endpoint.
+- **Connection Verification**: Deterministic 5-digit Short Authentication String (SAS) verbal safety code combined with direct DTLS certificate fingerprint inspection.
 
 ## Features
 
-- End-to-end encryption: Media streams use WebRTC DTLS-SRTP directly between peers.
-- 5-digit safety code: Symmetrically derived from DTLS fingerprints so callers can verify the connection verbally.
-- Low-bandwidth audio: Bitrates from 3.2 to 8.0 kbps CBR with 8 kHz SILK narrowband voice modeling.
+- **End-to-End Media Encryption**: Direct peer-to-peer WebRTC DTLS-SRTP voice encryption.
+- **Encrypted Signaling**: Ephemeral ECDH (P-256) key exchange prevents signaling intermediaries from reading SDP fingerprints.
+- **Air-Gapped QR Signaling**: 100% serverless call establishment via optical QR code or text clipboard exchange.
+- **Verbal Safety Code (SAS)**: 5-digit verification code derived symmetrically from DTLS certificate fingerprints to detect MITM attacks.
+- **Low-Bandwidth Codec Ladder**: 9 adaptive tiers from 1.2 kbps (`ULTRA_LOW`) up to 24.0 kbps (`HQ_PLUS`).
 - Packet aggregation: 80–100ms packetization (`ptime=80..100`), cutting IP/UDP header overhead from 17.6 kbps to 3.5 kbps.
 - Packet loss recovery: In-band FEC (`useinbandfec=1`) combined with RFC 2198 redundancy (`audio/red`) to handle up to 50% packet drops.
 - Locked jitter buffer: Dynamic NetEQ target floor (120ms to 400ms) to prevent NetEQ pitch-shifting and stutter on high-jitter links.

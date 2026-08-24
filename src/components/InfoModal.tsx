@@ -10,7 +10,8 @@ const SPECS = [
   { key: 'Loss Recovery', val: 'In-band FEC + RFC 2198 RED (50% recovery)', icon: Wifi },
   { key: 'Jitter Buffer', val: 'Locked NetEQ Controller (120–400ms)', icon: Sliders },
   { key: 'Connection Mode', val: 'Direct P2P with Adaptive TURN Failover', icon: ShieldCheck },
-  { key: 'Signaling Protocol', val: 'PeerJS Cloud Engine', icon: Server }
+  { key: 'Signaling Protocol', val: 'E2E Encrypted Signaling (ECDH P-256 + AES-GCM)', icon: Server },
+  { key: 'Privacy & Storage', val: 'Zero Server Logs · Local Device Sandbox Only', icon: Lock }
 ];
 
 function InfoModalComponent({ onClose }) {
@@ -64,7 +65,7 @@ function InfoModalComponent({ onClose }) {
 
         <div className="modal-note">
           <Lock className="w-4 h-4 text-green inline-block mr-1" aria-hidden="true" />
-          <span>Calls are end-to-end encrypted. Audio streams directly peer-to-peer and never passes through an intermediate server.</span>
+          <span>Voice media travels directly peer-to-peer (DTLS-SRTP). Signaling is encrypted client-side. Call history and logs remain exclusively on your local device.</span>
         </div>
       </div>
     </div>
