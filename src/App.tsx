@@ -160,7 +160,7 @@ export default function App() {
         <header className="card header">
           <div className="brand">
             <div className="brand-icon" aria-hidden="true">
-              <img src="./logo.png" alt="" />
+              <img src="./logo.svg" alt="" />
             </div>
             <div className="brand-text">
               <h1>SecureVoice</h1>

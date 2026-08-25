@@ -16,9 +16,16 @@ async function generateIcons() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  // Read logo.png as base64
-  const logoData = fs.readFileSync(path.resolve('public/logo.png'));
-  const base64Data = `data:image/jpeg;base64,${logoData.toString('base64')}`;
+  // Read logo.svg (or logo.png fallback) as base64
+  const svgPath = path.resolve('public/logo.svg');
+  let base64Data;
+  if (fs.existsSync(svgPath)) {
+    const svgData = fs.readFileSync(svgPath);
+    base64Data = `data:image/svg+xml;base64,${svgData.toString('base64')}`;
+  } else {
+    const logoData = fs.readFileSync(path.resolve('public/logo.png'));
+    base64Data = `data:image/png;base64,${logoData.toString('base64')}`;
+  }
 
   for (const [dir, size] of Object.entries(SIZES)) {
     const targetDir = path.resolve(`android/app/src/main/res/${dir}`);
