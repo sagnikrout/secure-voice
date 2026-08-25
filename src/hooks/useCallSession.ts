@@ -200,6 +200,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         audio: {
           deviceId: selectedInputIdRef.current ? { exact: selectedInputIdRef.current } : undefined,
           channelCount: { ideal: 1 },
+          sampleRate: { ideal: 48000 },
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
