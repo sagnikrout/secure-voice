@@ -50,6 +50,20 @@ describe('Advanced Network Resilience Features', () => {
       expect(Array.isArray(ranked)).toBe(true);
       expect(ranked.length).toBe(3);
     });
+
+    it('filters out invalid TURN servers with missing or empty credentials in getBestIceConfig', async () => {
+      const mixedServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:invalid-turn.example.com:443', username: '', credential: '' },
+        { urls: 'turn:valid-turn.example.com:443', username: 'user', credential: 'pass' }
+      ];
+      const mgr = new TurnRelayManager(mixedServers);
+      const config = await mgr.getBestIceConfig(false);
+      expect(config.iceServers).toEqual([
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:valid-turn.example.com:443', username: 'user', credential: 'pass' }
+      ]);
+    });
   });
 
   describe('2. JitterBufferController — Dynamic NetEQ Target Tuning', () => {

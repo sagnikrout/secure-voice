@@ -39,7 +39,7 @@ export class TurnRelayManager {
    * @returns {Promise<{server: Object, latencyMs: number}>}
    */
   async probeTurnServer(serverConfig) {
-    if (typeof RTCPeerConnection === 'undefined') {
+    if (typeof RTCPeerConnection === 'undefined' || !serverConfig?.username || !serverConfig?.credential) {
       return { server: serverConfig, latencyMs: 100 };
     }
 
@@ -109,8 +109,10 @@ export class TurnRelayManager {
     for (const server of this.iceServers) {
       const urls = Array.isArray(server.urls) ? server.urls : [server.urls || ''];
       const isTurn = urls.some(u => typeof u === 'string' && (u.startsWith('turn:') || u.startsWith('turns:')));
-      if (isTurn && server.username) {
-        turnServers.push(server);
+      if (isTurn) {
+        if (server.username && server.credential) {
+          turnServers.push(server);
+        }
       } else {
         stunServers.push(server);
       }
@@ -157,7 +159,9 @@ export class TurnRelayManager {
       const urls = Array.isArray(server.urls) ? server.urls : [server.urls || ''];
       const isTurn = urls.some(u => typeof u === 'string' && (u.startsWith('turn:') || u.startsWith('turns:')));
       if (isTurn) {
-        turnServers.push(server);
+        if (server.username && server.credential) {
+          turnServers.push(server);
+        }
       } else {
         stunServers.push(server);
       }

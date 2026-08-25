@@ -651,13 +651,19 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
   });
 
   describe('ICE_SERVERS', () => {
-    it('contains STUN and TURN configurations', () => {
+    it('contains STUN and TURN configurations with non-empty credentials', () => {
       expect(ICE_SERVERS.iceServers).toBeDefined();
       expect(ICE_SERVERS.iceServers.length).toBeGreaterThan(3);
       const hasStun = ICE_SERVERS.iceServers.some(s => typeof s.urls === 'string' && s.urls.startsWith('stun:'));
-      const hasTurn = ICE_SERVERS.iceServers.some(s => typeof s.urls === 'string' && s.urls.startsWith('turn:'));
+      const turnServers = ICE_SERVERS.iceServers.filter(s => typeof s.urls === 'string' && (s.urls.startsWith('turn:') || s.urls.startsWith('turns:')));
       expect(hasStun).toBe(true);
-      expect(hasTurn).toBe(true);
+      expect(turnServers.length).toBeGreaterThan(0);
+      turnServers.forEach(server => {
+        expect(server.username).toBeDefined();
+        expect(server.username.length).toBeGreaterThan(0);
+        expect(server.credential).toBeDefined();
+        expect(server.credential.length).toBeGreaterThan(0);
+      });
     });
   });
 

@@ -13,18 +13,18 @@ export const ICE_SERVERS = {
     { urls: 'stun:stun4.l.google.com:19302' },
     {
       urls: 'turn:openrelay.metered.ca:80',
-      username: import.meta.env.VITE_TURN_USERNAME || '',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || ''
+      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
     },
     {
       urls: 'turn:openrelay.metered.ca:443',
-      username: import.meta.env.VITE_TURN_USERNAME || '',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || ''
+      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
     },
     {
       urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: import.meta.env.VITE_TURN_USERNAME || '',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || ''
+      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
     }
   ]
 };
