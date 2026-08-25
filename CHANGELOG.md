@@ -2,6 +2,21 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.4.0] - 2026-08-26
+
+### Added
+- Opus Wideband HD Voice engine (16 kHz sampling, Variable Bit Rate, 14 kbps Pareto optimal bitrate).
+- 40ms lock-step packetization (`ptime=40`, `maxptime=60`) reducing RTP packet header overhead by 50%.
+- Dual-clamped playout delay control setting both `RTCRtpReceiver.jitterBufferTarget` and `RTCRtpReceiver.playoutDelayHint` for constant deterministic latency.
+- Ingest audio conditioning with 48 kHz high-fidelity microphone capture constraints.
+- Extended Web Audio DSP pipeline with 8.5 kHz lowpass filter, 2.8 kHz (+2.0 dB) voice formant presence EQ, and smoothed dynamics compressor.
+- Synchronous startup pacing with DSCP Expedited Forwarding (DiffServ 46) prioritization.
+
+### Fixed
+- Fixed `RTCPeerConnection` constructor crash caused by empty username or password on TURN server entries when environment variables are unset.
+- Configured default OpenRelay credentials fallback (`openrelayproject`) for public TURN servers.
+- Added defensive validation in `TurnRelayManager` to filter unauthenticated TURN servers before passing configuration to WebRTC.
+
 ## [v3.2.0] - 2026-08-24
 
 ### Added

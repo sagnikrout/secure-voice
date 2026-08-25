@@ -1,4 +1,4 @@
-# SecureVoice (v3.3.0)
+# SecureVoice (v3.4.0)
 
 Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE, high latency, and high packet loss) and privacy-focused communication. Voice media streams connect directly between devices via WebRTC DTLS-SRTP with zero media relays by default.
 
@@ -6,7 +6,7 @@ Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE,
 
 ## Overview
 
-SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It uses Opus narrowband encoding, adaptive packet pacing, and packet aggregation to keep voice legible at bitrates from 1.2 to 24.0 kbps and packet loss up to 50%.
+SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It uses Opus wideband encoding, adaptive packet pacing, and constant-latency packetization to keep voice crisp at bitrates from 1.2 to 24.0 kbps and packet loss up to 50%.
 
 Key design principles:
 - **Direct P2P Media**: Voice streams travel directly between peers using DTLS-SRTP; zero central media servers handle audio.
@@ -22,12 +22,12 @@ Key design principles:
 - **Air-Gapped QR Signaling**: 100% serverless call establishment via optical QR code or text clipboard exchange.
 - **Verbal Safety Code (SAS)**: 6-digit verification code derived symmetrically from DTLS certificate fingerprints to detect MITM attacks.
 - **Low-Bandwidth Codec Ladder**: 9 adaptive tiers from 1.2 kbps (`ULTRA_LOW`) up to 24.0 kbps (`HQ_PLUS`).
-- Packet aggregation: 80–100ms packetization (`ptime=80..100`), cutting IP/UDP header overhead from 17.6 kbps to 3.5 kbps.
+- Packet aggregation: 40ms lock-step packetization (`ptime=40`), cutting IP/UDP header overhead by 50% (25 pkts/sec).
 - Packet loss recovery: In-band FEC (`useinbandfec=1`) combined with RFC 2198 redundancy (`audio/red`) to handle up to 50% packet drops.
-- Locked jitter buffer: Dynamic NetEQ target floor (120ms to 400ms) to prevent NetEQ pitch-shifting and stutter on high-jitter links.
-- Packet pacing: Audio streams marked with DSCP Expedited Forwarding and paced with 15% headroom to prevent router queue drops.
+- Constant latency engine: Dual-clamped jitter buffer (`jitterBufferTarget` + `playoutDelayHint`) preventing NetEQ time-stretching.
+- Packet pacing: Audio streams marked with DSCP Expedited Forwarding (DiffServ 46) and paced with dynamic headroom.
 - Fast reconnection: 1.5s grace period on network drop with exponential backoff ICE restarts and automatic TURN relay fallback.
-- 6-stage audio cleanup: 80Hz highpass filter, 2.8kHz presence boost, 4.2kHz lowpass filter, noise gate (-46 dBFS), compressor, and makeup gain.
+- 6-stage audio cleanup: 80Hz highpass filter, 2.8kHz presence boost, 8.5kHz lowpass filter, noise gate (-48 dBFS), compressor, and makeup gain.
 - Diagnostics overlay: In-call metrics for RTT, packet loss percentage, jitter delay, concealment ratio, and active bitrate tier.
 - Android support: Standalone APK with background foreground service and wake lock support.
 - Audio routing: Switch between loudspeaker, earpiece, wired headsets, and Bluetooth devices during calls.
@@ -35,33 +35,33 @@ Key design principles:
 ## Audio and WebRTC pipeline
 
 ```text
-[ Hardware microphone ]
+[ Hardware microphone (48kHz) ]
           │
           ▼
 [ Web Audio DSP pipeline ]
   ├─ 80Hz highpass filter (cuts mic and desk rumble)
-  ├─ 2.8kHz peaking EQ (+3dB voice presence)
-  ├─ 4.2kHz lowpass filter (cuts hiss)
-  ├─ Downward RMS noise gate (-46 dBFS)
-  ├─ Dynamics compressor (-18dB threshold, 4:1 ratio)
-  └─ Makeup gain (+1.58 dB)
+  ├─ 2.8kHz peaking EQ (+2dB voice presence)
+  ├─ 8.5kHz lowpass filter (cuts hiss while retaining consonants)
+  ├─ Downward RMS noise gate (-48 dBFS)
+  ├─ Dynamics compressor (-20dB threshold, 3:1 ratio)
+  └─ Makeup gain (+1.21 dB)
           │
           ▼
-[ Opus SILK narrowband encoder ]
-  ├─ maxaveragebitrate=6000 (3.2–8.0 kbps adaptive ladder)
-  ├─ cbr=1 (constant bitrate)
+[ Opus Wideband VBR encoder ]
+  ├─ maxaveragebitrate=14000 (14 kbps Pareto optimal)
+  ├─ cbr=0 (variable bitrate, zero metallic artifacts)
   ├─ usedtx=1 (silence suppression)
   ├─ useinbandfec=1 (Opus forward error correction)
-  ├─ ptime=80 / maxptime=120 (12.5 pkts/sec)
-  ├─ maxplaybackrate=8000 (8kHz SILK speech band)
-  └─ b=AS:8 (session bandwidth ceiling)
+  ├─ ptime=40 / maxptime=60 (25 pkts/sec)
+  ├─ maxplaybackrate=16000 (16kHz Wideband speech band)
+  └─ b=AS:18 (session bandwidth ceiling)
           │
           ▼
 [ DTLS-SRTP encrypted stream ] ──► [ Remote peer ]
                                            │
                                            ▼
-                                [ NetEQ jitter buffer ]
-                                (120ms–400ms target floor)
+                                [ Dual-clamped jitter buffer ]
+                                (Fixed NetEQ target floor)
 ```
 
 ## Technical specifications
@@ -69,12 +69,12 @@ Key design principles:
 | Parameter | Specification | Details |
 | :--- | :--- | :--- |
 | Media transport | WebRTC DTLS-SRTP | Direct peer-to-peer encrypted UDP |
-| Audio codec | Opus SILK | 8 kHz narrowband, 3.2–8.0 kbps CBR |
-| Bandwidth ceiling | 8.0 kbps max | Set through SDP `b=AS:8` |
-| Packet aggregation | `ptime: 80ms–100ms` | 10 to 12.5 pkts/sec |
+| Audio codec | Opus Wideband VBR | 16 kHz wideband, 14.0 kbps Pareto optimal |
+| Bandwidth ceiling | 18.0 kbps max | Set through SDP `b=AS:18` |
+| Packet aggregation | `ptime: 40ms` | 25 pkts/sec (50% header reduction) |
 | Loss recovery | In-band FEC + RFC 2198 RED | Survives up to 50% packet loss |
-| Jitter buffer | RTCRtpReceiver target | 120ms (HQ) to 400ms (Ultra) NetEQ floor |
-| Traffic shaping | Packet pacer | DSCP high priority with 85% headroom factor |
+| Jitter buffer | Dual-clamped target | Fixed NetEQ playout floor |
+| Traffic shaping | Packet pacer | DSCP Expedited Forwarding (DiffServ 46) |
 | Reconnection | IceRestartManager | 1500ms grace period with 5 backoff retries |
 | TURN fallback | TurnRelayManager | Probes relay latency and auto-forces TURN after retries |
 | Verification | DTLS fingerprints | 6-digit safety code |
