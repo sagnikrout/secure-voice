@@ -67,14 +67,19 @@ export class JitterBufferController {
       let applied = false;
       for (const receiver of receivers) {
         if (receiver && receiver.track && receiver.track.kind === 'audio') {
-          // Check if jitterBufferTarget property is available on this browser engine
+          // 1. Modern W3C jitterBufferTarget (ms)
           if ('jitterBufferTarget' in receiver) {
             try {
-              receiver.jitterBufferTarget = targetMs;
+              (receiver as any).jitterBufferTarget = targetMs;
               applied = true;
-            } catch (err) {
-              // Ignore unsupported assignment
-            }
+            } catch (err) {}
+          }
+          // 2. Standard playoutDelayHint (seconds) for constant deterministic queue delay
+          if ('playoutDelayHint' in receiver) {
+            try {
+              (receiver as any).playoutDelayHint = targetMs / 1000;
+              applied = true;
+            } catch (err) {}
           }
         }
       }

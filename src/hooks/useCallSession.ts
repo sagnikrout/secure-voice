@@ -421,6 +421,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
       monitor.start();
       telemetryMonitorRef.current = monitor;
+
+      // Enforce constant-latency jitter buffer target and traffic pacing on startup
+      const initialTier = bitrateControllerRef.current.getCurrentTier();
+      jitterControllerRef.current.applyForTier(initialTier.name, pc);
+      packetPacerRef.current.applyForTierObject(initialTier, pc).catch(() => {});
     };
 
     // Initialize immediately if peer connection already exists on call object
