@@ -32,21 +32,21 @@ export const ICE_SERVERS = {
 // Character set for generating readable 9-character Peer IDs (omits confusing 0/O, 1/I, L)
 export const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Opus Codec & Packetization Constraints (Ultra-Low 2G/Satellite Constant Latency Engine)
+// Opus Codec & Packetization Constraints (High-Definition Wideband & Low-Latency Engine)
 export const OPUS_CONFIG = {
-  MAX_AVERAGE_BITRATE: '6000',  // 6 kbps default target bitrate (tailored for 2G / edge-of-cell)
+  MAX_AVERAGE_BITRATE: '20000', // 20 kbps default HD voice target bitrate (replaces 6kbps robotic mode)
   MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps ultra-survival bandwidth floor
-  HIGH_AVERAGE_BITRATE: '8000', // 8 kbps maximum ceiling (prevents bufferbloat & latency spikes)
+  HIGH_AVERAGE_BITRATE: '24000', // 24 kbps maximum ceiling
   USE_DTX: '1',                 // Discontinuous Transmission (silence suppression to drain queues)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
-  PACKET_LOSS_PERC: '30',       // Expected packet loss target for FEC tuning (10-50%)
+  PACKET_LOSS_PERC: '15',       // Expected packet loss target for FEC tuning
   STEREO: '0',                  // Mono voice optimization (1 channel)
-  CBR: '1',                     // Constant Bit Rate (CBR) to guarantee uniform latency and zero jitter
-  MAX_PLAYBACK_RATE: '8000',    // 8 kHz Narrowband SILK limit (focuses 100% of bit budget on speech)
-  SPROP_MAX_CAPTURE_RATE: '8000', // Capture rate matching playback rate
-  BANDWIDTH_CAP_KBPS: 8,        // SDP b=AS session bandwidth constraint
-  PTIME: '80',                  // 80ms packetization (reduces packet count to 12.5 pkts/sec)
-  MAX_PTIME: '120',             // 120ms maximum acceptable packetization time
+  CBR: '0',                     // Variable Bit Rate (VBR) eliminates metallic robotic distortion
+  MAX_PLAYBACK_RATE: '16000',   // 16 kHz Wideband HD limit (reproduces crisp consonants & vocal warmth)
+  SPROP_MAX_CAPTURE_RATE: '16000', // Capture rate matching playback rate
+  BANDWIDTH_CAP_KBPS: 24,       // SDP b=AS session bandwidth constraint
+  PTIME: '20',                  // 20ms packetization (standard low latency, zero choppiness)
+  MAX_PTIME: '60',              // 60ms maximum acceptable packetization time
   RED_PAYLOAD_TYPE: 63,         // RFC 2198 RED dynamic payload type
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
 };
@@ -59,10 +59,10 @@ export const LADDER_TIERS = [
     label: '2G Stable',
     maxBitrateBps: 8000,
     bandwidthCapKbps: 10,
-    ptimeMs: 60,
-    maxPtimeMs: 80,
-    fecPacketLossPerc: 20,
-    maxPlaybackRate: 8000,
+    ptimeMs: 40,
+    maxPtimeMs: 60,
+    fecPacketLossPerc: 15,
+    maxPlaybackRate: 16000,
     lossThreshold: 0.03,          // < 3% loss
     rttThresholdMs: 250,          // < 250ms RTT
     jitterThresholdMs: 40,        // < 40ms jitter
@@ -74,10 +74,10 @@ export const LADDER_TIERS = [
     label: '2G Normal',
     maxBitrateBps: 6500,
     bandwidthCapKbps: 8,
-    ptimeMs: 60,
-    maxPtimeMs: 100,
-    fecPacketLossPerc: 25,
-    maxPlaybackRate: 8000,
+    ptimeMs: 40,
+    maxPtimeMs: 80,
+    fecPacketLossPerc: 20,
+    maxPlaybackRate: 16000,
     lossThreshold: 0.08,          // 3% - 8% loss
     rttThresholdMs: 400,          // 250ms - 400ms RTT
     jitterThresholdMs: 70,        // 40ms - 70ms jitter
@@ -89,10 +89,10 @@ export const LADDER_TIERS = [
     label: '2G Congested',
     maxBitrateBps: 5200,
     bandwidthCapKbps: 7,
-    ptimeMs: 80,
-    maxPtimeMs: 120,
-    fecPacketLossPerc: 35,
-    maxPlaybackRate: 8000,
+    ptimeMs: 60,
+    maxPtimeMs: 100,
+    fecPacketLossPerc: 30,
+    maxPlaybackRate: 16000,
     lossThreshold: 0.15,          // 8% - 15% loss
     rttThresholdMs: 600,          // 400ms - 600ms RTT
     jitterThresholdMs: 120,       // 70ms - 120ms jitter

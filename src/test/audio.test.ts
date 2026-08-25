@@ -86,15 +86,15 @@ describe('Audio Utilities', () => {
       expect(highPass.frequency.setValueAtTime).toHaveBeenCalledWith(80, expect.any(Number));
       expect(highPass.Q.setValueAtTime).toHaveBeenCalledWith(0.7071, expect.any(Number));
 
-      // Stage 2: Peaking EQ 2.8kHz (+3.0dB, Q=1.2)
+      // Stage 2: Peaking EQ 2.8kHz (+2.0dB, Q=1.0)
       expect(presenceEQ.type).toBe('peaking');
       expect(presenceEQ.frequency.setValueAtTime).toHaveBeenCalledWith(2800, expect.any(Number));
-      expect(presenceEQ.gain.setValueAtTime).toHaveBeenCalledWith(3.0, expect.any(Number));
-      expect(presenceEQ.Q.setValueAtTime).toHaveBeenCalledWith(1.2, expect.any(Number));
+      expect(presenceEQ.gain.setValueAtTime).toHaveBeenCalledWith(2.0, expect.any(Number));
+      expect(presenceEQ.Q.setValueAtTime).toHaveBeenCalledWith(1.0, expect.any(Number));
 
-      // Stage 3: Lowpass 4.2kHz (Q=0.7071)
+      // Stage 3: Lowpass 8.5kHz (Q=0.7071)
       expect(hissCut.type).toBe('lowpass');
-      expect(hissCut.frequency.setValueAtTime).toHaveBeenCalledWith(4200, expect.any(Number));
+      expect(hissCut.frequency.setValueAtTime).toHaveBeenCalledWith(8500, expect.any(Number));
       expect(hissCut.Q.setValueAtTime).toHaveBeenCalledWith(0.7071, expect.any(Number));
 
       // Stage 4: Noise Gate GainNode & AnalyserNode
@@ -105,15 +105,15 @@ describe('Audio Utilities', () => {
       // Backwards-compatible alias
       expect(result.nodes.gateAnalyser).toBe(analyser);
 
-      // Stage 5: Dynamics Compressor (-18dB, 12dB knee, 4:1 ratio, 3ms attack, 150ms release)
-      expect(compressor.threshold.setValueAtTime).toHaveBeenCalledWith(-18, expect.any(Number));
-      expect(compressor.knee.setValueAtTime).toHaveBeenCalledWith(12, expect.any(Number));
-      expect(compressor.ratio.setValueAtTime).toHaveBeenCalledWith(4, expect.any(Number));
-      expect(compressor.attack.setValueAtTime).toHaveBeenCalledWith(0.003, expect.any(Number));
-      expect(compressor.release.setValueAtTime).toHaveBeenCalledWith(0.150, expect.any(Number));
+      // Stage 5: Dynamics Compressor (-20dB, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
+      expect(compressor.threshold.setValueAtTime).toHaveBeenCalledWith(-20, expect.any(Number));
+      expect(compressor.knee.setValueAtTime).toHaveBeenCalledWith(15, expect.any(Number));
+      expect(compressor.ratio.setValueAtTime).toHaveBeenCalledWith(3, expect.any(Number));
+      expect(compressor.attack.setValueAtTime).toHaveBeenCalledWith(0.005, expect.any(Number));
+      expect(compressor.release.setValueAtTime).toHaveBeenCalledWith(0.180, expect.any(Number));
 
-      // Stage 6: Makeup Gain (1.2x)
-      expect(makeupGain.gain.setValueAtTime).toHaveBeenCalledWith(1.2, expect.any(Number));
+      // Stage 6: Makeup Gain (1.15x)
+      expect(makeupGain.gain.setValueAtTime).toHaveBeenCalledWith(1.15, expect.any(Number));
 
       // Destination
       expect(dest.stream).toBe(result.processedStream);

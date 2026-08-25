@@ -48,18 +48,18 @@ export async function unlockAudioContext() {
  * Build 6-stage isolated Web Audio denoise and voice isolation pipeline:
  * MediaStreamSource
  *   -> Stage 1: 80Hz 2nd-order Butterworth Highpass (rumble/HVAC cut)
- *   -> Stage 2: 2.8kHz Peaking EQ (+3dB gain, Q=1.2) (vocal formant presence)
- *   -> Stage 3: 4.2kHz 2nd-order Lowpass (Q=0.7071) (hiss/fan cut)
- *   -> Stage 4: Active downward RMS Noise Gate (AnalyserNode + GainNode envelope follower, threshold -46 dBFS, floor 0.02, attack 10ms, hold 80ms, release 150ms)
- *   -> Stage 5: Dynamics Compressor (-18dB threshold, 12dB knee, 4:1 ratio, 3ms attack, 150ms release)
- *   -> Stage 6: 1.2x Makeup Gain (+1.58 dB)
+ *   -> Stage 2: 2.8kHz Peaking EQ (+2dB gain, Q=1.0) (vocal formant presence)
+ *   -> Stage 3: 8.5kHz 2nd-order Lowpass (Q=0.7071) (hiss/fan cut while preserving consonants)
+ *   -> Stage 4: Active downward RMS Noise Gate (AnalyserNode + GainNode envelope follower, threshold -48 dBFS, floor 0.10, attack 15ms, hold 120ms, release 220ms)
+ *   -> Stage 5: Dynamics Compressor (-20dB threshold, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
+ *   -> Stage 6: 1.15x Makeup Gain (+1.21 dB)
  *   -> MediaStreamDestination
  *
  * @param {MediaStream} stream - Input microphone MediaStream
  * @param {Object} [options] - Configuration overrides
- * @param {number} [options.gateThreshold=-46] - Noise gate threshold in dBFS
- * @param {number} [options.noiseGateThreshold=-46] - Alias for gateThreshold
- * @param {number} [options.gateFloor=0.02] - Attenuation floor when gate is closed
+ * @param {number} [options.gateThreshold=-48] - Noise gate threshold in dBFS
+ * @param {number} [options.noiseGateThreshold=-48] - Alias for gateThreshold
+ * @param {number} [options.gateFloor=0.10] - Attenuation floor when gate is closed
  * @param {boolean} [options.gateEnabled=true] - Initial noise gate state
  * @param {boolean} [options.noiseGateEnabled=true] - Alias for gateEnabled
  * @returns {{
@@ -116,21 +116,21 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       highPass.Q.setValueAtTime(0.7071, ctx.currentTime);
     }
 
-    // Stage 2: 2.8kHz Peaking EQ (+3dB gain, Q=1.2) for vocal formant clarity
+    // Stage 2: 2.8kHz Peaking EQ (+2dB gain, Q=1.0) for vocal formant clarity
     const presenceEQ = ctx.createBiquadFilter();
     presenceEQ.type = 'peaking';
     presenceEQ.frequency.setValueAtTime(2800, ctx.currentTime);
     if (presenceEQ.gain && presenceEQ.gain.setValueAtTime) {
-      presenceEQ.gain.setValueAtTime(3.0, ctx.currentTime);
+      presenceEQ.gain.setValueAtTime(2.0, ctx.currentTime);
     }
     if (presenceEQ.Q && presenceEQ.Q.setValueAtTime) {
-      presenceEQ.Q.setValueAtTime(1.2, ctx.currentTime);
+      presenceEQ.Q.setValueAtTime(1.0, ctx.currentTime);
     }
 
-    // Stage 3: 4.2kHz 2nd-order Lowpass filter (Q=0.7071) to eliminate ambient hiss
+    // Stage 3: 8.5kHz 2nd-order Lowpass filter (Q=0.7071) to eliminate hiss while preserving speech articulation
     const hissCut = ctx.createBiquadFilter();
     hissCut.type = 'lowpass';
-    hissCut.frequency.setValueAtTime(4200, ctx.currentTime);
+    hissCut.frequency.setValueAtTime(8500, ctx.currentTime);
     if (hissCut.Q && hissCut.Q.setValueAtTime) {
       hissCut.Q.setValueAtTime(0.7071, ctx.currentTime);
     }
@@ -252,17 +252,17 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
 
     gateIntervalId = setInterval(evaluateNoiseGate, 16);
 
-    // Stage 5: Dynamics Compressor (-18dB threshold, 12dB knee, 4:1 ratio, 3ms attack, 150ms release)
+    // Stage 5: Dynamics Compressor (-20dB threshold, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-18, ctx.currentTime);
-    compressor.knee.setValueAtTime(12, ctx.currentTime);
-    compressor.ratio.setValueAtTime(4, ctx.currentTime);
-    compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-    compressor.release.setValueAtTime(0.150, ctx.currentTime);
+    compressor.threshold.setValueAtTime(-20, ctx.currentTime);
+    compressor.knee.setValueAtTime(15, ctx.currentTime);
+    compressor.ratio.setValueAtTime(3, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.005, ctx.currentTime);
+    compressor.release.setValueAtTime(0.180, ctx.currentTime);
 
-    // Stage 6: 1.2x Makeup Gain (+1.58 dB)
+    // Stage 6: 1.15x Makeup Gain (+1.21 dB)
     const makeupGain = ctx.createGain();
-    makeupGain.gain.setValueAtTime(1.2, ctx.currentTime);
+    makeupGain.gain.setValueAtTime(1.15, ctx.currentTime);
 
     // Destination
     const dest = ctx.createMediaStreamDestination();
