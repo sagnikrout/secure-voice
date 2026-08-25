@@ -32,20 +32,20 @@ export const ICE_SERVERS = {
 // Character set for generating readable 9-character Peer IDs (omits confusing 0/O, 1/I, L)
 export const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Opus Codec & Packetization Constraints (High-Definition Wideband & Low-Latency Engine)
+// Opus Codec & Packetization Constraints (Highest Quality-per-Bit Wideband Engine)
 export const OPUS_CONFIG = {
-  MAX_AVERAGE_BITRATE: '20000', // 20 kbps default HD voice target bitrate (replaces 6kbps robotic mode)
+  MAX_AVERAGE_BITRATE: '14000', // 14 kbps Pareto optimal bitrate (Wideband HD at ~1.5 KB/s)
   MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps ultra-survival bandwidth floor
-  HIGH_AVERAGE_BITRATE: '24000', // 24 kbps maximum ceiling
-  USE_DTX: '1',                 // Discontinuous Transmission (silence suppression to drain queues)
+  HIGH_AVERAGE_BITRATE: '18000', // 18 kbps maximum ceiling
+  USE_DTX: '1',                 // Discontinuous Transmission (saves ~50% bandwidth during pauses)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
-  PACKET_LOSS_PERC: '15',       // Expected packet loss target for FEC tuning
+  PACKET_LOSS_PERC: '20',       // Expected packet loss target for FEC tuning
   STEREO: '0',                  // Mono voice optimization (1 channel)
-  CBR: '0',                     // Variable Bit Rate (VBR) eliminates metallic robotic distortion
+  CBR: '0',                     // Variable Bit Rate (VBR) for maximum acoustic efficiency
   MAX_PLAYBACK_RATE: '16000',   // 16 kHz Wideband HD limit (reproduces crisp consonants & vocal warmth)
   SPROP_MAX_CAPTURE_RATE: '16000', // Capture rate matching playback rate
-  BANDWIDTH_CAP_KBPS: 24,       // SDP b=AS session bandwidth constraint
-  PTIME: '20',                  // 20ms packetization (standard low latency, zero choppiness)
+  BANDWIDTH_CAP_KBPS: 18,       // SDP b=AS session bandwidth constraint
+  PTIME: '40',                  // 40ms packetization (reduces IP/RTP packet header overhead by 50%)
   MAX_PTIME: '60',              // 60ms maximum acceptable packetization time
   RED_PAYLOAD_TYPE: 63,         // RFC 2198 RED dynamic payload type
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
