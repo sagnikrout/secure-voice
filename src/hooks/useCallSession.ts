@@ -6,7 +6,7 @@ import {
   stopMediaStream
 } from '../utils/audio';
 import { transformOpusSdp, getQualityRating, generateSafetyCode, applySenderBitrate } from '../utils/webrtc';
-import { NetworkTelemetryMonitor, AdaptiveBitrateController } from '../utils/networkAdaptation';
+import { NetworkTelemetryMonitor, AdaptiveBitrateController, evaluateCodecCrossover } from '../utils/networkAdaptation';
 import { IceRestartManager } from '../utils/iceRestartManager';
 import { JitterBufferController } from '../utils/jitterBufferController';
 import { PacketPacer } from '../utils/packetPacer';
@@ -18,10 +18,12 @@ import {
   abandonAudioFocus,
   addAudioFocusListener
 } from '../utils/audioRouting';
-import { TIMINGS, LADDER_TIERS } from '../constants/config';
+import { TIMINGS, LADDER_TIERS, STORAGE_KEYS, LYRA_CONFIG, CODEC_CROSSOVER_CONFIG } from '../constants/config';
 import { audioResourceManager } from '../utils/resourceManager';
 import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
+import { lyraManager, lyraTransformController, lyraWasmLoader } from '../utils/lyra';
+import { CodecType, CodecPreference } from '../types';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state
@@ -70,6 +72,32 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const [isVerified, setIsVerified] = useState(false);
   const [activeTier, setActiveTier] = useState(LADDER_TIERS[0]);
   const [liveTelemetry, setLiveTelemetry] = useState(null);
+
+  // Neural Codec & Dynamic Crossover State
+  const [preferredCodec, setPreferredCodecState] = useState<CodecPreference>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.PREFERRED_CODEC);
+        if (saved === 'auto' || saved === 'opus' || saved === 'lyra') return saved as CodecPreference;
+      } catch (e) {}
+    }
+    return lyraWasmLoader.checkCompatibility().simd ? 'auto' : 'opus';
+  });
+  const [activeCodec, setActiveCodec] = useState<CodecType>('opus');
+  const crossoverHealthyTicksRef = useRef(0);
+
+  const setPreferredCodec = useCallback((codec: CodecPreference) => {
+    setPreferredCodecState(codec);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.PREFERRED_CODEC, codec);
+      } catch (e) {}
+    }
+    const label = codec === 'auto'
+      ? 'Smart Auto Crossover (Lyra v2 <14k, Opus ≥14k)'
+      : (codec === 'lyra' ? 'Google Lyra v2 Neural (3.2 kbps)' : 'Standard Opus');
+    callbacksRef.current.addLog?.(`Preferred voice codec set to: ${label}`, 'info');
+  }, []);
 
   // Ringtone player cleanup ref
   const stopRingtoneRef = useRef(null);
@@ -162,7 +190,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       stopRingtoneRef.current = null;
     }
 
-    // 8. Reset states
+    // 8. Clean Lyra neural codec state
+    lyraManager.reset();
+    lyraTransformController.reset();
+    setActiveCodec('opus');
+
+    // 9. Reset states
     stopTimer();
     setIsInCall(prevInCall => {
       if (prevInCall) {
@@ -219,6 +252,24 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
       if (audioCtx) {
         callbacksRef.current.addLog?.('Web Audio 6-stage filter & noise gate active', 'ok');
+      }
+
+      // Initialize Google Lyra v2 Neural Codec if preferred (or in Smart Auto Crossover mode)
+      if ((preferredCodec === 'auto' || preferredCodec === 'lyra') && lyraWasmLoader.checkCompatibility().simd) {
+        try {
+          const lyraReady = await lyraManager.init({ audioCtx: audioCtx || undefined });
+          if (lyraReady) {
+            setActiveCodec('lyra');
+            callbacksRef.current.addLog?.('Google Lyra v2 Neural Codec active (3.2 kbps wideband speech)', 'ok');
+          } else {
+            setActiveCodec('opus');
+            callbacksRef.current.addLog?.('Opus SILK codec active (fallback)', 'info');
+          }
+        } catch (e) {
+          setActiveCodec('opus');
+        }
+      } else {
+        setActiveCodec('opus');
       }
 
       return processedStream;
@@ -418,10 +469,40 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           // 2. Packet Pacing & Traffic Shaping (router queue overflow prevention)
           await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
         }
+
+        // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
+        if (preferredCodec === 'auto') {
+          const crossover = evaluateCodecCrossover({
+            snapshot,
+            currentCodec: activeCodec,
+            consecutiveHealthyTicks: crossoverHealthyTicksRef.current,
+            simdSupported: lyraWasmLoader.checkCompatibility().simd
+          });
+          crossoverHealthyTicksRef.current = crossover.consecutiveHealthyTicks;
+          if (crossover.codecChanged) {
+            lyraManager.setActiveCodec(crossover.targetCodec);
+            setActiveCodec(crossover.targetCodec);
+            callbacksRef.current.addLog?.(crossover.reason, 'info');
+          }
+        }
       }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
 
       monitor.start();
       telemetryMonitorRef.current = monitor;
+
+      // Attach Lyra neural transform streams to audio senders and receivers
+      try {
+        const audioSenders = pc.getSenders?.()?.filter(s => s.track && s.track.kind === 'audio');
+        if (audioSenders && audioSenders.length > 0) {
+          audioSenders.forEach(s => lyraTransformController.attachSender(s));
+        }
+        const audioReceivers = pc.getReceivers?.()?.filter(r => r.track && r.track.kind === 'audio');
+        if (audioReceivers && audioReceivers.length > 0) {
+          audioReceivers.forEach(r => lyraTransformController.attachReceiver(r));
+        }
+      } catch (e) {
+        console.warn('Lyra transform attachment notice:', e);
+      }
 
       // Enforce constant-latency jitter buffer target and traffic pacing on startup
       const initialTier = bitrateControllerRef.current.getCurrentTier();
@@ -731,6 +812,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     setIsVerified,
     activeTier,
     liveTelemetry,
+    activeCodec,
+    preferredCodec,
+    setPreferredCodec,
+    lyraStats: lyraManager.getStats(),
     startCall,
     cancelCall,
     answerCall,

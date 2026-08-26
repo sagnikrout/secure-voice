@@ -15,7 +15,8 @@ import {
   Info,
   Activity,
   ShieldAlert,
-  PhoneMissed
+  PhoneMissed,
+  Sliders
 } from 'lucide-react';
 
 import { useTheme } from './hooks/useTheme';
@@ -31,6 +32,7 @@ import RecentCalls from './components/RecentCalls';
 import InfoModal from './components/InfoModal';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
 import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
+import AudioSettingsModal from './components/AudioSettingsModal';
 import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
 
 /**
@@ -44,6 +46,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const [missedCallNotice, setMissedCallNotice] = useState(null);
   const [verificationDismissed, setVerificationDismissed] = useState(false);
@@ -177,6 +180,16 @@ export default function App() {
               title="Toggle theme"
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              type="button"
+              className="info-btn"
+              onClick={() => setShowAudioSettings(true)}
+              aria-label="Audio & Codec Settings"
+              title="Audio & Codec Settings"
+            >
+              <Sliders className="w-4 h-4" />
             </button>
 
             <button
@@ -371,6 +384,8 @@ export default function App() {
                   audioDevices.selectAudioInput(deviceId);
                   callSession.switchMicrophone(deviceId);
                 }}
+                preferredCodec={callSession.preferredCodec}
+                onSelectCodec={callSession.setPreferredCodec}
               />
             </div>
           </section>
@@ -488,6 +503,25 @@ export default function App() {
 
         {/* Specs & Privacy Info Modal */}
         {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
+
+        {/* Audio & Neural Codec Settings Modal */}
+        {showAudioSettings && (
+          <AudioSettingsModal
+            isOpen={showAudioSettings}
+            onClose={() => setShowAudioSettings(false)}
+            outputOptions={audioDevices.audioOutputs}
+            activeOutputId={callSession.activeOutputId}
+            onSelectOutput={(outputId) => callSession.toggleSpeaker(outputId)}
+            micDevices={audioDevices.audioInputs}
+            activeMicId={audioDevices.selectedInputId}
+            onSelectMic={(deviceId) => {
+              audioDevices.selectAudioInput(deviceId);
+              callSession.switchMicrophone(deviceId);
+            }}
+            preferredCodec={callSession.preferredCodec}
+            onSelectCodec={callSession.setPreferredCodec}
+          />
+        )}
 
         {/* WebRTC Diagnostics & Stats Modal */}
         {showStats && <WebRtcStatsOverlay isOpen={showStats} onClose={() => setShowStats(false)} callSession={callSession} />}

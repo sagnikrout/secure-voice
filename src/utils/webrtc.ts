@@ -380,10 +380,10 @@ export function getQualityRating(rttSeconds) {
 }
 
 /**
- * Generate a deterministic 5-digit verbal Safety Code from DTLS-SRTP fingerprints for MITM detection
+ * Generate a deterministic 8-digit verbal Safety Code from DTLS-SRTP fingerprints for MITM detection
  * @param {string} localSdp - Local session description
  * @param {string} remoteSdp - Remote session description
- * @returns {Promise<string|null>} 5-digit code string
+ * @returns {Promise<string|null>} 8-digit code string
  */
 export async function generateSafetyCode(localSdp, remoteSdp) {
   if (!localSdp || !remoteSdp || typeof localSdp !== 'string' || typeof remoteSdp !== 'string') return null;
@@ -405,7 +405,12 @@ export async function generateSafetyCode(localSdp, remoteSdp) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   
-  // Extract 32 bits to form a 6-digit number
+  // Extract 32 bits to form an 8-digit number (increases MITM collision resistance)
   const num = ((hashArray[0] << 24) | (hashArray[1] << 16) | (hashArray[2] << 8) | hashArray[3]) >>> 0;
-  return String(num % 1000000).padStart(6, '0');
+  return String(num % 100000000).padStart(8, '0');
 }
+
+/**
+ * Re-export Lyra frame validator for convenience
+ */
+export { isLyraFrame } from './lyra/lyraTransform';

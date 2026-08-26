@@ -14,7 +14,19 @@ export default function CallAudioDeviceSwitcher({
   outputDevices = [],
   micDevices = [], 
   activeMicId, 
-  onSwitchMic 
+  onSwitchMic,
+  preferredCodec = 'auto',
+  onSelectCodec
+}: {
+  isSpeakerOn?: boolean;
+  onToggleSpeaker: (mode: any) => void;
+  activeOutputId?: string;
+  outputDevices?: any[];
+  micDevices?: any[];
+  activeMicId?: string;
+  onSwitchMic: (deviceId: string) => void;
+  preferredCodec?: any;
+  onSelectCodec?: (codec: any) => void;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [nativeOutputs, setNativeOutputs] = useState(['speaker', 'earpiece']);
@@ -126,6 +138,8 @@ export default function CallAudioDeviceSwitcher({
         micDevices={micDevices}
         activeMicId={activeMicId}
         onSelectMic={(deviceId) => onSwitchMic(deviceId)}
+        preferredCodec={preferredCodec}
+        onSelectCodec={onSelectCodec}
       />
     </div>
   );

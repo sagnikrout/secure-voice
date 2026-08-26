@@ -1,7 +1,7 @@
 import { ExtendedLadderTier } from '../types';
 
 export const APP_NAME = 'SecureVoice';
-export const APP_VERSION = 'v3.4.0';
+export const APP_VERSION = 'v3.5.0';
 
 // WebRTC ICE Servers Configuration (Google STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
@@ -13,18 +13,18 @@ export const ICE_SERVERS = {
     { urls: 'stun:stun4.l.google.com:19302' },
     {
       urls: 'turn:openrelay.metered.ca:80',
-      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
+      username: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_USERNAME) || 'openrelayproject',
+      credential: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_CREDENTIAL) || 'openrelayproject'
     },
     {
       urls: 'turn:openrelay.metered.ca:443',
-      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
+      username: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_USERNAME) || 'openrelayproject',
+      credential: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_CREDENTIAL) || 'openrelayproject'
     },
     {
       urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: import.meta.env.VITE_TURN_USERNAME || 'openrelayproject',
-      credential: import.meta.env.VITE_TURN_CREDENTIAL || 'openrelayproject'
+      username: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_USERNAME) || 'openrelayproject',
+      credential: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_CREDENTIAL) || 'openrelayproject'
     }
   ]
 };
@@ -49,6 +49,34 @@ export const OPUS_CONFIG = {
   MAX_PTIME: '60',              // 60ms maximum acceptable packetization time
   RED_PAYLOAD_TYPE: 63,         // RFC 2198 RED dynamic payload type
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
+};
+
+// Google Lyra v2 Neural Speech Codec Configuration (SoundStream / LyraGAN Architecture)
+export const LYRA_CONFIG = {
+  DEFAULT_BITRATE: 3200 as const,      // 3.2 kbps default (8 bytes per 20ms frame -> ~0.84 kB/s total network rate)
+  SAMPLE_RATE: 16000,                  // 16 kHz speech domain
+  FRAME_SIZE_SAMPLES: 320,             // 20ms at 16 kHz (320 samples per frame)
+  FRAME_DURATION_MS: 20,               // 20ms frame duration
+  MODEL_PATH: '/models/lyra/',         // Path to quantized weights & WASM assets
+  HEADER_BYTE_MAGIC: 0x4C,             // ASCII 'L' identifier for Lyra frames in RTP payloads
+  SUPPORTED_BITRATES: [3200, 6000, 9200] as const,
+  BYTES_PER_FRAME: {
+    3200: 8,                           // 8 bytes per 20ms = 3.2 kbps
+    6000: 15,                          // 15 bytes per 20ms = 6.0 kbps
+    9200: 23                           // 23 bytes per 20ms = 9.2 kbps
+  } as const
+};
+
+// 14 kbps Acoustic Quality Crossover Configuration (Lyra v2 < 14 kbps vs Opus >= 14 kbps)
+export const CODEC_CROSSOVER_CONFIG = {
+  CROSSOVER_BITRATE_BPS: 14000,           // 14.0 kbps quality crossover boundary
+  DOWNGRADE_TO_LYRA_LOSS_THRESHOLD: 0.04, // > 4% loss triggers switch to Lyra v2 Neural
+  DOWNGRADE_TO_LYRA_RTT_MS: 280,          // > 280ms RTT triggers switch to Lyra v2 Neural
+  DOWNGRADE_TO_LYRA_JITTER_MS: 45,        // > 45ms jitter triggers switch to Lyra v2 Neural
+  UPGRADE_TO_OPUS_CONSECUTIVE_TICKS: 4,   // 4 consecutive healthy ticks to elevate to Opus Wideband
+  UPGRADE_TO_OPUS_MAX_LOSS: 0.015,        // < 1.5% loss required for Opus elevation
+  UPGRADE_TO_OPUS_MAX_RTT_MS: 160,        // < 160ms RTT required for Opus elevation
+  UPGRADE_TO_OPUS_MAX_JITTER_MS: 30       // < 30ms jitter required for Opus elevation
 };
 
 // 6-Tier 2G/Satellite Survival Ladder Configuration (Constant Latency Profile)
@@ -366,5 +394,6 @@ export const STORAGE_KEYS = {
   THEME: 'secure_voice_theme',
   RECENT_CALLS: 'secure_voice_recent_calls',
   PREFERRED_INPUT: 'securevoice_preferred_input_id',
-  PREFERRED_OUTPUT: 'securevoice_output_mode'
+  PREFERRED_OUTPUT: 'securevoice_output_mode',
+  PREFERRED_CODEC: 'securevoice_preferred_codec'
 };

@@ -1,11 +1,14 @@
 import React, { useRef, useEffect } from 'react';
-import { Volume2, Phone, Bluetooth, Mic, Check, X, Sliders, Speaker, Headphones } from 'lucide-react';
+import { Volume2, Phone, Bluetooth, Mic, Check, X, Sliders, Speaker, Headphones, Cpu, Sparkles } from 'lucide-react';
+import { isWasmSimdSupported } from '../utils/lyra/lyraWasmLoader';
+import { CodecType, CodecPreference } from '../types';
 import './DeviceSelectors.css';
 
 /**
  * Audio Settings & Device Routing Modal Component.
  * Allows users to choose between all enumerated hardware speakers,
- * headphones, earpieces, bluetooth devices, and hardware microphones.
+ * headphones, earpieces, bluetooth devices, hardware microphones,
+ * and the Google Lyra v2 Neural Speech Codec.
  */
 export default function AudioSettingsModal({
   isOpen,
@@ -15,7 +18,20 @@ export default function AudioSettingsModal({
   onSelectOutput,
   micDevices = [],
   activeMicId,
-  onSelectMic
+  onSelectMic,
+  preferredCodec = 'auto',
+  onSelectCodec
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  outputOptions?: any[];
+  activeOutputId?: string;
+  onSelectOutput?: (id: string) => void;
+  micDevices?: any[];
+  activeMicId?: string;
+  onSelectMic?: (id: string) => void;
+  preferredCodec?: CodecPreference;
+  onSelectCodec?: (codec: CodecPreference) => void;
 }) {
   const modalRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -154,6 +170,104 @@ export default function AudioSettingsModal({
                 <span>Default System Microphone Active</span>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Neural Codec Architecture Section */}
+        <div className="audio-settings-section" style={{ marginTop: '16px' }}>
+          <div className="audio-settings-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Cpu className="w-4 h-4 text-muted" />
+              <span>Voice Codec Engine</span>
+            </div>
+            {isWasmSimdSupported() ? (
+              <span style={{ fontSize: '11px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                WASM SIMD Ready
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px' }}>
+                Standard CPU
+              </span>
+            )}
+          </div>
+
+          <div className="audio-settings-options">
+            {/* Smart Auto Crossover Option (Recommended) */}
+            <button
+              type="button"
+              className={`audio-settings-option ${preferredCodec === 'auto' ? 'selected' : ''}`}
+              onClick={() => onSelectCodec?.('auto')}
+              aria-pressed={preferredCodec === 'auto'}
+            >
+              <div className="audio-settings-option-left">
+                <div className="audio-settings-option-icon" style={{ color: '#22c55e' }}>
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="audio-settings-option-text">
+                  <div className="audio-settings-option-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>Smart Auto Crossover (Recommended)</span>
+                  </div>
+                  <div className="audio-settings-option-desc">
+                    Lyra v2 Neural (&lt;14 kbps) · Opus HD (&ge;14 kbps broadband)
+                  </div>
+                </div>
+              </div>
+              {preferredCodec === 'auto' && (
+                <div className="audio-settings-check">
+                  <Check className="w-4 h-4" />
+                </div>
+              )}
+            </button>
+
+            {/* Lyra Locked Option */}
+            <button
+              type="button"
+              className={`audio-settings-option ${preferredCodec === 'lyra' ? 'selected' : ''}`}
+              onClick={() => onSelectCodec?.('lyra')}
+              aria-pressed={preferredCodec === 'lyra'}
+            >
+              <div className="audio-settings-option-left">
+                <div className="audio-settings-option-icon" style={{ color: '#3b82f6' }}>
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <div className="audio-settings-option-text">
+                  <div className="audio-settings-option-name">Google Lyra v2 (Locked 3.2 kbps)</div>
+                  <div className="audio-settings-option-desc">
+                    SoundStream wideband AI vocoder (~0.84 kB/s sub-1 kB/s data rate)
+                  </div>
+                </div>
+              </div>
+              {preferredCodec === 'lyra' && (
+                <div className="audio-settings-check">
+                  <Check className="w-4 h-4" />
+                </div>
+              )}
+            </button>
+
+            {/* Opus Option */}
+            <button
+              type="button"
+              className={`audio-settings-option ${preferredCodec === 'opus' ? 'selected' : ''}`}
+              onClick={() => onSelectCodec?.('opus')}
+              aria-pressed={preferredCodec === 'opus'}
+            >
+              <div className="audio-settings-option-left">
+                <div className="audio-settings-option-icon">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div className="audio-settings-option-text">
+                  <div className="audio-settings-option-name">Standard Opus (Adaptive)</div>
+                  <div className="audio-settings-option-desc">
+                    6-tier adaptive SILK/CELT ladder (1.2 to 24.0 kbps)
+                  </div>
+                </div>
+              </div>
+              {preferredCodec === 'opus' && (
+                <div className="audio-settings-check">
+                  <Check className="w-4 h-4" />
+                </div>
+              )}
+            </button>
           </div>
         </div>
 

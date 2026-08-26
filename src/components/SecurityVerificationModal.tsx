@@ -15,8 +15,8 @@ export default function SecurityVerificationModal({ safetyCode, onVerify, onReje
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onReject]);
 
-  // Format the code: 12345 -> 12-345 for easier verbal reading
-  const formattedCode = safetyCode ? `${safetyCode.substring(0, 2)}-${safetyCode.substring(2)}` : '';
+  // Format the code: 12345678 -> 1234-5678 for easier verbal reading
+  const formattedCode = safetyCode ? `${safetyCode.substring(0, 4)}-${safetyCode.substring(4)}` : '';
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="verification-title">
@@ -28,14 +28,18 @@ export default function SecurityVerificationModal({ safetyCode, onVerify, onReje
         <p className="inc-label" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Verifying Secure Connection</p>
         <p className="inc-caller" id="verification-title" style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '12px' }}>Peer: {connectedPeer}</p>
         
-        <p className="inc-sub" style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.4', marginBottom: '20px' }}>
-          To ensure no one is intercepting this call, read this code aloud to your contact:
+        <p className="inc-sub" style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.4', marginBottom: '12px' }}>
+          To ensure no one is intercepting this call (Man-in-the-Middle attack), you must read this 8-digit security code aloud to your contact:
         </p>
         
-        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '6px', fontFamily: 'var(--mono)', color: 'var(--text)', background: 'var(--bg)', border: '2px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '16px', margin: '0 0 24px 0', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '6px', fontFamily: 'var(--mono)', color: 'var(--text)', background: 'var(--bg)', border: '2px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '16px', margin: '0 0 16px 0', display: 'flex', justifyContent: 'center' }}>
           {formattedCode}
         </div>
         
+        <p className="inc-sub" style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.4', marginBottom: '20px', background: 'var(--bg)', padding: '12px', borderRadius: '8px' }}>
+          <strong>Why do this?</strong> This code is derived mathematically from your device's encryption keys. If an attacker is listening, their keys will produce a different code.
+        </p>
+
         <p className="inc-sub" style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-2)', marginBottom: '16px' }}>
           Did they read the exact same code back to you?
         </p>

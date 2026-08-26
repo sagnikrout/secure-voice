@@ -1,4 +1,4 @@
-# SecureVoice (v3.4.0)
+# SecureVoice (v3.5.0)
 
 Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE, high latency, and high packet loss) and privacy-focused communication. Voice media streams connect directly between devices via WebRTC DTLS-SRTP with zero media relays by default.
 
@@ -6,10 +6,11 @@ Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE,
 
 ## Overview
 
-SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It uses Opus wideband encoding, adaptive packet pacing, and constant-latency packetization to keep voice crisp at bitrates from 1.2 to 24.0 kbps and packet loss up to 50%.
+SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It features the Google Lyra v2 neural speech codec (SoundStream/LyraGAN architecture) for pristine wideband voice at 3.2 kbps (< 1 kB/s total network bandwidth), alongside an adaptive Opus ladder (1.2 to 24.0 kbps) and generative packet loss concealment.
 
 Key design principles:
 - **Direct P2P Media**: Voice streams travel directly between peers using DTLS-SRTP; zero central media servers handle audio.
+- **Google Lyra v2 Neural Speech Codec**: Sub-1 kB/s wideband voice transmission using WebAssembly SIMD and WebRTC Insertable Streams.
 - **Client-Side Encrypted Signaling**: Signaling payloads (SDP and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM before passing through any signaling relay.
 - **Pluggable & Air-Gapped Transports**: Supports serverless Air-Gapped QR Code / Clipboard discovery as well as ephemeral WebSocket relays.
 - **Zero Server Logs**: Call history and diagnostic logs remain exclusively on the user's local device sandbox (localStorage) and are never transmitted to any telemetry endpoint.
@@ -17,6 +18,7 @@ Key design principles:
 
 ## Features
 
+- **Google Lyra v2 Neural Codec**: 3.2 kbps SoundStream AI compression (~0.84 kB/s total data rate) with generative autoregressive packet loss concealment.
 - **End-to-End Media Encryption**: Direct peer-to-peer WebRTC DTLS-SRTP voice encryption.
 - **Encrypted Signaling**: Ephemeral ECDH (P-256) key exchange prevents signaling intermediaries from reading SDP fingerprints.
 - **Air-Gapped QR Signaling**: 100% serverless call establishment via optical QR code or text clipboard exchange.

@@ -144,7 +144,7 @@ export interface StructuredLogEntry {
 export interface StructuredLoggerOptions {
   maxEntries?: number;
   persistKey?: string;
-  enableLocalStorage?: boolean;
+  enableSessionStorage?: boolean;
   onLog?: (entry: StructuredLogEntry) => void;
 }
 
@@ -164,3 +164,44 @@ export interface AuditoryToneConfig {
 }
 
 export type CallAudioCue = 'ringing' | 'connected' | 'disconnected' | 'busy' | 'reconnecting' | 'verified';
+
+export type CodecType = 'opus' | 'lyra';
+
+export type CodecPreference = 'auto' | 'lyra' | 'opus';
+
+export type LyraBitrate = 3200 | 6000 | 9200;
+
+export interface LyraConfig {
+  DEFAULT_BITRATE: LyraBitrate;
+  SAMPLE_RATE: number;
+  FRAME_SIZE_SAMPLES: number;
+  FRAME_DURATION_MS: number;
+  MODEL_PATH: string;
+  HEADER_BYTE_MAGIC: number;
+  SUPPORTED_BITRATES: LyraBitrate[];
+  BYTES_PER_FRAME: Record<LyraBitrate, number>;
+}
+
+export interface LyraStats {
+  activeCodec: CodecType;
+  bitrateBps: number;
+  framesEncoded: number;
+  framesDecoded: number;
+  plcFramesSynthesized: number;
+  rawBandwidthKbps: number;
+  simdSupported: boolean;
+  workerActive: boolean;
+}
+
+export interface LyraWorkerMessage {
+  type: 'init' | 'encode' | 'decode' | 'plc' | 'set_bitrate' | 'reset';
+  payload?: any;
+  seq?: number;
+}
+
+export interface LyraWorkerResponse {
+  type: 'init_done' | 'encoded_frame' | 'decoded_pcm' | 'plc_pcm' | 'error';
+  payload?: any;
+  seq?: number;
+  error?: string;
+}

@@ -21,7 +21,7 @@ SecureVoice is designed from first principles as a **zero-knowledge, zero-log, e
 |---|---|---|---|
 | **Passive Network Eavesdropper** | Intercepts all IP/UDP packets (Wi-Fi sniffer, ISP, government wiretap). | Eavesdrop on voice conversations. | **DTLS-SRTP Encryption (AES-GCM)**: All RTP payloads are ciphertext. |
 | **Traffic / Metadata Analyst** | Observes packet timing, lengths, and burst patterns. | Infer speech presence, word lengths, or caller identities. | **Constant Bit Rate (CBR)**: Enforced mono Opus CBR eliminates packet size modulation. Fixed 80ms ptime. |
-| **Malicious Signaling Relay (MITM)** | Tampers with or replaces SDP offer/answers in transit. | Subvert DTLS handshake to intercept encryption keys. | **Short Authentication String (SAS)**: 5-digit safety code computed via SHA-256 hash of lexicographically sorted local and remote DTLS fingerprints. |
+| **Malicious Signaling Relay (MITM)** | Tampers with or replaces SDP offer/answers in transit. | Subvert DTLS handshake to intercept encryption keys. | **Short Authentication String (SAS)**: 8-digit safety code computed via SHA-256 hash of lexicographically sorted local and remote DTLS fingerprints. |
 | **Compromised Host Device** | Malware, rootkit, or spyware installed on user OS. | Extract microphone stream or memory contents. | Application-level sandboxing; hardware audio permissions; memory cleanup upon call termination. |
 
 ---
@@ -31,9 +31,9 @@ SecureVoice is designed from first principles as a **zero-knowledge, zero-log, e
 ### 3.1 Signaling Interception & MITM Prevention
 - **Threat**: An active attacker modifying SDP packets on the signaling relay could inject their own DTLS fingerprint.
 - **Mitigation**:
-  - SecureVoice calculates a **5-digit verification code** directly from the SHA-256 fingerprints embedded in the negotiated SDP:
-    $$\text{SafetyCode} = \text{SHA256}(\text{fingerprint}_{\text{local}} \parallel \text{fingerprint}_{\text{remote}}) \pmod{100000}$$
-  - Peers verbally cross-verify this 5-digit SAS code during the call to verify zero MITM interference.
+  - SecureVoice calculates a **8-digit verification code** directly from the SHA-256 fingerprints embedded in the negotiated SDP:
+    $$\text{SafetyCode} = \text{SHA256}(\text{fingerprint}_{\text{local}} \parallel \text{fingerprint}_{\text{remote}}) \pmod{100000000}$$
+  - Peers verbally cross-verify this 8-digit SAS code during the call to verify zero MITM interference.
   - Pluggable support for out-of-band QR code SDP exchange.
 
 ---
@@ -80,3 +80,11 @@ SecureVoice is designed from first principles as a **zero-knowledge, zero-log, e
 - [x] Zero telemetry or analytics endpoints in codebase.
 - [x] Sanitized diagnostic logs with automated credential stripping.
 - [x] Capacitor Android permissions sandboxed to `RECORD_AUDIO` and foreground service.
+
+### 4.1 Perfect Forward Secrecy (PFS)
+WebRTC inherently provides **Perfect Forward Secrecy** for all media and data channels. The browser's WebRTC stack generates a fresh, ephemeral ECDHE keypair for every single RTCPeerConnection. A compromised signaling channel or a retroactive key compromise cannot decrypt past media sessions, as the ephemeral private keys are destroyed in memory immediately after the DTLS handshake completes.
+
+### 4.2 Graceful Degradation & Network Failover
+SecureVoice implements multi-tier fallback mechanisms:
+- **ICE Network Traversal**: Attempts direct Host/Server-Reflexive UDP hole punching via STUN. If strict symmetric NAT is detected, falls back to relayed TURN. Media encryption remains End-to-End even via TURN.
+- **Codec Escalation**: Employs Google Lyra v2 Neural Codec (3.2 kbps) under heavily congested environments (>4% packet loss, >280ms RTT) and escalates to Opus Wideband HD when stable broadband is restored. 

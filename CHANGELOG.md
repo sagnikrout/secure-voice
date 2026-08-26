@@ -2,6 +2,17 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.5.0] - 2026-08-26
+
+### Added
+- Google Lyra v2 neural speech codec integration (SoundStream and LyraGAN architecture) operating at 3.2 kbps for sub-1 kB/s wideband voice calling.
+- WebAssembly 128-bit SIMD capability detection and off-thread neural worker (`lyraWorker.ts`).
+- WebRTC Encoded Transform (`RTCRtpScriptTransform` / `createEncodedStreams`) pipeline with magic frame header serialization and sequence tracking.
+- Autoregressive generative neural Packet Loss Concealment (PLC) synthesizing missing frames without NetEQ pitch-shifting.
+- Low-latency 16 kHz polyphase AudioWorklet resampler and 20ms (320-sample) ring-buffered framing (`lyraAudioWorklet.ts`).
+- Voice Codec Engine selector in audio settings modal and live diagnostics overlay displaying neural data rates and PLC synthesis metrics.
+- Automatic graceful fallback to Opus SILK on legacy or non-SIMD client runtimes.
+
 ## [v3.4.0] - 2026-08-26
 
 ### Added

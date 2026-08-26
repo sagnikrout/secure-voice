@@ -7,11 +7,11 @@
  * - applySenderBitrate: Utility to configure RTCRtpSender encoding parameters.
  */
 
-import { LADDER_TIERS, EXTENDED_BITRATE_LADDER, ADAPTATION_CONFIG, TIMINGS } from '../constants/config';
-import { ExtendedLadderTier } from '../types';
+import { LADDER_TIERS, EXTENDED_BITRATE_LADDER, ADAPTATION_CONFIG, TIMINGS, CODEC_CROSSOVER_CONFIG } from '../constants/config';
+import { ExtendedLadderTier, CodecType } from '../types';
 import { applySenderBitrate } from './webrtc';
 
-export { applySenderBitrate, EXTENDED_BITRATE_LADDER };
+export { applySenderBitrate, EXTENDED_BITRATE_LADDER, CODEC_CROSSOVER_CONFIG };
 
 /**
  * High-Frequency Multi-Dimensional WebRTC Telemetry Monitor
@@ -509,4 +509,93 @@ export function selectExtendedTier(metrics: { packetLossPercent?: number; loss?:
  */
 export function getExtendedTierByName(name: string): ExtendedLadderTier | undefined {
   return EXTENDED_BITRATE_LADDER.find(t => t.name.toUpperCase() === name.toUpperCase());
+}
+
+/**
+ * Evaluates the 14 kbps acoustic quality crossover point:
+ * - Under 14 kbps: Lyra v2 delivers superior voice quality bit-for-bit.
+ * - 14 kbps and above: Opus delivers superior voice quality with fullband waveform transparency.
+ */
+export function evaluateCodecCrossover(params: {
+  snapshot: any;
+  currentCodec: CodecType;
+  consecutiveHealthyTicks: number;
+  simdSupported?: boolean;
+}): {
+  targetCodec: CodecType;
+  codecChanged: boolean;
+  consecutiveHealthyTicks: number;
+  reason: string;
+} {
+  const { snapshot, currentCodec, consecutiveHealthyTicks, simdSupported = true } = params;
+  if (!simdSupported) {
+    return {
+      targetCodec: 'opus',
+      codecChanged: currentCodec !== 'opus',
+      consecutiveHealthyTicks: 0,
+      reason: 'WASM SIMD unsupported -> locked to Opus'
+    };
+  }
+
+  if (!snapshot) {
+    return {
+      targetCodec: currentCodec,
+      codecChanged: false,
+      consecutiveHealthyTicks,
+      reason: 'stable'
+    };
+  }
+
+  const loss = Number.isFinite(snapshot.effectiveLossRate) ? snapshot.effectiveLossRate : 0;
+  const rtt = Number.isFinite(snapshot.rttMs) ? snapshot.rttMs : 0;
+  const jitter = Number.isFinite(snapshot.jitterMs) ? snapshot.jitterMs : 0;
+  const availableBps = snapshot.availableOutgoingBitrate || 0;
+
+  // Condition 1: Network constrained (< 14 kbps headroom, loss > 4%, or high latency)
+  const isConstrained = (availableBps > 0 && availableBps < CODEC_CROSSOVER_CONFIG.CROSSOVER_BITRATE_BPS) ||
+    loss >= CODEC_CROSSOVER_CONFIG.DOWNGRADE_TO_LYRA_LOSS_THRESHOLD ||
+    rtt >= CODEC_CROSSOVER_CONFIG.DOWNGRADE_TO_LYRA_RTT_MS ||
+    jitter >= CODEC_CROSSOVER_CONFIG.DOWNGRADE_TO_LYRA_JITTER_MS;
+
+  // Condition 2: Clean broadband link (>= 14 kbps headroom, low loss < 1.5%, low RTT < 160ms)
+  const isBroadband = !isConstrained &&
+    loss <= CODEC_CROSSOVER_CONFIG.UPGRADE_TO_OPUS_MAX_LOSS &&
+    rtt <= CODEC_CROSSOVER_CONFIG.UPGRADE_TO_OPUS_MAX_RTT_MS &&
+    jitter <= CODEC_CROSSOVER_CONFIG.UPGRADE_TO_OPUS_MAX_JITTER_MS;
+
+  if (currentCodec === 'opus' && isConstrained) {
+    // Immediate 1-tick switch to Lyra v2 Neural for superior bit-for-bit voice under 14 kbps
+    return {
+      targetCodec: 'lyra',
+      codecChanged: true,
+      consecutiveHealthyTicks: 0,
+      reason: `Network constrained (Loss: ${(loss * 100).toFixed(1)}%, RTT: ${Math.round(rtt)}ms) -> Switched to Lyra v2 Neural (<14 kbps optimal)`
+    };
+  }
+
+  if (currentCodec === 'lyra' && isBroadband) {
+    const newHealthyTicks = consecutiveHealthyTicks + 1;
+    if (newHealthyTicks >= CODEC_CROSSOVER_CONFIG.UPGRADE_TO_OPUS_CONSECUTIVE_TICKS) {
+      // 4 consecutive stable ticks: Elevate to Opus Wideband HD (>= 14 kbps)
+      return {
+        targetCodec: 'opus',
+        codecChanged: true,
+        consecutiveHealthyTicks: 0,
+        reason: `Broadband link sustained (Loss: ${(loss * 100).toFixed(1)}%, RTT: ${Math.round(rtt)}ms) -> Elevated to Opus Wideband HD (≥14 kbps optimal)`
+      };
+    }
+    return {
+      targetCodec: 'lyra',
+      codecChanged: false,
+      consecutiveHealthyTicks: newHealthyTicks,
+      reason: `Broadband link detected: probing headroom (${newHealthyTicks}/${CODEC_CROSSOVER_CONFIG.UPGRADE_TO_OPUS_CONSECUTIVE_TICKS})...`
+    };
+  }
+
+  return {
+    targetCodec: currentCodec,
+    codecChanged: false,
+    consecutiveHealthyTicks: 0,
+    reason: 'stable'
+  };
 }

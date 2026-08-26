@@ -11,7 +11,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
 
   const loadRecents = useCallback(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
+      const saved = sessionStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -36,7 +36,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
   const saveRecents = useCallback((list) => {
     setRecents(list);
     try {
-      localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(list));
+      sessionStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(list));
       window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
     } catch (e) {
       console.warn('Failed to save recent calls:', e);
@@ -48,7 +48,7 @@ function RecentCallsComponent({ onSelectPeer, currentPeerId }) {
     setRecents(prev => {
       const updated = prev.filter(r => r.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
+        sessionStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
         window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
       } catch (err) {}
       return updated;
@@ -152,7 +152,7 @@ export const RecentCalls = memo(RecentCallsComponent);
 export default RecentCalls;
 
 /**
- * Persist call history record into localStorage.
+ * Persist call history record into sessionStorage.
  * @param {string} peerId
  * @param {'connected' | 'missed'} [type='connected']
  */
@@ -162,14 +162,14 @@ export function saveCallHistory(peerId, type = 'connected') {
   if (!cleanId) return;
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
+    const saved = sessionStorage.getItem(STORAGE_KEYS.RECENT_CALLS);
     const list = saved ? JSON.parse(saved) : [];
     const filtered = Array.isArray(list) ? list.filter(r => r && r.id !== cleanId) : [];
     const updated = [
       { id: cleanId, timestamp: Date.now(), type },
       ...filtered.slice(0, TIMINGS.MAX_RECENT_CALLS - 1)
     ];
-    localStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
+    sessionStorage.setItem(STORAGE_KEYS.RECENT_CALLS, JSON.stringify(updated));
     window.dispatchEvent(new Event(EVENT_RECENT_CALLS_UPDATED));
   } catch (e) {
     console.warn('Failed to save call history:', e);

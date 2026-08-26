@@ -12,7 +12,7 @@ export class StructuredLogger {
   private entries: StructuredLogEntry[] = [];
   private maxEntries: number;
   private persistKey: string;
-  private enableLocalStorage: boolean;
+  private enableSessionStorage: boolean;
   private sessionId: string;
   private peerId: string;
   private onLog?: (entry: StructuredLogEntry) => void;
@@ -20,12 +20,12 @@ export class StructuredLogger {
   constructor(options: StructuredLoggerOptions = {}) {
     this.maxEntries = options.maxEntries || 500;
     this.persistKey = options.persistKey || 'securevoice_diagnostics_logs';
-    this.enableLocalStorage = options.enableLocalStorage ?? false;
+    this.enableSessionStorage = options.enableSessionStorage ?? false;
     this.sessionId = `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     this.peerId = '';
     this.onLog = options.onLog;
 
-    if (this.enableLocalStorage) {
+    if (this.enableSessionStorage) {
       this.loadFromStorage();
     }
   }
@@ -64,7 +64,7 @@ export class StructuredLogger {
       this.entries.splice(0, this.entries.length - this.maxEntries);
     }
 
-    if (this.enableLocalStorage) {
+    if (this.enableSessionStorage) {
       this.saveToStorage();
     }
 
@@ -139,47 +139,40 @@ export class StructuredLogger {
   }
 
   /**
-   * Clear all in-memory and local storage logs
+   * Clear all in-memory and session storage logs
    */
   clearLogs(): void {
     this.entries = [];
-    if (this.enableLocalStorage && typeof window !== 'undefined' && window.localStorage) {
+    if (this.enableSessionStorage && typeof window !== 'undefined' && window.sessionStorage) {
       try {
-        window.localStorage.removeItem(this.persistKey);
+        window.sessionStorage.removeItem(this.persistKey);
       } catch (e) {}
     }
   }
 
   /**
-   * Persist logs to localStorage with 7-day expiration
+   * Persist logs to sessionStorage
    */
   private saveToStorage(): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
     try {
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const recentEntries = this.entries.filter(
-        e => new Date(e.timestamp).getTime() > sevenDaysAgo
-      );
-      window.localStorage.setItem(this.persistKey, JSON.stringify(recentEntries));
+      window.sessionStorage.setItem(this.persistKey, JSON.stringify(this.entries));
     } catch (e) {
       // Storage quota exceeded or disabled in private browsing
     }
   }
 
   /**
-   * Hydrate logs from localStorage
+   * Hydrate logs from sessionStorage
    */
   private loadFromStorage(): void {
-    if (typeof window === 'undefined' || !window.localStorage) return;
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
     try {
-      const stored = window.localStorage.getItem(this.persistKey);
+      const stored = window.sessionStorage.getItem(this.persistKey);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-          this.entries = parsed.filter(
-            e => e && e.timestamp && new Date(e.timestamp).getTime() > sevenDaysAgo
-          );
+          this.entries = parsed;
         }
       }
     } catch (e) {}
