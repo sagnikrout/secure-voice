@@ -94,7 +94,7 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
   // Options normalization with fallbacks to OPUS_CONFIG
   const targetBitrate = String(opts.bitrate ?? opts.maxaveragebitrate ?? OPUS_CONFIG.MAX_AVERAGE_BITRATE ?? '12000');
 
-  const normalizeBool = (val, defaultVal) => {
+  const normalizeBool = (val: any, defaultVal: any) => {
     if (val === undefined || val === null) return defaultVal;
     if (typeof val === 'boolean') return val ? '1' : '0';
     if (val === '1' || val === 1 || val === 'true') return '1';
@@ -285,7 +285,7 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
  * @param {RTCRtpTransceiver} transceiver - Audio transceiver instance
  * @returns {boolean} True if codec preferences were successfully set, false otherwise
  */
-export function configureAudioTransceiver(transceiver) {
+export function configureAudioTransceiver(transceiver: any) {
   if (!transceiver || typeof transceiver.setCodecPreferences !== 'function') {
     return false;
   }
@@ -334,7 +334,7 @@ export function configureAudioTransceiver(transceiver) {
  * @param {string} [priority='high'] - Encoding priority ('high', 'medium', 'low')
  * @returns {Promise<boolean>} True if parameters were successfully applied
  */
-export async function applySenderBitrate(sender, bitrateBps, priority = 'high') {
+export async function applySenderBitrate(sender: any, bitrateBps: any, priority = 'high') {
   if (!sender || typeof sender.getParameters !== 'function' || typeof sender.setParameters !== 'function') {
     return false;
   }
@@ -371,7 +371,7 @@ export async function applySenderBitrate(sender, bitrateBps, priority = 'high') 
  * @param {number} rttSeconds
  * @returns {'good' | 'fair' | 'poor'}
  */
-export function getQualityRating(rttSeconds) {
+export function getQualityRating(rttSeconds: any) {
   const rtt = Number(rttSeconds);
   if (isNaN(rtt) || rtt < 0) return 'good';
   if (rtt < 0.15) return 'good'; // < 150ms
@@ -385,10 +385,10 @@ export function getQualityRating(rttSeconds) {
  * @param {string} remoteSdp - Remote session description
  * @returns {Promise<string|null>} 8-digit code string
  */
-export async function generateSafetyCode(localSdp, remoteSdp) {
+export async function generateSafetyCode(localSdp: any, remoteSdp: any) {
   if (!localSdp || !remoteSdp || typeof localSdp !== 'string' || typeof remoteSdp !== 'string') return null;
   
-  const extractFingerprint = (sdp) => {
+  const extractFingerprint = (sdp: any) => {
     const match = sdp.match(/a=fingerprint:\S+\s+([A-F0-9:]+)/i);
     return match ? match[1].toUpperCase().trim() : '';
   };

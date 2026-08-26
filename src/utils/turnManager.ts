@@ -48,7 +48,7 @@ export class TurnRelayManager {
       let pc = null;
       let resolved = false;
 
-      const finish = (latency) => {
+      const finish = (latency: any) => {
         if (resolved) return;
         resolved = true;
         clearTimeout(timer);

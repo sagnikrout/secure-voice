@@ -447,7 +447,7 @@ export function playRingtone() {
  * @param {(level: number) => void} onLevel - Callback with normalized volume (0.0 - 1.0)
  * @returns {Promise<() => void>} Stop callback
  */
-export async function createMicLoopbackTest(deviceId, onLevel) {
+export async function createMicLoopbackTest(deviceId: any, onLevel: any) {
   let isRunning = true;
   let intervalId = null;
   let audioCtx = null;
@@ -527,7 +527,7 @@ export async function createMicLoopbackTest(deviceId, onLevel) {
 /**
  * Safely switch audio output device (Speaker vs Earpiece)
  */
-export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
+export async function setAudioOutputDevice(audioElement: any, isSpeakerOn: any) {
   if (!audioElement) return false;
 
   if (typeof audioElement.setSinkId === 'function') {
@@ -551,11 +551,11 @@ export async function setAudioOutputDevice(audioElement, isSpeakerOn) {
  * @param {AudioContext|null} [audioCtx]
  * @param {Object|Array|null} [nodes]
  */
-export function stopMediaStream(stream, audioCtx = null, nodes = null) {
+export function stopMediaStream(stream: any, audioCtx = null, nodes = null) {
   // 1. Stop all tracks and disable them
   if (stream) {
     audioResourceManager.cleanupStream(stream);
-    const safeStopTrack = (track) => {
+    const safeStopTrack = (track: any) => {
       if (!track) return;
       try {
         if (typeof track.stop === 'function') {

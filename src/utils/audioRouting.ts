@@ -16,7 +16,7 @@ function getNativePlugin() {
 /**
  * Helper to execute commands against our custom Capacitor AudioRouting plugin
  */
-async function invokeNativeAudioRouting(mode) {
+async function invokeNativeAudioRouting(mode: any) {
   const plugin = getNativePlugin();
   if (!plugin) {
     console.warn('AudioRouting native plugin not found');
@@ -25,7 +25,7 @@ async function invokeNativeAudioRouting(mode) {
   
   try {
     return await plugin.setAudioMode({ mode });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to invoke native audio routing', err);
     return { success: false, mode, error: err.message };
   }
@@ -52,7 +52,7 @@ export function isOutputSwitchingSupported() {
  * @param {HTMLAudioElement} [audioElement]
  * @returns {Promise<{ success: boolean, mode: string, error?: string }>}
  */
-export async function setAudioOutputMode(modeOrDeviceId, audioElement) {
+export async function setAudioOutputMode(modeOrDeviceId: any, audioElement: any) {
   try {
     localStorage.setItem(PREFERRED_OUTPUT_KEY, modeOrDeviceId);
 
@@ -72,7 +72,7 @@ export async function setAudioOutputMode(modeOrDeviceId, audioElement) {
       try {
         await audioElement.setSinkId(sinkId);
         return { success: true, mode: modeOrDeviceId };
-      } catch (err) {
+      } catch (err: any) {
         if (sinkId !== 'default') {
           await audioElement.setSinkId('default').catch(() => {});
         }
@@ -81,7 +81,7 @@ export async function setAudioOutputMode(modeOrDeviceId, audioElement) {
     }
 
     return { success: true, mode: modeOrDeviceId };
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error setting audio output mode:', err);
     return { success: false, mode: modeOrDeviceId, error: err.message };
   }
@@ -137,7 +137,7 @@ export async function abandonAudioFocus() {
 /**
  * Listen for native audio focus events (e.g. cellular phone call interruptions)
  */
-export function addAudioFocusListener(callback) {
+export function addAudioFocusListener(callback: any) {
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
     const plugin = getNativePlugin();
     if (plugin && plugin.addListener) {

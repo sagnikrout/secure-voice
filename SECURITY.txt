@@ -1,0 +1,4 @@
+﻿Contact: https://github.com/sagnikrout/secure-voice/issues
+Preferred-Languages: en
+Canonical: https://github.com/sagnikrout/secure-voice/blob/main/SECURITY.txt
+Policy: https://github.com/sagnikrout/secure-voice/blob/main/docs/SECURITY.md

@@ -79,7 +79,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.PREFERRED_CODEC);
         if (saved === 'auto' || saved === 'opus' || saved === 'lyra') return saved as CodecPreference;
-      } catch (e) {}
+      } catch (e: any) {}
     }
     return lyraWasmLoader.checkCompatibility().simd ? 'auto' : 'opus';
   });
@@ -91,7 +91,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CODEC, codec);
-      } catch (e) {}
+      } catch (e: any) {}
     }
     const label = codec === 'auto'
       ? 'Smart Auto Crossover (Lyra v2 <14k, Opus ≥14k)'
@@ -155,7 +155,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     // 3. Close PeerJS call
     if (callRef.current) {
-      try { callRef.current.close(); } catch (e) {}
+      try { callRef.current.close(); } catch (e: any) {}
       callRef.current = null;
     }
     if (typeof window !== 'undefined') {
@@ -169,7 +169,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     // 5. Clean audio pipeline & stop all media tracks explicitly
     if (pipelineCleanupRef.current) {
-      try { pipelineCleanupRef.current(); } catch (e) {}
+      try { pipelineCleanupRef.current(); } catch (e: any) {}
       pipelineCleanupRef.current = null;
     }
     stopMediaStream(rawStreamRef.current);
@@ -265,7 +265,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             setActiveCodec('opus');
             callbacksRef.current.addLog?.('Opus SILK codec active (fallback)', 'info');
           }
-        } catch (e) {
+        } catch (e: any) {
           setActiveCodec('opus');
         }
       } else {
@@ -273,7 +273,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       }
 
       return processedStream;
-    } catch (err) {
+    } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
         callbacksRef.current.addLog?.(`Microphone error: ${err.message}`, 'error');
       }
@@ -324,10 +324,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               if (data && data.type === 'safety_code' && data.code) {
                 setSafetyCode(prev => prev || data.code);
               }
-            } catch (e) {}
+            } catch (e: any) {}
           };
         }
-      } catch (e) {}
+      } catch (e: any) {}
 
       // Generate MITM Safety Code from DTLS Fingerprints with multi-event settlement checks
       const computeAndSetSafetyCode = async () => {
@@ -340,10 +340,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               setSafetyCode(code);
               const dc = (pc as any)._safetyChannel;
               if (dc && dc.readyState === 'open') {
-                try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e) {}
+                try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e: any) {}
               } else if (dc) {
                 dc.onopen = () => {
-                  try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e) {}
+                  try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e: any) {}
                 };
               }
             }
@@ -386,7 +386,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           if (call.dataChannel && call.dataChannel.readyState === 'open') {
             try {
               call.dataChannel.send(JSON.stringify(msg));
-            } catch (e) {}
+            } catch (e: any) {}
           }
         },
         sdpTransform: (sdp) => {
@@ -500,7 +500,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         if (audioReceivers && audioReceivers.length > 0) {
           audioReceivers.forEach(r => lyraTransformController.attachReceiver(r));
         }
-      } catch (e) {
+      } catch (e: any) {
         console.warn('Lyra transform attachment notice:', e);
       }
 
@@ -593,7 +593,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         callbacksRef.current.addLog?.(`No answer from ${targetPeerId} (timeout)`, 'warn');
         endCall();
       }, TIMINGS.OUTGOING_CALL_TIMEOUT_MS);
-    } catch (err) {
+    } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
         callbacksRef.current.addLog?.(`Could not initiate call: ${err.message}`, 'error');
       }
@@ -613,7 +613,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     incomingTimeoutRef.current = setTimeout(() => {
       callbacksRef.current.addLog?.(`Incoming call from ${call.peer} timed out`, 'info');
-      try { call.close(); } catch (e) {}
+      try { call.close(); } catch (e: any) {}
       if (stopRingtoneRef.current) {
         stopRingtoneRef.current();
         stopRingtoneRef.current = null;
@@ -648,7 +648,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       startTimer();
       saveCallHistory(call.peer);
       bindCallEvents(call);
-    } catch (err) {
+    } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
         callbacksRef.current.addLog?.(`Failed to answer call: ${err.message}`, 'error');
       }
@@ -665,7 +665,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         stopRingtoneRef.current = null;
       }
       if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
-      try { incomingCall.close(); } catch (e) {}
+      try { incomingCall.close(); } catch (e: any) {}
       setIncomingCall(null);
     }
   }, [incomingCall]);
@@ -754,7 +754,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
       if (!audioSender) {
         if (cleanup) {
-          try { cleanup(); } catch (e) {}
+          try { cleanup(); } catch (e: any) {}
         }
         stopMediaStream(newStream, newAudioCtx, nodes);
         throw new Error('No active audio sender found on RTCPeerConnection');
@@ -765,7 +765,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
       // SUCCESS: Clean up old stream, pipeline timers, and context now that new track is transmitting
       if (pipelineCleanupRef.current) {
-        try { pipelineCleanupRef.current(); } catch (e) {}
+        try { pipelineCleanupRef.current(); } catch (e: any) {}
       }
       stopMediaStream(rawStreamRef.current);
       stopMediaStream(processedStreamRef.current, audioCtxRef.current, pipelineNodesRef.current);
@@ -779,7 +779,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       callbacksRef.current.addLog?.('Microphone switched seamlessly without renegotiation', 'ok');
       return true;
 
-    } catch (err) {
+    } catch (err: any) {
       // ROLLBACK: Clean up the aborted attempt, keeping existing active call tracks intact
       if (newStream) stopMediaStream(newStream, newAudioCtx);
 

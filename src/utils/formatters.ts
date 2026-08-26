@@ -8,7 +8,7 @@ import { PEER_ID_ALPHABET } from '../constants/config';
  * @param {number} seconds
  * @returns {string} e.g. "03:45"
  */
-export function formatTimer(seconds) {
+export function formatTimer(seconds: any) {
   const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
   const mins = Math.floor(safeSeconds / 60);
   const secs = safeSeconds % 60;
@@ -20,7 +20,7 @@ export function formatTimer(seconds) {
  * @param {string} id
  * @returns {string}
  */
-export function formatPeerId(id) {
+export function formatPeerId(id: any) {
   if (typeof id !== 'string') return '';
   const sanitized = id.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   const chunks = sanitized.match(/.{1,3}/g);
@@ -32,7 +32,7 @@ export function formatPeerId(id) {
  * @param {string} input
  * @returns {string}
  */
-export function sanitizePeerId(input) {
+export function sanitizePeerId(input: any) {
   return formatPeerId(input);
 }
 
@@ -41,7 +41,7 @@ export function sanitizePeerId(input) {
  * @param {string|number} code
  * @returns {string}
  */
-export function formatSafetyCode(code) {
+export function formatSafetyCode(code: any) {
   if (!code) return '';
   const str = String(code);
   return str.length >= 5 ? `${str.substring(0, 2)}-${str.substring(2)}` : str;
@@ -52,7 +52,7 @@ export function formatSafetyCode(code) {
  * @param {number|string|Date} timestamp
  * @returns {string}
  */
-export function formatTimestamp(timestamp) {
+export function formatTimestamp(timestamp: any) {
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) return '';
