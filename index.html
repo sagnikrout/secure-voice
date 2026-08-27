@@ -6,14 +6,22 @@
     <link rel="alternate icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' blob: data:; connect-src 'self' blob: data: https: wss: turn: turns: stun:; img-src 'self' blob: data:; object-src 'none'; base-uri 'self';" />
+    
     <meta name="description" content="SecureVoice – Zero-setup, end-to-end encrypted peer-to-peer voice calling with adaptive low-bandwidth resilience." />
     <title>SecureVoice – Encrypted P2P Voice Calling</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="./assets/index-DhB_wPG1.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CK17MFa_.css">
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        document.body.innerHTML += '<div style="color:red;font-size:20px;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:white;width:100%;height:100%;word-wrap:break-word;"><b>ERROR:</b> ' + message + '<br>' + source + ':' + lineno + '<br><pre>' + (error ? error.stack : '') + '</pre></div>';
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        document.body.innerHTML += '<div style="color:red;font-size:20px;padding:20px;z-index:9999;position:fixed;top:0;left:0;background:white;width:100%;height:100%;word-wrap:break-word;"><b>PROMISE REJECTION:</b> ' + (event.reason ? event.reason.message : 'Unknown') + '<br><pre>' + (event.reason ? event.reason.stack : '') + '</pre></div>';
+      });
+    </script>
+    <script type="module" crossorigin src="./assets/index-DzOLYXOT.js" integrity="sha384-ZZ/4PIr6GTWhC3310AunMWcTPPGgI+CLp+qO0Rp+RvXTQIY5QCmrxYkOuVclbD3p" crossorigin="anonymous"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CK17MFa_.css" integrity="sha384-pq0gJSZtnTAN8y4fISQqAMT8u0S0LjsAX0kiU3RZv/je0XKbFPdn0/Zcw4b1U3kB" crossorigin="anonymous">
   </head>
   <body>
     <div id="root"></div>
