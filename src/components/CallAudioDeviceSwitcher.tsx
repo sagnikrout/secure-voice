@@ -75,7 +75,7 @@ export default function CallAudioDeviceSwitcher({
           id: 'earpiece',
           label: 'Earpiece (Handset)',
           description: 'Ear receiver with proximity screen-off',
-          icon: Phone
+          icon: Headphones
         }
       ];
 
@@ -104,7 +104,7 @@ export default function CallAudioDeviceSwitcher({
   const ActiveIcon = useMemo(() => {
     const activeOption = combinedOutputOptions.find(o => o.id === currentOutputId);
     if (activeOption?.icon) return activeOption.icon;
-    if (currentOutputId === 'earpiece') return Phone;
+    if (currentOutputId === 'earpiece') return Headphones;
     if (currentOutputId === 'bluetooth') return Bluetooth;
     return Volume2;
   }, [combinedOutputOptions, currentOutputId]);

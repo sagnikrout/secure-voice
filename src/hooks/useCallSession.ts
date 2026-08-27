@@ -23,7 +23,7 @@ import { audioResourceManager } from '../utils/resourceManager';
 import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
 import { lyraManager, lyraTransformController, lyraWasmLoader } from '../utils/lyra';
-import { CodecType, CodecPreference } from '../types';
+import { CodecType, CodecPreference, LyraBitrate } from '../types';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state
@@ -470,21 +470,36 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
         }
 
-        // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
-        if (preferredCodec === 'auto') {
-          const crossover = evaluateCodecCrossover({
-            snapshot,
-            currentCodec: activeCodec,
-            consecutiveHealthyTicks: crossoverHealthyTicksRef.current,
-            simdSupported: lyraWasmLoader.checkCompatibility().simd
-          });
-          crossoverHealthyTicksRef.current = crossover.consecutiveHealthyTicks;
-          if (crossover.codecChanged) {
-            lyraManager.setActiveCodec(crossover.targetCodec);
-            setActiveCodec(crossover.targetCodec);
-            callbacksRef.current.addLog?.(crossover.reason, 'info');
+          // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
+          if (preferredCodec === 'auto') {
+            const crossover = evaluateCodecCrossover({
+              snapshot,
+              currentCodec: activeCodec,
+              consecutiveHealthyTicks: crossoverHealthyTicksRef.current,
+              simdSupported: lyraWasmLoader.checkCompatibility().simd
+            });
+            crossoverHealthyTicksRef.current = crossover.consecutiveHealthyTicks;
+            if (crossover.codecChanged) {
+              lyraManager.setActiveCodec(crossover.targetCodec);
+              setActiveCodec(crossover.targetCodec);
+              callbacksRef.current.addLog?.(crossover.reason, 'info');
+            }
+
+            // Dynamic Lyra Bitrate Scaling (3.2 kbps to 9.2 kbps)
+            if ((!crossover.codecChanged ? activeCodec : crossover.targetCodec) === 'lyra' && snapshot && snapshot.availableOutgoingBitrate) {
+              const bps = snapshot.availableOutgoingBitrate;
+              let targetLyraBitrate: LyraBitrate = 3200;
+              if (bps >= 9200) targetLyraBitrate = 9200;
+              else if (bps >= 6000) targetLyraBitrate = 6000;
+              else targetLyraBitrate = 3200;
+              
+              const currentStats = lyraManager.getStats();
+              if (currentStats && currentStats.bitrateBps !== targetLyraBitrate) {
+                lyraManager.setBitrate(targetLyraBitrate);
+                callbacksRef.current.addLog?.(`Lyra v2 dynamic scaled to ${targetLyraBitrate} bps`, 'info');
+              }
+            }
           }
-        }
       }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
 
       monitor.start();

@@ -1,20 +1,19 @@
-﻿# Contributing to SecureVoice
+# Contributing to SecureVoice
 
-SecureVoice is an open-source, Zero-Knowledge peer-to-peer communication platform. We welcome pull requests that align with our core invariants:
+SecureVoice is an open-source, zero-knowledge peer-to-peer communication platform. Contributions must adhere to the following invariants:
 
-## 1. Core Invariants
-- **Zero Telemetry**: No third-party SDKs, tracking pixels, or data collection.
-- **Cryptography**: Do not introduce custom cryptography. We strictly rely on the WebRTC DTLS-SRTP standards stack provided by the browser ecosystem.
-- **Performance**: Codecs must remain operable on devices with degraded network links. The adaptive network fallback matrix must be preserved.
+## 1. Core invariants
+- **Zero telemetry**: No third-party SDKs, tracking pixels, or data collection.
+- **Standard cryptography**: Rely strictly on standard WebRTC DTLS-SRTP protocols.
+- **Low-bandwidth performance**: Codecs must remain operable on devices with degraded network links. The adaptive network fallback matrix must be preserved.
 
-## 2. Pull Request Guidelines
-- All PRs must pass the existing itest test suites and the empirical network degradation benchmark (
-pm run benchmark).
-- Avoid ny typings where possible.
-- Update walkthrough.md and AGENTS.md if your change introduces new architectural rules or invariants.
+## 2. Pull request guidelines
+- All pull requests must pass the test suite (`npm test`) and network benchmarks (`npm run benchmark`).
+- Avoid `any` types where explicit types can be written.
+- Update documentation and AGENTS.md if a change introduces new architectural rules or invariants.
 
-## 3. Scope Boundaries
-We will reject pull requests that introduce:
+## 3. Scope boundaries
+Pull requests introducing the following will be rejected:
 - Centralized media relays (SFUs).
 - Social network integrations.
 - Monetization or advertisements.

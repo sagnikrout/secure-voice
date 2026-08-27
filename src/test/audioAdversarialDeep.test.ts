@@ -9,7 +9,7 @@ import {
   stopMediaStream
 } from '../utils/audio';
 
-describe('Deep Empirical Adversarial Stress Suite (Milestone 1 Iteration 2)', () => {
+describe('Deep Adversarial Stress Suite (Milestone 1 Iteration 2)', () => {
   let savedAudioContext;
   let savedWebkitAudioContext;
   let savedVibrate;

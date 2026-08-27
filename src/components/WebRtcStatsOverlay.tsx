@@ -145,7 +145,7 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
         <div className="modal-header">
           <div className="modal-title-box">
             <Activity className="w-5 h-5 text-blue" />
-            <span id="stats-overlay-title" className="modal-title">Live WebRTC Telemetry</span>
+            <span id="stats-overlay-title" className="modal-title">Network Health</span>
           </div>
           <button
             type="button"
@@ -158,100 +158,27 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
         </div>
 
         {/* Top Metric Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
           <div style={{ background: 'var(--bg)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Tier</div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent)' }}>
-              {statsData.tierName} <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({statsData.tierBitrateKbps}k)</span>
+              {statsData.tierName}
             </div>
           </div>
 
           <div style={{ background: 'var(--bg)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Latency (RTT)</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Latency</div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: statsData.rttMs > 250 ? 'var(--red)' : 'var(--green)' }}>
               {statsData.rttMs} <span style={{ fontSize: '11px' }}>ms</span>
             </div>
           </div>
 
           <div style={{ background: 'var(--bg)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Down / Up Loss</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Packet Loss</div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: Number(statsData.downlinkLossPct) > 5 ? 'var(--red)' : 'var(--green)' }}>
-              {statsData.downlinkLossPct}% <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>/ {statsData.uplinkLossPct}%</span>
+              {statsData.downlinkLossPct}%
             </div>
           </div>
-        </div>
-
-        {/* Detailed Metrics List */}
-        <div className="info-list" style={{ fontSize: '13px' }}>
-          <div className="info-row">
-            <div className="info-key-box">
-              <Layers className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Jitter / Jitter Buffer</span>
-            </div>
-            <span className="info-val">{statsData.jitterMs} ms / {statsData.jitterBufferDelayMs} ms</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Gauge className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Concealment Ratio</span>
-            </div>
-            <span className="info-val">{statsData.concealmentPct} %</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Radio className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Transport Route</span>
-            </div>
-            <span className="info-val" style={{ fontFamily: 'var(--mono)', fontSize: '11px' }}>{statsData.candidateType}</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Zap className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Packetization (ptime)</span>
-            </div>
-            <span className="info-val">{statsData.ptime}</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Shield className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Opus In-band FEC</span>
-            </div>
-            <span className="info-val">{statsData.fec}</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Shield className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Redundant Audio (RED)</span>
-            </div>
-            <span className="info-val">{statsData.red}</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Cpu className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Audio Codec</span>
-            </div>
-            <span className="info-val">{statsData.codec}</span>
-          </div>
-
-          <div className="info-row">
-            <div className="info-key-box">
-              <Wifi className="w-3.5 h-3.5 text-muted" />
-              <span className="info-key">Bandwidth Target</span>
-            </div>
-            <span className="info-val">{OPUS_CONFIG.BANDWIDTH_CAP_KBPS} kbps (b=AS)</span>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '16px', textAlign: 'center' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Real-time diagnostics active · Polling every 1000ms
-          </span>
         </div>
       </div>
     </div>

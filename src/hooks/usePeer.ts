@@ -18,7 +18,14 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   const [myId, setMyId] = useState('');
   const [status, setStatus] = useState('connecting'); // connecting, ready, reconnecting, error
   const peerRef = useRef(null);
-  const peerIdRef = useRef(generatePeerId());
+  const peerIdRef = useRef((() => {
+    let id = localStorage.getItem('securevoice_my_id');
+    if (!id) {
+      id = generatePeerId();
+      localStorage.setItem('securevoice_my_id', id);
+    }
+    return id;
+  })());
   const retryCountRef = useRef(0);
   const lastIncomingCallTimeRef = useRef(0);
   const destroyedRef = useRef(false);
@@ -65,6 +72,16 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         try { incomingCall?.close(); } catch (e) {}
         return;
       }
+
+      // Auto-reject Blocked Callers
+      try {
+        const blocked = JSON.parse(localStorage.getItem('securevoice_blocked') || '[]');
+        if (blocked.includes(incomingCall.peer)) {
+          callbacksRef.current.addLog?.(`Auto-rejected blocked caller: ${incomingCall.peer}`, 'warn');
+          try { incomingCall.close(); } catch (e) {}
+          return;
+        }
+      } catch(e) {}
 
       // Auto-reject if already busy in active call & record as Missed Call
       if (callbacksRef.current.isInActiveCall && callbacksRef.current.isInActiveCall()) {

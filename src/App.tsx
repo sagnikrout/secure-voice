@@ -196,20 +196,10 @@ export default function App() {
               type="button"
               className="info-btn"
               onClick={() => setShowStats(true)}
-              aria-label="WebRTC Diagnostics & Stats"
-              title="WebRTC Diagnostics"
+              aria-label="Network Health"
+              title="Network Health"
             >
               <Activity className="w-4 h-4" />
-            </button>
-
-            <button
-              type="button"
-              className="info-btn"
-              onClick={() => setShowInfo(true)}
-              aria-label="App info & specs"
-              title="Information"
-            >
-              <Info className="w-4 h-4" />
             </button>
           </div>
         </header>
@@ -402,40 +392,6 @@ export default function App() {
           />
         )}
 
-        {/* Activity Log Card */}
-        <section className="card log-card" aria-labelledby="activity-log-title">
-          <div
-            className="log-header"
-            onClick={toggleLogs}
-            role="button"
-            tabIndex={0}
-            aria-expanded={showLogs}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleLogs()}
-          >
-            <div className="log-title">
-              <Activity className="w-4 h-4 text-blue" aria-hidden="true" />
-              <span id="activity-log-title">Activity Log</span>
-              {logs.length > 0 && <span className="log-badge">{logs.length}</span>}
-            </div>
-            <span className="log-toggle">{showLogs ? '▲' : '▼'}</span>
-          </div>
-
-          {showLogs && (
-            <div className="log-body" id="log-container" tabIndex={0} aria-label="Activity history log">
-              {logs.length === 0 ? (
-                <p className="log-empty">No activity recorded yet</p>
-              ) : (
-                logs.map(log => (
-                  <div key={log.id} className={`log-item ${log.level}`}>
-                    <span className="log-time">{log.time}</span>
-                    <span className="log-msg">{log.msg}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </section>
-
         {/* Global Rate Limit Toast */}
         {showRateLimitToast && (
           <div className="toast toast-warning" role="alert">
@@ -462,6 +418,24 @@ export default function App() {
               <p className="inc-label">Incoming Encrypted Call</p>
               <p className="inc-caller" id="incoming-caller-id">{callSession.incomingCall.peer}</p>
               <div className="inc-btns">
+                <button
+                  type="button"
+                  className="btn btn-red"
+                  onClick={() => {
+                    const peerId = callSession.incomingCall.peer;
+                    const blocked = JSON.parse(localStorage.getItem('securevoice_blocked') || '[]');
+                    if (!blocked.includes(peerId)) {
+                      blocked.push(peerId);
+                      localStorage.setItem('securevoice_blocked', JSON.stringify(blocked));
+                    }
+                    callSession.declineCall();
+                  }}
+                  aria-label="Block caller"
+                  style={{ background: 'var(--red)', color: 'white', opacity: 0.9 }}
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  <span>Block</span>
+                </button>
                 <button
                   type="button"
                   className="btn btn-red"

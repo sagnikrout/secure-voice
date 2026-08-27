@@ -16,6 +16,8 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+.claude
+*.iml
 .DS_Store
 *.suo
 *.ntvs*
@@ -30,6 +32,7 @@ android/.gradle
 android/build
 android/app/build
 android/local.properties
+android/gradle/gradle-daemon-jvm.properties
 android/capacitor-cordova-android-plugins/build
 *.apk
 *.keystore

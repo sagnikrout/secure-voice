@@ -27,7 +27,7 @@ describe('App Integration', () => {
     expect(screen.getByText('v3.5.0')).toBeInTheDocument();
     expect(screen.getByText('Your Peer ID')).toBeInTheDocument();
     expect(screen.getByText('New Call')).toBeInTheDocument();
-    expect(screen.getByText('Activity Log')).toBeInTheDocument();
+    expect(screen.getByTitle('Network Health')).toBeInTheDocument();
   });
 
   it('allows entering and sanitizing peer ID in call input', async () => {
@@ -52,20 +52,20 @@ describe('App Integration', () => {
     expect(document.documentElement.dataset.theme).toBeDefined();
   });
 
-  it('opens and closes info modal', async () => {
+  it('opens and closes audio settings modal', async () => {
     await act(async () => {
       render(<App />);
     });
-    const infoBtn = screen.getByTitle('Information');
+    const settingsBtn = screen.getByTitle('Audio & Codec Settings');
     await act(async () => {
-      fireEvent.click(infoBtn);
+      fireEvent.click(settingsBtn);
     });
-    expect(screen.getByText('How SecureVoice Works')).toBeInTheDocument();
+    expect(screen.getByText('Audio Settings')).toBeInTheDocument();
 
-    const closeBtn = screen.getByLabelText('Close modal');
+    const closeBtn = screen.getByLabelText('Close audio settings');
     await act(async () => {
       fireEvent.click(closeBtn);
     });
-    expect(screen.queryByText('How SecureVoice Works')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audio Settings')).not.toBeInTheDocument();
   });
 });

@@ -1,39 +1,40 @@
-﻿# Deployment Guide
+# Deployment guide
 
-This guide details the processes required to compile SecureVoice for Android and Web environments, enforcing verifiable and deterministic builds.
+This guide details the processes required to compile SecureVoice for Android and Web environments.
 
 ## 1. Prerequisites
 - **Node.js**: v20 or higher.
-- **Java**: JDK 21 (Temurin).
-- **Android Studio / SDK**: API Level 36 (ndroid-36, uild-tools;36.0.0).
-- **Capacitor CLI**: @capacitor/cli v8+.
+- **Java**: JDK 21 (Temurin distribution).
+- **Android Studio / SDK**: API Level 36 (`android-36`, `build-tools;36.0.0`).
+- **Capacitor CLI**: `@capacitor/cli` v8+.
 
-## 2. Web Compilation
-SecureVoice leverages Vite for minimal WebAssembly neural codec bundling.
-`ash
+## 2. Web compilation
+SecureVoice uses Vite for web asset bundling.
+
+```bash
 npm ci
 npm run build
-`
-The output will be placed in the dist/ directory. For GitHub Pages deployment, run 
-pm run deploy.
+```
 
-## 3. Android Compilation
-The Android pipeline requires sanitizing line endings on Linux runners and enforcing release-mode APK generation.
+The output files are generated in the `dist/` directory.
 
-1. Synchronize Web assets to Android:
-   `ash
+## 3. Android compilation
+The Android build requires line-ending sanitization on Linux runners before invoking Gradle.
+
+1. Synchronize web assets to Android:
+   ```bash
    npx cap sync android
-   `
-2. Build the APK:
-   `ash
+   ```
+2. Build the release APK:
+   ```bash
    cd android
    ./gradlew assembleRelease
-   `
-3. Generate SHA-256 Checksums (Required for Releases):
-   `ash
+   ```
+3. Generate SHA-256 checksums:
+   ```bash
    cd app/build/outputs/apk/release
-   sha256sum app-release-unsigned.apk > SHA256SUMS.txt
-   `
+   sha256sum app-release.apk > SHA256SUMS.txt
+   ```
 
-## 4. Continuous Integration
-SecureVoice maintains automated deployment pipelines in .github/workflows/release.yml. This pipeline strictly provisions JDK 21 and Android-36 tooling.
+## 4. Continuous integration
+SecureVoice maintains automated deployment workflows in `.github/workflows/release.yml`. This pipeline provisions JDK 21 and Android 36 build tooling.
