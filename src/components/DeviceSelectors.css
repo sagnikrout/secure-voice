@@ -1,0 +1,120 @@
+/* src/components/DeviceSelectors.css */
+
+/* --- Audio Settings Modal & Switcher --- */
+.audio-settings-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.audio-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.audio-settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.audio-settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.audio-settings-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  width: 100%;
+}
+
+.audio-settings-option:hover {
+  background: var(--border);
+}
+
+.audio-settings-option.selected {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+  border-color: var(--blue-mid);
+}
+
+.audio-settings-option-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audio-settings-option-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.audio-settings-option.selected .audio-settings-option-icon {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.audio-settings-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audio-settings-option-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.audio-settings-option-desc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.audio-settings-check {
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-settings-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--card-2);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
