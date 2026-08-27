@@ -51,7 +51,7 @@ All notable changes to SecureVoice are documented in this file.
 ### Added
 - Constant bitrate Opus encoding (`cbr=1`) to prevent packet size spikes and reduce queue bloat on cellular connections.
 - 8 kHz SILK narrowband encoding (`maxplaybackrate=8000`) for low-bandwidth operation between 3.2 and 8.0 kbps.
-- Packet aggregation (`ptime=80..100`, `maxptime=120`) dropping packet rate to 10–12.5 pkts/sec and cutting header overhead by 80%.
+- Packet aggregation (`ptime=80..100`, `maxptime=120`) dropping packet rate to 10 to 12.5 pkts/sec and cutting header overhead by 80%.
 - Dynamic NetEQ jitter buffer floor (`RTCRtpReceiver.jitterBufferTarget`) from 120ms (HQ) to 400ms (Ultra) to prevent audio pitch-shifting.
 - Traffic shaping and packet pacer with DSCP Expedited Forwarding markings and 85% bandwidth headroom allocation.
 - Adaptive TURN manager that ranks relay servers by ping latency and forces relay fallback after repeated P2P failures.
