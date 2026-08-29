@@ -26,8 +26,8 @@ SecureVoice is designed from first principles as a zero-knowledge, zero-log, end
 - Threat: An active attacker modifying SDP packets on the signaling relay could inject their own DTLS fingerprint.
 - Mitigation:
   - SecureVoice calculates a verification code directly from the SHA-256 fingerprints embedded in the negotiated SDP:
-    $$\text{SafetyCode} = \text{SHA256}(\text{fingerprint}_{\text{local}} \parallel \text{fingerprint}_{\text{remote}}) \pmod{1000000}$$
-  - Peers verbally cross-verify this SAS code during the call to verify zero MITM interference.
+    $$\text{SafetyCode} = \text{SHA256}(\text{fingerprint}_{\text{local}} \parallel \text{fingerprint}_{\text{remote}}) \pmod{100000000}$$
+  - Peers verbally cross-verify this 8-digit SAS code during the call to verify zero MITM interference.
   - Pluggable support for out-of-band QR code SDP exchange.
 
 ### 3.2 Traffic analysis and packet sizing leakage

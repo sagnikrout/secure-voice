@@ -3,12 +3,12 @@ import { ShieldCheck, X, Cpu, Wifi, Lock, Zap, Sliders, Server } from 'lucide-re
 
 const SPECS = [
   { key: 'Encryption', val: 'DTLS-SRTP (WebRTC E2EE)', icon: Lock },
-  { key: 'Audio Codec', val: 'Opus SILK · 3.2–8.0 kbps (CBR 8kHz)', icon: Cpu },
+  { key: 'Audio Codec', val: 'Google Lyra v2 (3.2 kbps) · Opus HD', icon: Cpu },
   { key: 'Voice Pre-Processing', val: '6-Stage Vocal Formant DSP + RMS Gate', icon: Sliders },
-  { key: 'Bandwidth Cap', val: '8.0 kbps session ceiling (b=AS:8)', icon: Zap },
-  { key: 'Packet Aggregation', val: 'ptime=80–100ms (10–12.5 pkts/sec)', icon: Zap },
-  { key: 'Loss Recovery', val: 'In-band FEC + RFC 2198 RED (50% recovery)', icon: Wifi },
-  { key: 'Jitter Buffer', val: 'Locked NetEQ Controller (120–400ms)', icon: Sliders },
+  { key: 'Bandwidth Cap', val: '18.0 kbps session ceiling (b=AS:18)', icon: Zap },
+  { key: 'Packet Aggregation', val: 'ptime=40ms (25 pkts/sec)', icon: Zap },
+  { key: 'Loss Recovery', val: 'Neural PLC + In-band FEC + RFC 2198 RED', icon: Wifi },
+  { key: 'Jitter Buffer', val: 'Dual-Clamped NetEQ Controller', icon: Sliders },
   { key: 'Connection Mode', val: 'Direct P2P with Adaptive TURN Failover', icon: ShieldCheck },
   { key: 'Signaling Protocol', val: 'E2E Encrypted Signaling (ECDH P-256 + AES-GCM)', icon: Server },
   { key: 'Privacy & Storage', val: 'Zero Server Logs · Local Device Sandbox Only', icon: Lock }

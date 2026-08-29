@@ -37,13 +37,19 @@ export function sanitizePeerId(input: any) {
 }
 
 /**
- * Format a verbal 5-digit MITM Safety Code (e.g. 12345 -> 12-345)
+ * Format a verbal MITM Safety Code (e.g. 12345678 -> 1234-5678, 12345 -> 12-345)
  * @param {string|number} code
  * @returns {string}
  */
 export function formatSafetyCode(code: any) {
   if (!code) return '';
   const str = String(code);
+  if (str.length === 8) {
+    return `${str.substring(0, 4)}-${str.substring(4)}`;
+  }
+  if (str.length === 6) {
+    return `${str.substring(0, 3)}-${str.substring(3)}`;
+  }
   return str.length >= 5 ? `${str.substring(0, 2)}-${str.substring(2)}` : str;
 }
 

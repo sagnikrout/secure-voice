@@ -46,6 +46,15 @@ describe('Formatters Utility', () => {
   });
 
   describe('formatSafetyCode', () => {
+    it('formats 8-digit codes into 4-4 chunk format', () => {
+      expect(formatSafetyCode('12345678')).toBe('1234-5678');
+      expect(formatSafetyCode(98765432)).toBe('9876-5432');
+    });
+
+    it('formats 6-digit codes into 3-3 chunk format', () => {
+      expect(formatSafetyCode('123456')).toBe('123-456');
+    });
+
     it('formats 5-digit codes into 2-3 chunk format', () => {
       expect(formatSafetyCode('12345')).toBe('12-345');
       expect(formatSafetyCode(98765)).toBe('98-765');

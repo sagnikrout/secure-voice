@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { Volume2, Phone, Bluetooth, Mic, Check, X, Sliders, Speaker, Headphones, Cpu, Sparkles } from 'lucide-react';
-import { isWasmSimdSupported } from '../utils/lyra/lyraWasmLoader';
-import { CodecType, CodecPreference } from '../types';
+import { Volume2, Mic, Check, X, Sliders } from 'lucide-react';
+import { CodecPreference } from '../types';
 import './DeviceSelectors.css';
 
 /**

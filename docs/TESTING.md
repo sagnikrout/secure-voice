@@ -6,7 +6,7 @@ SecureVoice uses Vitest for unit and integration testing, Playwright for automat
 
 | Type | Command | Scope |
 | :--- | :--- | :--- |
-| Unit and integration | `npm test` | All 17 suites in `src/test/` |
+| Unit and integration | `npm test` | All 26 suites in `src/test/` |
 | Typecheck and build | `npm run build` | `tsc && vite build` |
 | Resilience benchmark | `npm run benchmark` | `tsx scripts/benchmark-network-resilience.js` |
 | Network simulation | `npm run test:network` | `tsx scripts/simulate-network-impairments.js` |
@@ -22,10 +22,19 @@ SecureVoice uses Vitest for unit and integration testing, Playwright for automat
 - `audioAdversarialDeep.test.ts`: Boundary values for RMS levels and buffer edges.
 - `audioAdversarialDynamics.test.ts`: Attack and release timing on gain nodes.
 - `audioRouting.test.ts`: Output device routing and Android audio focus callbacks.
-- `formatters.test.ts`: Peer ID formatting and duration timestamps.
+- `auditoryFeedback.test.ts`: Synthesized audio tones and state notifications.
+- `chaosEngineering.test.ts`: Extreme packet loss and network chaos resilience.
+- `circuitBreaker.test.ts`: ICE restart rate limiting and circuit breakers.
+- `e2eSignaling.test.ts`: End-to-end encrypted signaling envelopes.
+- `formatters.test.ts`: Peer ID formatting, duration timestamps, and safety codes.
+- `fuzzing.test.ts`: Randomized fuzz testing for SDP munging and safety code generation.
 - `iceRestart.test.ts`: Non-destructive ICE restarts and backoff retry logic.
+- `lyra.test.ts`: Google Lyra v2 neural speech codec WebAssembly SIMD pipeline.
 - `networkAdaptation.test.ts`: Bitrate stepping, EMA smoothing, and hysteresis.
 - `resilienceFeatures.test.ts`: Jitter buffer target clamping and DSCP packet marking.
+- `resourceManager.test.ts`: Web Audio context and node lifecycle tracking.
+- `signalingTransports.test.ts`: Pluggable signaling transports and QR exchange.
+- `structuredLogger.test.ts`: Structured diagnostic event logging and log export.
 - `useAudioDevices.test.ts`: Hardware device enumeration.
 - `webrtc.test.ts`: SDP modification, RED injection, and safety code math.
 - `webrtcAdversarial.test.ts`: Corrupted SDP strings and boundary bitrates.

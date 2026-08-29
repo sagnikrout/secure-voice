@@ -18,7 +18,7 @@ An attacker with read-only access to network traffic (for example, an internet s
 ### Active man-in-the-middle (MITM)
 An attacker capable of intercepting and modifying packets in transit.
 - **Capabilities**: Can manipulate signaling SDP payloads, inject falsified ICE candidates, or attempt DTLS handshake downgrade.
-- **Defenses**: SecureVoice utilizes a 6-digit Short Authentication String (SAS) derived from local and remote DTLS certificate fingerprints. Users verbally cross-verify this string. A mismatch indicates active signaling compromise.
+- **Defenses**: SecureVoice utilizes an 8-digit Short Authentication String (SAS) derived from local and remote DTLS certificate fingerprints. Users verbally cross-verify this string. A mismatch indicates active signaling compromise.
 - **Unmitigated risks**: Relies on user compliance to verbally verify the code.
 
 ### Endpoint compromise
