@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import {
   unlockAudioContext,
   createDenoisePipeline,
@@ -208,6 +209,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     setIsMuted(false);
     setQuality('good');
     setIncomingCall(null);
+    try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
     setSafetyCode(null);
     setIsVerified(false);
     setActiveTier(LADDER_TIERS[0]);
@@ -624,6 +626,17 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     structuredLogger.setSession(`call_${Date.now().toString(36)}`, call?.peer);
     structuredLogger.info('call-incoming', { callerPeer: call?.peer });
 
+    try {
+      LocalNotifications.schedule({
+        notifications: [{
+          title: 'Incoming Encrypted Call',
+          body: `Call from ${call.peer}`,
+          id: 1122,
+          autoCancel: true
+        }]
+      }).catch(() => {});
+    } catch (e) {}
+
     stopRingtoneRef.current = playRingtone();
 
     incomingTimeoutRef.current = setTimeout(() => {
@@ -634,6 +647,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         stopRingtoneRef.current = null;
       }
       setIncomingCall(null);
+      try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
     }, TIMINGS.INCOMING_CALL_TIMEOUT_MS);
   }, []);
 
@@ -647,6 +661,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       stopRingtoneRef.current = null;
     }
     setIncomingCall(null);
+    try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
 
     try {
@@ -682,6 +697,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
       try { incomingCall.close(); } catch (e: any) {}
       setIncomingCall(null);
+      try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
     }
   }, [incomingCall]);
 

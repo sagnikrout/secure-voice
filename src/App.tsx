@@ -12,7 +12,6 @@ import {
   Check,
   Moon,
   Sun,
-  Info,
   Activity,
   ShieldAlert,
   PhoneMissed,
@@ -29,7 +28,6 @@ import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION } from './constants/config';
 
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
-import InfoModal from './components/InfoModal';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
 import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
 import AudioSettingsModal from './components/AudioSettingsModal';
@@ -44,7 +42,6 @@ export default function App() {
 
   const [calleeInput, setCalleeInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
@@ -200,16 +197,6 @@ export default function App() {
               title="Network Health"
             >
               <Activity className="w-4 h-4" />
-            </button>
-
-            <button
-              type="button"
-              className="info-btn"
-              onClick={() => setShowInfo(true)}
-              aria-label="About SecureVoice"
-              title="About SecureVoice"
-            >
-              <Info className="w-4 h-4" />
             </button>
           </div>
         </header>
@@ -484,9 +471,6 @@ export default function App() {
             }}
           />
         )}
-
-        {/* Specs & Privacy Info Modal */}
-        {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
 
         {/* Audio & Neural Codec Settings Modal */}
         {showAudioSettings && (
