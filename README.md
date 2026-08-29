@@ -14,7 +14,7 @@ Key design principles:
 - **Client-Side Encrypted Signaling**: Signaling payloads (SDP and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM before passing through any signaling relay.
 - **Pluggable & Air-Gapped Transports**: Supports serverless Air-Gapped QR Code / Clipboard discovery as well as ephemeral WebSocket relays.
 - **Zero Server Logs**: Call history and diagnostic logs remain exclusively on the user's local device sandbox (localStorage) and are never transmitted to any telemetry endpoint.
-- **Connection Verification**: Deterministic 6-digit Short Authentication String (SAS) verbal safety code combined with direct DTLS certificate fingerprint inspection.
+- **Connection Verification**: Deterministic 8-digit Short Authentication String (SAS) verbal safety code combined with direct DTLS certificate fingerprint inspection.
 
 ## Features
 
@@ -22,7 +22,7 @@ Key design principles:
 - **End-to-End Media Encryption**: Direct peer-to-peer WebRTC DTLS-SRTP voice encryption.
 - **Encrypted Signaling**: Ephemeral ECDH (P-256) key exchange prevents signaling intermediaries from reading SDP fingerprints.
 - **Air-Gapped QR Signaling**: 100% serverless call establishment via optical QR code or text clipboard exchange.
-- **Verbal Safety Code (SAS)**: 6-digit verification code derived symmetrically from DTLS certificate fingerprints to detect MITM attacks.
+- **Verbal Safety Code (SAS)**: 8-digit verification code derived symmetrically from DTLS certificate fingerprints to detect MITM attacks.
 - **Low-Bandwidth Codec Ladder**: 9 adaptive tiers from 1.2 kbps (`ULTRA_LOW`) up to 24.0 kbps (`HQ_PLUS`).
 - Packet aggregation: 40ms lock-step packetization (`ptime=40`), cutting IP/UDP header overhead by 50% (25 pkts/sec).
 - Packet loss recovery: In-band FEC (`useinbandfec=1`) combined with RFC 2198 redundancy (`audio/red`) to handle up to 50% packet drops.
@@ -79,7 +79,7 @@ Key design principles:
 | Traffic shaping | Packet pacer | DSCP Expedited Forwarding (DiffServ 46) |
 | Reconnection | IceRestartManager | 1500ms grace period with 5 backoff retries |
 | TURN fallback | TurnRelayManager | Probes relay latency and auto-forces TURN after retries |
-| Verification | DTLS fingerprints | 6-digit safety code |
+| Verification | DTLS fingerprints | 8-digit safety code |
 | Language | TypeScript | Strict types for WebRTC, audio nodes, and telemetry |
 | Platforms | Web, PWA, Android APK | Android app built with Capacitor |
 
@@ -112,7 +112,7 @@ secure-voice/
 ## Testing
 
 ```bash
-# Run unit and integration tests (317 tests across 17 suites)
+# Run unit and integration tests (432 tests across 26 suites)
 npm test
 
 # Run resilience and low-bandwidth benchmarks

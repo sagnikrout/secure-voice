@@ -40,7 +40,7 @@ import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
  */
 export default function App() {
   const { darkMode, toggleTheme } = useTheme();
-  const { logs, showLogs, addLog, toggleLogs } = useLogs();
+  const { addLog } = useLogs();
 
   const [calleeInput, setCalleeInput] = useState('');
   const [copied, setCopied] = useState(false);
@@ -201,6 +201,16 @@ export default function App() {
             >
               <Activity className="w-4 h-4" />
             </button>
+
+            <button
+              type="button"
+              className="info-btn"
+              onClick={() => setShowInfo(true)}
+              aria-label="About SecureVoice"
+              title="About SecureVoice"
+            >
+              <Info className="w-4 h-4" />
+            </button>
           </div>
         </header>
 
@@ -324,8 +334,8 @@ export default function App() {
                   <Shield className="w-3.5 h-3.5" />
                   <span>
                     {callSession.isVerified
-                      ? `Verified (${callSession.safetyCode.slice(0, 3)}-${callSession.safetyCode.slice(3)})`
-                      : `Code: ${callSession.safetyCode.slice(0, 3)}-${callSession.safetyCode.slice(3)}`}
+                      ? `Verified (${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)})`
+                      : `Code: ${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)}`}
                   </span>
                 </button>
               </div>

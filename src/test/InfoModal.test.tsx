@@ -8,7 +8,7 @@ describe('InfoModal Component', () => {
     render(<InfoModal onClose={vi.fn()} />);
     expect(screen.getByText('How SecureVoice Works')).toBeInTheDocument();
     expect(screen.getByText('DTLS-SRTP (WebRTC E2EE)')).toBeInTheDocument();
-    expect(screen.getByText('Opus SILK · 3.2–8.0 kbps (CBR 8kHz)')).toBeInTheDocument();
+    expect(screen.getByText('Google Lyra v2 (3.2 kbps) · Opus HD')).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', () => {

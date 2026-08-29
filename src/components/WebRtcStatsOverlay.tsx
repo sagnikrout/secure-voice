@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, X, Wifi, Shield, Cpu, Zap, Radio, Layers, Gauge } from 'lucide-react';
+import { Activity, X } from 'lucide-react';
 import { OPUS_CONFIG, LADDER_TIERS } from '../constants/config';
 
 /**
@@ -7,7 +7,6 @@ import { OPUS_CONFIG, LADDER_TIERS } from '../constants/config';
  */
 export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
   const isLyra = callSession?.activeCodec === 'lyra';
-  const lyraStats = callSession?.lyraStats;
 
   const [statsData, setStatsData] = useState({
     rttMs: 0,
