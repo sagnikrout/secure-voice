@@ -16,3 +16,8 @@
 - Use sentence case for headings.
 - Omit emoji characters and decorative em dashes from release notes and technical documentation.
 - Maintain an objective, encyclopedic tone with zero marketing filler or banned copula substitutes.
+
+## 4. Engineering & Environment Guidelines
+- **Universal Version Consistency**: When bumping application versions in package manifests, comprehensively update all user-facing version badges, configuration constants, and documentation headers. Do not leave the UI or documentation in a stale state.
+- **Resilient UI Testing**: Avoid hardcoding volatile data (such as exact semantic version strings or timestamps) directly in UI test assertions. Dynamically import the source-of-truth constants to ensure tests survive routine updates.
+- **PowerShell Exclusion Anti-Pattern**: Never use -Exclude combined with -Recurse in PowerShell's Get-ChildItem when filtering directories, as it only matches leaf names. Use alternative tools or Where-Object path filtering instead.
