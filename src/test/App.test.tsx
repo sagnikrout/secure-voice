@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from '../App';
+import { APP_VERSION } from '../constants/config';
 
 vi.mock('peerjs', () => {
   return {
@@ -24,7 +25,7 @@ describe('App Integration', () => {
       render(<App />);
     });
     expect(screen.getByText('SecureVoice')).toBeInTheDocument();
-    expect(screen.getByText('v3.5.0')).toBeInTheDocument();
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
     expect(screen.getByText('Your Peer ID')).toBeInTheDocument();
     expect(screen.getByText('New Call')).toBeInTheDocument();
     expect(screen.getByTitle('Network Health')).toBeInTheDocument();
@@ -69,3 +70,4 @@ describe('App Integration', () => {
     expect(screen.queryByText('Audio Settings')).not.toBeInTheDocument();
   });
 });
+
