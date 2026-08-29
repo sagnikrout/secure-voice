@@ -2,6 +2,13 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.5.1] - 2026-08-29
+
+### Changed
+- Repository hygiene: removed legacy IDE configuration folders and consolidated .github community health files.
+- Removed redundant individual release notes in favor of a unified CHANGELOG.
+- Cleaned up remote GitHub release history.
+
 ## [v3.5.0] - 2026-08-26
 
 ### Added
@@ -88,3 +95,4 @@ All notable changes to SecureVoice are documented in this file.
 - Initial WebRTC audio implementation with SDP munging.
 - Basic 80Hz highpass filter and simple noise gate.
 - Capacitor wrapper for Android builds.
+
