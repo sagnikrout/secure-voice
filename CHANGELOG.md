@@ -2,6 +2,15 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.5.2] - 2026-08-29
+
+### Added
+- Implemented native local notifications (`@capacitor/local-notifications`) for incoming calls to allow users to answer from outside the app without compromising P2P privacy.
+
+### Fixed
+- Removed accidentally reintroduced "info" button and dead `InfoModal` code.
+- Synchronized Android `versionName` and `versionCode` in Gradle configs.
+
 ## [v3.5.1] - 2026-08-29
 
 ### Changed

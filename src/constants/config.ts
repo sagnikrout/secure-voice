@@ -1,7 +1,7 @@
 import { ExtendedLadderTier } from '../types';
 
 export const APP_NAME = 'SecureVoice';
-export const APP_VERSION = 'v3.5.1';
+export const APP_VERSION = 'v3.5.2';
 
 // WebRTC ICE Servers Configuration (Google STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
