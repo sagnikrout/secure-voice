@@ -222,7 +222,7 @@ describe('Google Lyra v2 Neural Speech Codec Subsystem', () => {
       expect(result.reason).toContain('Lyra v2 Neural');
     });
 
-    it('14 kbps and above: elevates from Lyra to Opus Wideband HD after 4 stable consecutive ticks', () => {
+    it('14 kbps and above: elevates from Lyra to Opus Wideband HD after 8 stable consecutive ticks', () => {
       // Clean broadband network snapshot (0.2% loss, 45ms RTT, 25 kbps available)
       const broadbandSnapshot = {
         effectiveLossRate: 0.002,
@@ -231,39 +231,37 @@ describe('Google Lyra v2 Neural Speech Codec Subsystem', () => {
         availableOutgoingBitrate: 25000
       };
 
-      // Tick 1, 2, 3: Probing headroom without premature switching
-      let res = evaluateCodecCrossover({
-        snapshot: broadbandSnapshot,
-        currentCodec: 'lyra',
-        consecutiveHealthyTicks: 0,
-        simdSupported: true
-      });
+      // Ticks 1-7: Probing headroom without premature switching
+      let res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 0, simdSupported: true });
       expect(res.codecChanged).toBe(false);
       expect(res.consecutiveHealthyTicks).toBe(1);
 
-      res = evaluateCodecCrossover({
-        snapshot: broadbandSnapshot,
-        currentCodec: 'lyra',
-        consecutiveHealthyTicks: 1,
-        simdSupported: true
-      });
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 1, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
       expect(res.consecutiveHealthyTicks).toBe(2);
 
-      res = evaluateCodecCrossover({
-        snapshot: broadbandSnapshot,
-        currentCodec: 'lyra',
-        consecutiveHealthyTicks: 2,
-        simdSupported: true
-      });
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 2, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
       expect(res.consecutiveHealthyTicks).toBe(3);
 
-      // Tick 4: 4 consecutive healthy ticks reached -> elevate to Opus Wideband
-      res = evaluateCodecCrossover({
-        snapshot: broadbandSnapshot,
-        currentCodec: 'lyra',
-        consecutiveHealthyTicks: 3,
-        simdSupported: true
-      });
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 3, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
+      expect(res.consecutiveHealthyTicks).toBe(4);
+
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 4, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
+      expect(res.consecutiveHealthyTicks).toBe(5);
+
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 5, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
+      expect(res.consecutiveHealthyTicks).toBe(6);
+
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 6, simdSupported: true });
+      expect(res.codecChanged).toBe(false);
+      expect(res.consecutiveHealthyTicks).toBe(7);
+
+      // Tick 8: 8 consecutive healthy ticks → elevate to Opus Wideband
+      res = evaluateCodecCrossover({ snapshot: broadbandSnapshot, currentCodec: 'lyra', consecutiveHealthyTicks: 7, simdSupported: true });
       expect(res.codecChanged).toBe(true);
       expect(res.targetCodec).toBe('opus');
       expect(res.reason).toContain('Elevated to Opus Wideband HD');

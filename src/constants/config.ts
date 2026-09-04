@@ -1,7 +1,7 @@
 import { ExtendedLadderTier } from '../types';
 
 export const APP_NAME = 'SecureVoice';
-export const APP_VERSION = 'v3.6.0';
+export const APP_VERSION = 'v3.6.1';
 
 // WebRTC ICE Servers Configuration (Google STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
@@ -67,16 +67,18 @@ export const LYRA_CONFIG = {
   } as const
 };
 
-// 14 kbps Acoustic Quality Crossover Configuration (Lyra v2 < 14 kbps vs Opus >= 14 kbps)
+// Codec crossover — tuned for throttled mobile (Jio post-cap, 64 kbps ceiling).
+// Lyra v2 is the primary codec. Opus only activates on consistently clean links.
+// The 14 kbps threshold keeps Lyra engaged across the full throttled range.
 export const CODEC_CROSSOVER_CONFIG = {
-  CROSSOVER_BITRATE_BPS: 14000,           // 14.0 kbps quality crossover boundary
-  DOWNGRADE_TO_LYRA_LOSS_THRESHOLD: 0.04, // > 4% loss triggers switch to Lyra v2 Neural
-  DOWNGRADE_TO_LYRA_RTT_MS: 280,          // > 280ms RTT triggers switch to Lyra v2 Neural
-  DOWNGRADE_TO_LYRA_JITTER_MS: 45,        // > 45ms jitter triggers switch to Lyra v2 Neural
-  UPGRADE_TO_OPUS_CONSECUTIVE_TICKS: 4,   // 4 consecutive healthy ticks to elevate to Opus Wideband
-  UPGRADE_TO_OPUS_MAX_LOSS: 0.015,        // < 1.5% loss required for Opus elevation
-  UPGRADE_TO_OPUS_MAX_RTT_MS: 160,        // < 160ms RTT required for Opus elevation
-  UPGRADE_TO_OPUS_MAX_JITTER_MS: 30       // < 30ms jitter required for Opus elevation
+  CROSSOVER_BITRATE_BPS: 14000,           // 14 kbps boundary — Lyra below, Opus above
+  DOWNGRADE_TO_LYRA_LOSS_THRESHOLD: 0.05, // > 5% packet loss → stay/return to Lyra
+  DOWNGRADE_TO_LYRA_RTT_MS: 380,          // > 380ms RTT → stay/return to Lyra
+  DOWNGRADE_TO_LYRA_JITTER_MS: 65,        // > 65ms jitter → stay/return to Lyra
+  UPGRADE_TO_OPUS_CONSECUTIVE_TICKS: 8,   // 8 consecutive healthy ticks (8s) before Opus
+  UPGRADE_TO_OPUS_MAX_LOSS: 0.01,         // < 1% loss sustained before Opus elevation
+  UPGRADE_TO_OPUS_MAX_RTT_MS: 180,        // < 180ms RTT sustained before Opus elevation
+  UPGRADE_TO_OPUS_MAX_JITTER_MS: 30       // < 30ms jitter sustained before Opus elevation
 };
 
 // 6-Tier 2G/Satellite Survival Ladder Configuration (Constant Latency Profile)
