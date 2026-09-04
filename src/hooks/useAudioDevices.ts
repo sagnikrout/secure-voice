@@ -23,6 +23,13 @@ export function useAudioDevices() {
   const [isEnumerating, setIsEnumerating] = useState(true);
   const [permissionState, setPermissionState] = useState('prompt');
   
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const enumeratingRef = useRef(false);
   const debounceRef = useRef(null);
 
@@ -61,20 +68,20 @@ export function useAudioDevices() {
         groupId: d.groupId
       }));
 
-      setAudioInputs(formattedInputs);
-      setAudioOutputs(formattedOutputs);
+      if (isMountedRef.current) setAudioInputs(formattedInputs);
+      if (isMountedRef.current) setAudioOutputs(formattedOutputs);
 
       // Restore preferred microphone from localStorage if available
       const savedInputId = localStorage.getItem(PREFERRED_INPUT_KEY);
       const isSavedInputAvailable = formattedInputs.some(d => d.deviceId === savedInputId);
 
       if (isSavedInputAvailable) {
-        setSelectedInputId(savedInputId);
+        if (isMountedRef.current) setSelectedInputId(savedInputId);
       } else if (formattedInputs.length > 0) {
-        setSelectedInputId(formattedInputs[0].deviceId);
+        if (isMountedRef.current) setSelectedInputId(formattedInputs[0].deviceId);
         localStorage.setItem(PREFERRED_INPUT_KEY, formattedInputs[0].deviceId);
       } else {
-        setSelectedInputId(null);
+        if (isMountedRef.current) setSelectedInputId(null);
       }
 
       // Restore preferred output from localStorage if available
@@ -102,7 +109,7 @@ export function useAudioDevices() {
   }, []);
 
   const selectAudioInput = useCallback((deviceId) => {
-    setSelectedInputId(deviceId);
+    if (isMountedRef.current) setSelectedInputId(deviceId);
     if (deviceId) {
       localStorage.setItem(PREFERRED_INPUT_KEY, deviceId);
     } else {

@@ -1,25 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/config';
 
 export function useTheme() {
   const [darkMode, setDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
-      if (saved !== null) return saved === 'dark';
-    } catch (e) {}
-    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('securevoice_theme');
+    if (saved === 'dark') return true;
+    if (saved === 'light') return false;
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   });
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.theme = darkMode ? 'dark' : 'light';
-    try {
-      localStorage.setItem(STORAGE_KEYS.THEME, darkMode ? 'dark' : 'light');
-    } catch (e) {}
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
+  // Listen for OS theme changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      const saved = localStorage.getItem('securevoice_theme');
+      if (!saved) {
+        setDarkMode(e.matches);
+      }
+    };
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
   const toggleTheme = useCallback(() => {
-    setDarkMode(prev => !prev);
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('securevoice_theme', next ? 'dark' : 'light');
+      return next;
+    });
   }, []);
 
   return { darkMode, toggleTheme };

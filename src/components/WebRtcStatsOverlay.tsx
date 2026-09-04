@@ -157,7 +157,7 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
         </div>
 
         {/* Top Metric Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px', marginBottom: '8px' }}>
           <div style={{ background: 'var(--bg)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Tier</div>
             <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent)' }}>

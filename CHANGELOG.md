@@ -2,6 +2,39 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.6.0] - 2026-09-04
+
+### Fixed (Android stability)
+- Added `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` to foreground service declaration, fixing a `SecurityException` crash on Android 14+.
+- Added missing permissions: `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`.
+- Created native notification channel in `MainActivity.onCreate()` to prevent crashes when the OS restarts the service before the WebView loads.
+- Added `BLUETOOTH_CONNECT` runtime permission guard to `AudioRoutingPlugin.java` to prevent crashes on Android 12+.
+- Added `network_security_config.xml` for explicit TLS enforcement.
+- Hardware back button now minimizes the app instead of destroying it, preserving the WebRTC connection.
+
+### Fixed (Call reliability)
+- Eliminated re-instantiation of `AdaptiveBitrateController`, `JitterBufferController`, `PacketPacer`, and `TurnRelayManager` on every React render (lazy initialization pattern).
+- Fixed stale closure in the telemetry callback that broke codec crossover logic after dynamic codec switches.
+- Added race condition guard to `acquireMicrophone()` preventing concurrent `getUserMedia` calls from leaking orphaned mic streams.
+- Safety code computation interval is now properly cleared on early call drops.
+- All unmanaged `setTimeout` calls in `bindCallEvents` are now tracked and cleared in `endCall()`.
+- Remote `track.onended` now uses a 2-second debounce to prevent false-positive hangups during WebRTC renegotiation.
+- Fixed `usePeer` reconnection timeout leak on component unmount.
+- Fixed `useAudioDevices` setState-after-unmount memory leak.
+- Auditory feedback tones now cancel pending sequences before starting new ones, preventing overlapping sounds.
+- Theme hook now listens for OS dark/light mode changes in real time.
+
+### Improved (UX)
+- Widened app shell from 380px to 480px for modern phone screens.
+- Increased all header button touch targets from 32px to 40px.
+- Increased Recent Calls action buttons from 28px to 36px.
+- Increased Copy button and Close button touch targets to meet 44px mobile minimum.
+- Restructured incoming call modal: Answer button is now full-width on top, Decline and Block are side-by-side below.
+- Responsive breakpoint raised from 340px to 440px so all phone screens get the mobile-optimized layout.
+- Audio visualizer canvas now scales by `devicePixelRatio` for crisp rendering on high-DPI displays.
+- WebRTC stats grid uses responsive `auto-fit` layout instead of hardcoded 3-column grid.
+- Security verification modal buttons meet 44px touch target minimum.
+
 ## [v3.5.2] - 2026-08-29
 
 ### Added
