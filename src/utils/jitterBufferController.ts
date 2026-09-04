@@ -20,12 +20,12 @@ export class JitterBufferController {
    * Target jitter buffer delays (ms) mapped per adaptive tier
    */
   static TIER_TARGETS: Record<string, number> = {
-    HQ: 120,    // 2G Stable — smooth buffer eliminating micro-jitter
-    STD: 160,   // 2G Normal
-    LB: 200,    // 2G Congested
-    HL: 250,    // 2G High Loss
-    EXT: 300,   // 2G Survival
-    ULTRA: 400  // Satellite / Extreme Loss — maximum NetEQ packet concealment window
+    HQ: 160,    // Throttled mobile default — variable link needs extra absorption margin
+    STD: 200,   // Jittery mobile
+    LB: 250,    // Congested
+    HL: 300,    // High loss / cell edge
+    EXT: 350,   // Severe degradation
+    ULTRA: 400  // Satellite / extreme loss
   };
 
   constructor(options: any = {}) {

@@ -2,6 +2,14 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.6.1] - 2026-09-05
+
+### Changed (audio tuning for throttled mobile networks)
+- Lyra v2 is now the default startup codec when WebAssembly SIMD is available. The app previously defaulted to `auto` mode (Opus-first), which is suboptimal for throttled Jio and similar post-cap mobile connections where Lyra consistently outperforms Opus.
+- Lyra bitrate scaling thresholds lowered: 9.2 kbps quality is now reached at 10 kbps available bandwidth instead of 9.2 kbps, ensuring maximum Lyra fidelity is active on any throttled link with headroom.
+- Codec crossover threshold restored to 14 kbps. Opus only activates after 8 consecutive seconds of clean network conditions (down from 4 seconds), preventing premature codec switching on momentarily stable throttled links.
+- Jitter buffer defaults raised across all tiers to better absorb the variable packet delivery characteristic of throttled mobile connections (HQ: 120ms to 160ms, STD: 160ms to 200ms, LB: 200ms to 250ms, HL: 250ms to 300ms, EXT: 300ms to 350ms).
+
 ## [v3.6.0] - 2026-09-04
 
 ### Fixed (Android stability)

@@ -81,6 +81,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const [liveTelemetry, setLiveTelemetry] = useState(null);
 
   // Neural Codec & Dynamic Crossover State
+  // Default to Lyra v2 when SIMD is available — the primary use case is throttled/jittery
+  // mobile connections where Lyra v2 outperforms Opus. Only fall back to Opus when the
+  // link is consistently excellent.
   const [preferredCodec, setPreferredCodecState] = useState<CodecPreference>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -88,7 +91,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         if (saved === 'auto' || saved === 'opus' || saved === 'lyra') return saved as CodecPreference;
       } catch (e: any) {}
     }
-    return lyraWasmLoader.checkCompatibility().simd ? 'auto' : 'opus';
+    // Default: Lyra v2 if SIMD supported, otherwise Opus
+    return lyraWasmLoader.checkCompatibility().simd ? 'lyra' : 'opus';
   });
   const [activeCodec, setActiveCodec] = useState<CodecType>('opus');
   const crossoverHealthyTicksRef = useRef(0);
@@ -513,18 +517,20 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               callbacksRef.current.addLog?.(crossover.reason, 'info');
             }
 
-            // Dynamic Lyra Bitrate Scaling (3.2 kbps to 9.2 kbps)
+            // Aggressive Lyra Bitrate Scaling (3.2 → 6.0 → 9.2 kbps)
+            // On throttled 64 kbps links, even 10 kbps available is enough to run at max Lyra fidelity.
+            // Scale up fast, scale down cautiously (only at < 5 kbps).
             if ((!crossover.codecChanged ? activeCodecRef.current : crossover.targetCodec) === 'lyra' && snapshot && snapshot.availableOutgoingBitrate) {
               const bps = snapshot.availableOutgoingBitrate;
               let targetLyraBitrate: LyraBitrate = 3200;
-              if (bps >= 9200) targetLyraBitrate = 9200;
-              else if (bps >= 6000) targetLyraBitrate = 6000;
-              else targetLyraBitrate = 3200;
-              
+              if (bps >= 10000) targetLyraBitrate = 9200;       // 10 kbps available → max quality
+              else if (bps >= 6500) targetLyraBitrate = 6000;   // 6.5 kbps available → mid quality
+              else targetLyraBitrate = 3200;                     // below 6.5 kbps → survival mode
+
               const currentStats = lyraManager.getStats();
               if (currentStats && currentStats.bitrateBps !== targetLyraBitrate) {
                 lyraManager.setBitrate(targetLyraBitrate);
-                callbacksRef.current.addLog?.(`Lyra v2 dynamic scaled to ${targetLyraBitrate} bps`, 'info');
+                callbacksRef.current.addLog?.(`Lyra v2 scaled to ${(targetLyraBitrate / 1000).toFixed(1)} kbps`, 'info');
               }
             }
           }
