@@ -29,6 +29,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   const retryCountRef = useRef(0);
   const lastIncomingCallTimeRef = useRef(0);
   const destroyedRef = useRef(false);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Store callbacks in a ref to avoid infinite re-initialization loops
   const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall });
@@ -114,7 +115,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         const newId = generatePeerId();
         peerIdRef.current = newId;
         callbacksRef.current.addLog?.(`ID collision detected, retrying with new ID: ${newId}...`, 'info');
-        setTimeout(() => initPeer(newId), 300 * retryCountRef.current);
+        reconnectTimeoutRef.current = setTimeout(() => initPeer(newId), 300 * retryCountRef.current);
       } else if (err.type === 'peer-unavailable') {
         callbacksRef.current.addLog?.('Peer unavailable or not found. Check the ID.', 'error');
         setStatus('error');
@@ -145,6 +146,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
 
     return () => {
       destroyedRef.current = true;
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (peerRef.current && !peerRef.current.destroyed) {
         try { peerRef.current.destroy(); } catch (e) {}
       }

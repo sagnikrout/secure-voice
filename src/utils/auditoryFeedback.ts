@@ -12,6 +12,7 @@ import { getAudioContext, unlockAudioContext } from './audio';
 export class AuditoryFeedback {
   private enabled: boolean;
   private speechEnabled: boolean;
+  private pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
 
   // Preset frequencies and timing per call state cue
   static TONE_PRESETS: Record<CallAudioCue, AuditoryToneConfig | AuditoryToneConfig[]> = {
@@ -61,6 +62,11 @@ export class AuditoryFeedback {
    */
   setSpeechEnabled(speechEnabled: boolean): void {
     this.speechEnabled = Boolean(speechEnabled);
+  }
+
+  cancelPending(): void {
+    this.pendingTimeouts.forEach(id => clearTimeout(id));
+    this.pendingTimeouts = [];
   }
 
   /**
@@ -113,14 +119,16 @@ export class AuditoryFeedback {
   async playToneSequence(tones: AuditoryToneConfig[]): Promise<void> {
     if (!this.enabled || !Array.isArray(tones) || tones.length === 0) return;
 
+    this.cancelPending();
     let offsetMs = 0;
     for (const tone of tones) {
       if (offsetMs === 0) {
         this.playTone(tone);
       } else {
-        setTimeout(() => {
+        const tid = setTimeout(() => {
           this.playTone(tone);
         }, offsetMs);
+        this.pendingTimeouts.push(tid);
       }
       offsetMs += tone.durationMs + (tone.intervalMs || 50);
     }
@@ -130,6 +138,7 @@ export class AuditoryFeedback {
    * Announce call state by name
    */
   async notifyState(cue: CallAudioCue): Promise<void> {
+    this.cancelPending();
     const preset = AuditoryFeedback.TONE_PRESETS[cue];
     if (!preset) return;
 

@@ -50,7 +50,7 @@ export default function SecurityVerificationModal({ safetyCode, onVerify, onReje
             className="btn btn-red"
             onClick={onReject}
             aria-label="No, the code does not match"
-            style={{ flex: 1, padding: '12px 0' }}
+            style={{ flex: 1, padding: '14px 16px' }}
           >
             <ShieldAlert className="w-4 h-4" />
             <span>Mismatch</span>
@@ -61,7 +61,7 @@ export default function SecurityVerificationModal({ safetyCode, onVerify, onReje
             className="btn btn-green"
             onClick={onVerify}
             aria-label="Yes, the code exactly matches"
-            style={{ flex: 1, padding: '12px 0' }}
+            style={{ flex: 1, padding: '14px 16px' }}
           >
             <Check className="w-4 h-4" />
             <span>Matches</span>

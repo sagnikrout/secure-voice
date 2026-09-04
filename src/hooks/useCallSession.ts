@@ -47,11 +47,17 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
   // Telemetry monitor, bitrate controller, ICE restart, jitter buffer, packet pacer, and TURN manager refs
   const telemetryMonitorRef = useRef(null);
-  const bitrateControllerRef = useRef(new AdaptiveBitrateController());
+  const bitrateControllerRef = useRef(null);
   const iceRestartManagerRef = useRef(null);
-  const jitterControllerRef = useRef(new JitterBufferController({ onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
-  const packetPacerRef = useRef(new PacketPacer({ onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
-  const turnRelayManagerRef = useRef(new TurnRelayManager(null, { onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level) }));
+  const jitterControllerRef = useRef(null);
+  const packetPacerRef = useRef(null);
+  const turnRelayManagerRef = useRef(null);
+
+  // Lazy initialization (runs once, not on every render)
+  if (!bitrateControllerRef.current) bitrateControllerRef.current = new AdaptiveBitrateController();
+  if (!jitterControllerRef.current) jitterControllerRef.current = new JitterBufferController({ onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
+  if (!packetPacerRef.current) packetPacerRef.current = new PacketPacer({ onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
+  if (!turnRelayManagerRef.current) turnRelayManagerRef.current = new TurnRelayManager(null, { onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
 
   // Timers & Stats Tracking
   const dialTimeoutRef = useRef(null);
@@ -86,6 +92,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   });
   const [activeCodec, setActiveCodec] = useState<CodecType>('opus');
   const crossoverHealthyTicksRef = useRef(0);
+  const activeCodecRef = useRef<CodecType>(activeCodec);
+  const preferredCodecRef = useRef<CodecPreference>(preferredCodec);
 
   const setPreferredCodec = useCallback((codec: CodecPreference) => {
     setPreferredCodecState(codec);
@@ -102,6 +110,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
   // Ringtone player cleanup ref
   const stopRingtoneRef = useRef(null);
+  const acquiringMicRef = useRef(false);
+  const safetyIntervalRef = useRef(null);
+  const setupTimeoutsRef = useRef([]);
 
   // Store callbacks in a ref to prevent infinite re-renders & stale closures
   const callbacksRef = useRef({ addLog, onStatusChange });
@@ -113,6 +124,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   useEffect(() => {
     selectedInputIdRef.current = selectedInputId;
   }, [selectedInputId]);
+
+  // Keep codec refs in sync with state
+  useEffect(() => { activeCodecRef.current = activeCodec; }, [activeCodec]);
+  useEffect(() => { preferredCodecRef.current = preferredCodec; }, [preferredCodec]);
 
   // Timer controls
   const startTimer = useCallback(() => {
@@ -184,6 +199,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     // 6. Clear all timeouts and intervals
     if (dialTimeoutRef.current) { clearTimeout(dialTimeoutRef.current); dialTimeoutRef.current = null; }
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
+    if (safetyIntervalRef.current) { clearInterval(safetyIntervalRef.current); safetyIntervalRef.current = null; }
+    setupTimeoutsRef.current.forEach(id => clearTimeout(id));
+    setupTimeoutsRef.current = [];
 
     // 7. Stop Ringtone and clean oscillators
     if (stopRingtoneRef.current) {
@@ -226,6 +244,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     if (processedStreamRef.current && processedStreamRef.current.active) {
       return processedStreamRef.current;
     }
+    if (acquiringMicRef.current) {
+      // Prevent concurrent getUserMedia calls from leaking orphaned streams
+      throw new Error('Microphone acquisition already in progress');
+    }
+    acquiringMicRef.current = true;
 
     await unlockAudioContext();
     callbacksRef.current.addLog?.('Requesting hardware microphone access...', 'info');
@@ -274,8 +297,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         setActiveCodec('opus');
       }
 
+      acquiringMicRef.current = false;
       return processedStream;
     } catch (err: any) {
+      acquiringMicRef.current = false;
       if (err.name !== 'NotAllowedError') {
         callbacksRef.current.addLog?.(`Microphone error: ${err.message}`, 'error');
       }
@@ -357,8 +382,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
       // Try immediately and on continuous interval during handshake
       computeAndSetSafetyCode();
-      const safetyInterval = setInterval(computeAndSetSafetyCode, 250);
-      setTimeout(() => clearInterval(safetyInterval), 8000);
+      if (safetyIntervalRef.current) clearInterval(safetyIntervalRef.current);
+      safetyIntervalRef.current = setInterval(computeAndSetSafetyCode, 250);
+      setTimeout(() => { if (safetyIntervalRef.current) { clearInterval(safetyIntervalRef.current); safetyIntervalRef.current = null; } }, 8000);
 
       if (pcInitialized) return;
       pcInitialized = true;
@@ -473,10 +499,10 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         }
 
           // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
-          if (preferredCodec === 'auto') {
+          if (preferredCodecRef.current === 'auto') {
             const crossover = evaluateCodecCrossover({
               snapshot,
-              currentCodec: activeCodec,
+              currentCodec: activeCodecRef.current,
               consecutiveHealthyTicks: crossoverHealthyTicksRef.current,
               simdSupported: lyraWasmLoader.checkCompatibility().simd
             });
@@ -488,7 +514,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
             }
 
             // Dynamic Lyra Bitrate Scaling (3.2 kbps to 9.2 kbps)
-            if ((!crossover.codecChanged ? activeCodec : crossover.targetCodec) === 'lyra' && snapshot && snapshot.availableOutgoingBitrate) {
+            if ((!crossover.codecChanged ? activeCodecRef.current : crossover.targetCodec) === 'lyra' && snapshot && snapshot.availableOutgoingBitrate) {
               const bps = snapshot.availableOutgoingBitrate;
               let targetLyraBitrate: LyraBitrate = 3200;
               if (bps >= 9200) targetLyraBitrate = 9200;
@@ -529,8 +555,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
 
     // Initialize immediately if peer connection already exists on call object
     setupPeerConnection();
-    setTimeout(setupPeerConnection, 100);
-    setTimeout(setupPeerConnection, 500);
+    setupTimeoutsRef.current.push(setTimeout(setupPeerConnection, 100));
+    setupTimeoutsRef.current.push(setTimeout(setupPeerConnection, 500));
 
     call.on('stream', (remoteStream) => {
       streamAttached = true;
@@ -543,12 +569,21 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         });
       }
 
-      // Attach track ended listeners for instant hangup detection
+      // Attach track ended listeners with debounce to avoid false hangups during renegotiation
       if (remoteStream && typeof remoteStream.getAudioTracks === 'function') {
         remoteStream.getAudioTracks().forEach(track => {
           track.onended = () => {
-            callbacksRef.current.addLog?.('Remote audio track ended (Peer hung up)', 'info');
-            endCall();
+            // Debounce: wait 2s to confirm the track is truly gone (not just a renegotiation)
+            const hangupTimeout = setTimeout(() => {
+              if (callRef.current) {
+                const pc = callRef.current.peerConnection || (callRef.current as any)._peerConnection;
+                if (!pc || pc.connectionState === 'closed' || pc.connectionState === 'failed') {
+                  callbacksRef.current.addLog?.('Remote audio track ended (Peer hung up)', 'info');
+                  endCall();
+                }
+              }
+            }, 2000);
+            setupTimeoutsRef.current.push(hangupTimeout);
           };
         });
       }

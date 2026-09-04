@@ -8,5 +8,14 @@
   "android": {
     "allowMixedContent": false,
     "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_launcher",
+      "iconColor": "#007AFF"
+    },
+    "ForegroundService": {
+      "channelId": "securevoice_foreground"
+    }
   }
 }

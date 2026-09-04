@@ -150,8 +150,11 @@ public class AudioRoutingPlugin extends Plugin {
                     audioManager.setSpeakerphoneOn(true);
                 } else if ("bluetooth".equals(mode)) {
                     audioManager.setSpeakerphoneOn(false);
-                    audioManager.startBluetoothSco();
-                    audioManager.setBluetoothScoOn(true);
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                        getContext().checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        audioManager.startBluetoothSco();
+                        audioManager.setBluetoothScoOn(true);
+                    }
                 } else { // earpiece
                     if (audioManager.isBluetoothScoOn()) {
                         audioManager.stopBluetoothSco();

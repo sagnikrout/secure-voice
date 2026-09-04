@@ -30,8 +30,18 @@ function AudioVisualizerComponent({ stream, isActive }) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = 200 * dpr;
+      canvas.height = 36 * dpr;
+      canvas.style.width = '200px';
+      canvas.style.height = '36px';
+      ctx.scale(dpr, dpr);
+
+      const logicalWidth = 200;
+      const logicalHeight = 36;
+
       // Pre-create gradient once to eliminate 60fps GC allocations
-      const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+      const gradient = ctx.createLinearGradient(0, logicalHeight, 0, 0);
       gradient.addColorStop(0, '#007aff');
       gradient.addColorStop(1, '#2ecc71');
 
@@ -45,20 +55,20 @@ function AudioVisualizerComponent({ stream, isActive }) {
         }
 
         analyser.getByteFrequencyData(dataArray);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-        const barWidth = (canvas.width / bufferLength) * 2;
+        const barWidth = (logicalWidth / bufferLength) * 2;
         let x = 0;
 
         ctx.fillStyle = gradient;
         for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * canvas.height * 0.85;
+          const barHeight = (dataArray[i] / 255) * logicalHeight * 0.85;
 
           ctx.beginPath();
           if (typeof ctx.roundRect === 'function') {
-            ctx.roundRect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight, 3);
+            ctx.roundRect(x, logicalHeight - barHeight, Math.max(barWidth - 2, 2), barHeight, 3);
           } else {
-            ctx.rect(x, canvas.height - barHeight, Math.max(barWidth - 2, 2), barHeight);
+            ctx.rect(x, logicalHeight - barHeight, Math.max(barWidth - 2, 2), barHeight);
           }
           ctx.fill();
 

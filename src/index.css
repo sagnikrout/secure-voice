@@ -118,7 +118,7 @@ body {
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  max-width: 380px;
+  max-width: 480px;
 }
 
 .card {
@@ -270,8 +270,8 @@ body {
 }
 
 .info-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--card-2);
   border: 1px solid var(--border-2);
@@ -341,7 +341,7 @@ body {
   color: #fff;
   border: 1px solid var(--blue);
   border-radius: var(--radius-sm);
-  padding: 8px 14px;
+  padding: 10px 16px;
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font);
@@ -729,8 +729,8 @@ body {
 }
 
 .icon-call-btn, .icon-delete-btn {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid var(--border-2);
   background: var(--card);
@@ -936,10 +936,16 @@ body {
 
 .inc-btns {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.inc-btns .btn {
+.inc-btns-row {
+  display: flex;
+  gap: 10px;
+}
+
+.inc-btns-row .btn {
   flex: 1;
 }
 
@@ -964,8 +970,8 @@ body {
 }
 
 .close-btn {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--card-2);
   border: 1px solid var(--border-2);
@@ -1043,7 +1049,7 @@ body {
   .call-btns { gap: 12px; }
 }
 
-@media (max-width: 340px) {
+@media (max-width: 440px) {
   .app { padding: 12px 8px; }
   .card { padding: 14px; }
   .header { flex-direction: column; align-items: stretch; gap: 12px; }

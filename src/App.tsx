@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import {
   Shield,
@@ -106,8 +107,31 @@ export default function App() {
     };
     startForeground();
 
+    // Request notification permissions so local notifications work on Android 13+
+    const requestNotificationPermissions = async () => {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        const perms = await LocalNotifications.checkPermissions();
+        if (perms.display !== 'granted') {
+          await LocalNotifications.requestPermissions();
+        }
+      } catch (e) {}
+    };
+    requestNotificationPermissions();
+
+    // Prevent hardware back button from closing the app; push it to background instead
+    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (!canGoBack) {
+        CapacitorApp.minimizeApp();
+      } else {
+        window.history.back();
+      }
+    });
+
     return () => {
-      ForegroundService.stopForegroundService().catch(() => {});
+      // Clean up listener, but DO NOT stop the foreground service 
+      // so it survives React strict mode re-renders cleanly.
+      backButtonListener.then(listener => listener.remove()).catch(() => {});
     };
   }, [addLog]);
 
@@ -417,40 +441,43 @@ export default function App() {
               <div className="inc-btns">
                 <button
                   type="button"
-                  className="btn btn-red"
-                  onClick={() => {
-                    const peerId = callSession.incomingCall.peer;
-                    const blocked = JSON.parse(localStorage.getItem('securevoice_blocked') || '[]');
-                    if (!blocked.includes(peerId)) {
-                      blocked.push(peerId);
-                      localStorage.setItem('securevoice_blocked', JSON.stringify(blocked));
-                    }
-                    callSession.declineCall();
-                  }}
-                  aria-label="Block caller"
-                  style={{ background: 'var(--red)', color: 'white', opacity: 0.9 }}
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>Block</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-red"
-                  onClick={callSession.declineCall}
-                  aria-label="Decline incoming call"
-                >
-                  <PhoneOff className="w-4 h-4" />
-                  <span>Decline</span>
-                </button>
-                <button
-                  type="button"
                   className="btn btn-green"
                   onClick={callSession.answerCall}
                   aria-label="Answer incoming call"
+                  style={{ width: '100%' }}
                 >
                   <Phone className="w-4 h-4" />
                   <span>Answer</span>
                 </button>
+                <div className="inc-btns-row">
+                  <button
+                    type="button"
+                    className="btn btn-red"
+                    onClick={callSession.declineCall}
+                    aria-label="Decline incoming call"
+                  >
+                    <PhoneOff className="w-4 h-4" />
+                    <span>Decline</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-red"
+                    onClick={() => {
+                      const peerId = callSession.incomingCall.peer;
+                      const blocked = JSON.parse(localStorage.getItem('securevoice_blocked') || '[]');
+                      if (!blocked.includes(peerId)) {
+                        blocked.push(peerId);
+                        localStorage.setItem('securevoice_blocked', JSON.stringify(blocked));
+                      }
+                      callSession.declineCall();
+                    }}
+                    aria-label="Block caller"
+                    style={{ opacity: 0.85 }}
+                  >
+                    <ShieldAlert className="w-4 h-4" />
+                    <span>Block</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
