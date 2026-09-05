@@ -2,6 +2,11 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.3] - 2026-09-05
+
+### Fixed (signaling and state)
+- Resolved an edge case where force-quitting the app caused the user's permanent ID to be surrendered and regenerated upon restart. The app will now patiently back off and re-claim the exact same ID from the signaling server once the ghost connection times out, ensuring the ID never changes.
+
 ## [v3.7.2] - 2026-09-05
 
 ### Fixed (signaling and state)
