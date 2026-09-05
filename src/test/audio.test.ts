@@ -8,6 +8,11 @@ import {
   setAudioOutputDevice,
   stopMediaStream
 } from '../utils/audio';
+import {
+  registerNoiseGateWorklet,
+  NOISE_GATE_WORKLET_NAME,
+  NOISE_GATE_WORKLET_CODE
+} from '../utils/noiseGateWorklet';
 
 describe('Audio Utilities', () => {
   beforeEach(() => {
@@ -557,6 +562,36 @@ describe('Audio Utilities', () => {
 
       const nullSuccess = await setAudioOutputDevice(null, true);
       expect(nullSuccess).toBe(false);
+    });
+  });
+
+  describe('NoiseGateWorklet', () => {
+    it('exports the correct processor name and valid processor code', () => {
+      expect(NOISE_GATE_WORKLET_NAME).toBe('securevoice-noise-gate');
+      expect(NOISE_GATE_WORKLET_CODE).toContain('class NoiseGateProcessor extends AudioWorkletProcessor');
+      expect(NOISE_GATE_WORKLET_CODE).toContain("registerProcessor('securevoice-noise-gate', NoiseGateProcessor)");
+    });
+
+    it('returns false when audioContext has no audioWorklet support', async () => {
+      const mockCtxWithoutWorklet = {} as any;
+      const res = await registerNoiseGateWorklet(mockCtxWithoutWorklet);
+      expect(res).toBe(false);
+    });
+
+    it('returns false when audioContext is null or undefined', async () => {
+      const res = await registerNoiseGateWorklet(null as any);
+      expect(res).toBe(false);
+    });
+
+    it('registers worklet module when audioWorklet.addModule is present', async () => {
+      const mockCtxWithWorklet = {
+        audioWorklet: {
+          addModule: vi.fn().mockResolvedValue(undefined)
+        }
+      } as any;
+      const res = await registerNoiseGateWorklet(mockCtxWithWorklet);
+      expect(res).toBe(true);
+      expect(mockCtxWithWorklet.audioWorklet.addModule).toHaveBeenCalled();
     });
   });
 });

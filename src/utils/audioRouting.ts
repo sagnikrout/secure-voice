@@ -148,6 +148,19 @@ export function addAudioFocusListener(callback: any) {
 }
 
 /**
+ * Listen for native audio device connection changes (e.g. bluetooth headset or wired headphones)
+ */
+export function addAudioDevicesListener(callback: (data: { outputs: string[] }) => void) {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const plugin = getNativePlugin();
+    if (plugin && plugin.addListener) {
+      return plugin.addListener('audioDevicesChanged', callback);
+    }
+  }
+  return { remove: () => {} };
+}
+
+/**
  * Retrieves the currently saved audio output mode.
  * @returns {'earpiece' | 'speaker' | 'bluetooth' | 'default'}
  */

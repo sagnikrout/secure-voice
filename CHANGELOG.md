@@ -2,6 +2,17 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.0] - 2026-09-05
+
+### Added (audio processing and native platform integration)
+- Dedicated `AudioWorkletProcessor` for real-time downward RMS noise gating (`src/utils/noiseGateWorklet.ts`), running on the dedicated Web Audio rendering thread to eliminate mic processing jitter during UI re-renders, with automatic fallback to the analytical filter in non-worklet environments.
+- Reactive native Android `AudioDeviceCallback` in `AudioRoutingPlugin.java` emitting `audioDevicesChanged` events on hardware connection changes (Bluetooth SCO pairing, wired headsets), automatically refreshing available audio outputs in `useAudioDevices`.
+- TypeScript declaration merging for W3C `RTCRtpReceiver` extensions (`playoutDelayHint`), removing untyped casts across the jitter buffer controller.
+
+### Changed (styling and mobile integration)
+- Modernized mobile layout in `src/index.css` with dynamic viewport unit `100dvh` and safe-area inset padding (`env(safe-area-inset-*)`) on app containers and modal overlays.
+- Updated `index.html` viewport with `viewport-fit=cover` and added dynamic `theme-color` meta tags matching dark and light color schemes. Removed legacy debug error overlay scripts.
+
 ## [v3.6.3] - 2026-09-05
 
 ### Fixed (Android packaging)

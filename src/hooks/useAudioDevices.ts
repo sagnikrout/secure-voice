@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { STORAGE_KEYS } from '../constants/config';
+import { addAudioDevicesListener } from '../utils/audioRouting';
 
 const PREFERRED_INPUT_KEY = STORAGE_KEYS.PREFERRED_INPUT || 'securevoice_preferred_input_id';
 const PREFERRED_OUTPUT_KEY = STORAGE_KEYS.PREFERRED_OUTPUT || 'securevoice_output_mode';
@@ -138,12 +139,19 @@ export function useAudioDevices() {
       navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
     }
 
+    const nativeListener = addAudioDevicesListener(() => {
+      handleDeviceChange();
+    });
+
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
       if (navigator.mediaDevices && typeof navigator.mediaDevices.removeEventListener === 'function') {
         navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      }
+      if (nativeListener && typeof nativeListener.remove === 'function') {
+        nativeListener.remove();
       }
     };
   }, [refreshDevices]);

@@ -21,6 +21,7 @@ public class AudioRoutingPlugin extends Plugin {
     private AudioFocusRequest audioFocusRequest = null;
     private PowerManager.WakeLock proximityWakeLock = null;
     private AudioManager.OnAudioFocusChangeListener focusChangeListener = null;
+    private android.media.AudioDeviceCallback audioDeviceCallback = null;
 
     @Override
     public void load() {
@@ -33,6 +34,27 @@ public class AudioRoutingPlugin extends Plugin {
             }
         } catch (Exception e) {
             // Proximity sensor not available
+        }
+
+        // Register reactive hardware audio device listener (API 23+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+                if (audioManager != null) {
+                    audioDeviceCallback = new android.media.AudioDeviceCallback() {
+                        @Override
+                        public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+                            notifyAudioDevicesChanged();
+                        }
+
+                        @Override
+                        public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+                            notifyAudioDevicesChanged();
+                        }
+                    };
+                    audioManager.registerAudioDeviceCallback(audioDeviceCallback, null);
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -180,17 +202,12 @@ public class AudioRoutingPlugin extends Plugin {
         }
     }
 
-    @PluginMethod
-    public void getAvailableOutputs(PluginCall call) {
-        AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-        if (audioManager == null) {
-            call.reject("AudioManager not available");
-            return;
-        }
-
+    private JSArray computeAvailableOutputs(AudioManager audioManager) {
         JSArray outputs = new JSArray();
         outputs.put("earpiece");
         outputs.put("speaker");
+
+        if (audioManager == null) return outputs;
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -211,9 +228,26 @@ public class AudioRoutingPlugin extends Plugin {
                 }
             }
         } catch (Exception ignored) {}
+        return outputs;
+    }
+
+    private void notifyAudioDevicesChanged() {
+        AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        JSObject ret = new JSObject();
+        ret.put("outputs", computeAvailableOutputs(audioManager));
+        notifyListeners("audioDevicesChanged", ret);
+    }
+
+    @PluginMethod
+    public void getAvailableOutputs(PluginCall call) {
+        AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            call.reject("AudioManager not available");
+            return;
+        }
 
         JSObject ret = new JSObject();
-        ret.put("outputs", outputs);
+        ret.put("outputs", computeAvailableOutputs(audioManager));
         call.resolve(ret);
     }
 
@@ -262,6 +296,15 @@ public class AudioRoutingPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         releaseProximityLock();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && audioDeviceCallback != null) {
+            try {
+                AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+                if (audioManager != null) {
+                    audioManager.unregisterAudioDeviceCallback(audioDeviceCallback);
+                }
+            } catch (Exception ignored) {}
+            audioDeviceCallback = null;
+        }
         super.handleOnDestroy();
     }
 }
