@@ -60,6 +60,8 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
       if (destroyedRef.current) return;
       retryCountRef.current = 0;
       setMyId(id);
+      peerIdRef.current = id;
+      localStorage.setItem('securevoice_my_id', id);
       setStatus('ready');
       callbacksRef.current.addLog?.(`Connected to signaling mesh. ID: ${id}`, 'ok');
     });
@@ -144,8 +146,16 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     destroyedRef.current = false;
     initPeer(peerIdRef.current);
 
+    const handleBeforeUnload = () => {
+      if (peerRef.current && !peerRef.current.destroyed) {
+        try { peerRef.current.destroy(); } catch (e) {}
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       destroyedRef.current = true;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (peerRef.current && !peerRef.current.destroyed) {
         try { peerRef.current.destroy(); } catch (e) {}
