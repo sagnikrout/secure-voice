@@ -2,6 +2,12 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.6.3] - 2026-09-05
+
+### Fixed (Android packaging)
+- Removed invalid notification meta-data referencing non-existent `capacitor_default_color` resource in `AndroidManifest.xml` that caused AAPT resource linking failures during release packaging.
+- Re-synchronized web bundle and verified clean local and CI Android resource processing.
+
 ## [v3.6.2] - 2026-09-05
 
 ### Changed (asymmetric link adaptation)

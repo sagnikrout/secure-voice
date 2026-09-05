@@ -43,10 +43,6 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="WebRTC peer-to-peer encrypted voice calling requires persistent background connectivity" />
         </service>
-
-        <!-- Default notification icon and color -->
-        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@mipmap/ic_launcher" />
-        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/capacitor_default_color" />
     </application>
 
     <!-- Permissions for Voice Calling & WebRTC -->
