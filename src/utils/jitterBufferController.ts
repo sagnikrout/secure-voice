@@ -70,14 +70,14 @@ export class JitterBufferController {
           // 1. Modern W3C jitterBufferTarget (ms)
           if ('jitterBufferTarget' in receiver) {
             try {
-              (receiver as any).jitterBufferTarget = targetMs;
+              receiver.jitterBufferTarget = targetMs;
               applied = true;
             } catch (err) {}
           }
           // 2. Standard playoutDelayHint (seconds) for constant deterministic queue delay
           if ('playoutDelayHint' in receiver) {
             try {
-              (receiver as any).playoutDelayHint = targetMs / 1000;
+              receiver.playoutDelayHint = targetMs / 1000;
               applied = true;
             } catch (err) {}
           }

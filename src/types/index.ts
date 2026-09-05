@@ -2,6 +2,12 @@
  * SecureVoice Core Telecom & Network Type Definitions
  */
 
+declare global {
+  interface RTCRtpReceiver {
+    playoutDelayHint?: number;
+  }
+}
+
 export interface OpusConfig {
   MAX_AVERAGE_BITRATE: string;
   MIN_AVERAGE_BITRATE: string;

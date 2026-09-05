@@ -1,4 +1,5 @@
 import { audioResourceManager } from './resourceManager';
+import { registerNoiseGateWorklet, NOISE_GATE_WORKLET_NAME } from './noiseGateWorklet';
 
 /**
  * Get or create a shared AudioContext for UI audio / ringtones safely handling autoplay restrictions.
@@ -252,6 +253,34 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
 
     gateIntervalId = setInterval(evaluateNoiseGate, 16);
 
+    // AudioWorklet Optimization:
+    // When AudioWorklet is supported, offload RMS noise gating from the main thread
+    // to the real-time audio thread, stopping the 16ms setInterval.
+    let isCleanedUp = false;
+    let workletNode: any = null;
+
+    if (ctx && ctx.audioWorklet && typeof ctx.audioWorklet.addModule === 'function') {
+      registerNoiseGateWorklet(ctx).then(registered => {
+        if (registered && !isCleanedUp && typeof AudioWorkletNode !== 'undefined') {
+          try {
+            workletNode = new AudioWorkletNode(ctx, NOISE_GATE_WORKLET_NAME, {
+              processorOptions: {
+                thresholdDb: gateThreshold,
+                floor: gateFloor,
+                enabled: gateEnabled
+              }
+            });
+            if (gateIntervalId) {
+              clearInterval(gateIntervalId);
+              gateIntervalId = null;
+            }
+          } catch (workletErr) {
+            // Retain fallback interval timer
+          }
+        }
+      }).catch(() => {});
+    }
+
     // Stage 5: Dynamics Compressor (-20dB threshold, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.setValueAtTime(-20, ctx.currentTime);
@@ -297,9 +326,14 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
     audioResourceManager.registerNodes(ctx, nodes);
 
     const cleanup = () => {
+      isCleanedUp = true;
       if (gateIntervalId) {
         clearInterval(gateIntervalId);
         gateIntervalId = null;
+      }
+      if (workletNode) {
+        try { workletNode.disconnect(); } catch (e) {}
+        workletNode = null;
       }
       audioResourceManager.cleanupContext(ctx);
       Object.values(nodes).forEach(node => {
@@ -318,6 +352,9 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       nodes,
       setNoiseGateEnabled: (enabled) => {
         gateEnabled = Boolean(enabled);
+        if (workletNode && workletNode.port) {
+          try { workletNode.port.postMessage({ enabled: gateEnabled }); } catch (e) {}
+        }
         if (!gateEnabled && ctx && noiseGateGain) {
           try {
             const now = ctx.currentTime;
@@ -340,6 +377,9 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       setNoiseGateThreshold: (thresholdDb) => {
         if (typeof thresholdDb === 'number' && Number.isFinite(thresholdDb)) {
           gateThreshold = thresholdDb;
+          if (workletNode && workletNode.port) {
+            try { workletNode.port.postMessage({ thresholdDb: gateThreshold }); } catch (e) {}
+          }
         }
       },
       cleanup

@@ -109,8 +109,13 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
-  padding: 24px 16px;
+  padding: max(20px, env(safe-area-inset-top))
+           max(16px, env(safe-area-inset-right))
+           max(20px, env(safe-area-inset-bottom))
+           max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
 }
 
 .shell {
@@ -870,7 +875,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top))
+           max(20px, env(safe-area-inset-right))
+           max(20px, env(safe-area-inset-bottom))
+           max(20px, env(safe-area-inset-left));
+  box-sizing: border-box;
   animation: fadein 0.2s ease-out;
 }
 
