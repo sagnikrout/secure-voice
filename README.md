@@ -1,4 +1,4 @@
-# SecureVoice (v3.6.2)
+# SecureVoice (v3.6.3)
 
 Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE, high latency, and high packet loss) and privacy-focused communication. Voice media streams connect directly between devices via WebRTC DTLS-SRTP with zero media relays by default.
 
