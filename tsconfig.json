@@ -24,7 +24,7 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src", "scripts"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist", "src/test"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

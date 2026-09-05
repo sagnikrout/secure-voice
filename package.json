@@ -1,17 +1,17 @@
 {
   "name": "secure-voice",
   "private": true,
-  "version": "3.7.0",
+  "version": "3.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc && vite build && node scripts/generate-sri.js",
+    "build": "tsc && vite build && tsx scripts/generate-sri.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:sim": "tsx scripts/webrtc-simulation-runner.js",
-    "test:network": "tsx scripts/simulate-network-impairments.js",
-    "benchmark": "tsx scripts/benchmark-network-resilience.js",
+    "test:sim": "tsx scripts/webrtc-simulation-runner.ts",
+    "test:network": "tsx scripts/simulate-network-impairments.ts",
+    "benchmark": "tsx scripts/benchmark-network-resilience.ts",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

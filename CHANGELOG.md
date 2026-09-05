@@ -2,6 +2,12 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.1] - 2026-09-05
+
+### Changed (build tools and styling)
+- Converted JavaScript build scripts (`vite.config.js`, `scripts/*.js`) to TypeScript executed via `tsx` to unify the repository's typing ecosystem.
+- Replaced legacy viewport media queries (`@media`) with modern container queries (`@container`) in `src/index.css` for structurally decoupled responsive design.
+
 ## [v3.7.0] - 2026-09-05
 
 ### Added (audio processing and native platform integration)

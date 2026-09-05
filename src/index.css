@@ -1052,13 +1052,13 @@ body {
   color: #8be0a3;
 }
 
-@media (max-width: 440px) {
+@container (max-width: 440px) {
   .id-text { font-size: 18px; }
   .timer { font-size: 32px; }
   .call-btns { gap: 12px; }
 }
 
-@media (max-width: 440px) {
+@container (max-width: 440px) {
   .app { padding: 12px 8px; }
   .card { padding: 14px; }
   .header { flex-direction: column; align-items: stretch; gap: 12px; }
