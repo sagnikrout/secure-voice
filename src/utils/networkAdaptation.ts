@@ -223,6 +223,16 @@ export class NetworkTelemetryMonitor {
         avgJitterBufferDelayMs = Math.round((currentJitterBufferDelay / currentJitterBufferEmittedCount) * 1000);
       }
 
+      // Calculate throughput deltas if previous sample timestamp exists
+      let estimatedIncomingBitrate: number | null = null;
+      if (this.prevStats.timestamp > 0 && now > this.prevStats.timestamp) {
+        const intervalSec = (now - this.prevStats.timestamp) / 1000;
+        if (intervalSec > 0 && bytesReceived >= this.prevStats.bytesReceived) {
+          const deltaBytes = bytesReceived - this.prevStats.bytesReceived;
+          estimatedIncomingBitrate = Math.round((deltaBytes * 8) / intervalSec);
+        }
+      }
+
       // Update baseline stats for next interval
       this.prevStats = {
         timestamp: now,
@@ -240,7 +250,12 @@ export class NetworkTelemetryMonitor {
       const finalInboundLoss = Number.isFinite(inboundLossRate) ? Math.max(0, Math.min(1.0, inboundLossRate)) : 0;
       const finalOutboundLoss = Number.isFinite(outboundLossRate) ? Math.max(0, Math.min(1.0, outboundLossRate)) : 0;
       const effectiveLossRate = Math.max(finalInboundLoss, finalOutboundLoss);
-      const finalJitterMs = Number.isFinite(jitterMs) ? Math.max(0, jitterMs) : (Number.isFinite(remoteJitterMs) ? Math.max(0, remoteJitterMs) : 0);
+      
+      // Asymmetric jitter: evaluate worst-case across inbound (downlink) and remote-inbound (uplink)
+      const finalInboundJitter = Number.isFinite(jitterMs) ? Math.max(0, jitterMs) : 0;
+      const finalOutboundJitter = Number.isFinite(remoteJitterMs) ? Math.max(0, remoteJitterMs) : 0;
+      const finalJitterMs = Math.max(finalInboundJitter, finalOutboundJitter);
+      
       const finalDelayMs = Number.isFinite(avgJitterBufferDelayMs) ? Math.max(0, avgJitterBufferDelayMs) : 0;
       const finalConcealment = Number.isFinite(concealmentRatio) ? Math.max(0, Math.min(1.0, concealmentRatio)) : 0;
       const finalAudioLevel = Number.isFinite(audioLevel) ? Math.max(0, Math.min(1.0, audioLevel)) : 0;
@@ -259,6 +274,7 @@ export class NetworkTelemetryMonitor {
         candidateType,
         protocol,
         availableOutgoingBitrate,
+        estimatedIncomingBitrate,
         totalPacketsLost: currentPacketsLost,
         totalPacketsReceived: currentPacketsReceived,
         bytesReceived,

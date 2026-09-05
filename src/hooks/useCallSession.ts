@@ -517,20 +517,31 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
               callbacksRef.current.addLog?.(crossover.reason, 'info');
             }
 
-            // Aggressive Lyra Bitrate Scaling (3.2 → 6.0 → 9.2 kbps)
-            // On throttled 64 kbps links, even 10 kbps available is enough to run at max Lyra fidelity.
-            // Scale up fast, scale down cautiously (only at < 5 kbps).
-            if ((!crossover.codecChanged ? activeCodecRef.current : crossover.targetCodec) === 'lyra' && snapshot && snapshot.availableOutgoingBitrate) {
-              const bps = snapshot.availableOutgoingBitrate;
+            // Asymmetry-Aware Lyra Bitrate Scaling (3.2 → 6.0 → 9.2 kbps)
+            // Uplink and downlink are often asymmetric on throttled mobile networks (e.g. Jio post-cap).
+            // 1. availableOutgoingBitrate provides our upload headroom estimate.
+            // 2. outboundLossRate (from RTCP) reveals if the remote peer is dropping our outgoing packets.
+            // 3. inboundLossRate / effectiveLossRate indicates overall path distress.
+            // If the upload path is dropping packets (>= 4%), we step down bitrate to avoid bufferbloat.
+            if ((!crossover.codecChanged ? activeCodecRef.current : crossover.targetCodec) === 'lyra' && snapshot) {
+              const bps = snapshot.availableOutgoingBitrate || 0;
+              const outboundLoss = snapshot.outboundLossRate || 0;
+              const inboundLoss = snapshot.inboundLossRate || 0;
+              const effectiveLoss = Math.max(outboundLoss, inboundLoss);
+
               let targetLyraBitrate: LyraBitrate = 3200;
-              if (bps >= 10000) targetLyraBitrate = 9200;       // 10 kbps available → max quality
-              else if (bps >= 6500) targetLyraBitrate = 6000;   // 6.5 kbps available → mid quality
-              else targetLyraBitrate = 3200;                     // below 6.5 kbps → survival mode
+              if (bps >= 10000 && effectiveLoss < 0.04) {
+                targetLyraBitrate = 9200; // Uplink headroom and clean delivery -> maximum quality
+              } else if (bps >= 6500 && effectiveLoss < 0.08) {
+                targetLyraBitrate = 6000; // Moderate uplink or minor loss -> balanced quality
+              } else {
+                targetLyraBitrate = 3200; // Constrained uplink (<6.5 kbps) or loss >= 8% -> survival mode
+              }
 
               const currentStats = lyraManager.getStats();
               if (currentStats && currentStats.bitrateBps !== targetLyraBitrate) {
                 lyraManager.setBitrate(targetLyraBitrate);
-                callbacksRef.current.addLog?.(`Lyra v2 scaled to ${(targetLyraBitrate / 1000).toFixed(1)} kbps`, 'info');
+                callbacksRef.current.addLog?.(`Lyra v2 scaled to ${(targetLyraBitrate / 1000).toFixed(1)} kbps (Uplink: ${bps > 0 ? Math.round(bps / 1000) + 'k' : 'N/A'}, Loss: ${(effectiveLoss * 100).toFixed(1)}%)`, 'info');
               }
             }
           }

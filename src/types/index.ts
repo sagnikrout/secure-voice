@@ -50,6 +50,7 @@ export interface TelemetrySnapshot {
   candidateType: string;
   protocol: string;
   availableOutgoingBitrate: number | null;
+  estimatedIncomingBitrate: number | null;   // Derived from bytesReceived delta — downlink proxy
   totalPacketsLost: number;
   totalPacketsReceived: number;
   bytesReceived: number;
