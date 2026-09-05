@@ -114,10 +114,9 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
 
       if (err.type === 'unavailable-id' && retryCountRef.current < TIMINGS.MAX_RETRY_ATTEMPTS) {
         retryCountRef.current += 1;
-        const newId = generatePeerId();
-        peerIdRef.current = newId;
-        callbacksRef.current.addLog?.(`ID collision detected, retrying with new ID: ${newId}...`, 'info');
-        reconnectTimeoutRef.current = setTimeout(() => initPeer(newId), 300 * retryCountRef.current);
+        const existingId = peerIdRef.current;
+        callbacksRef.current.addLog?.(`ID collision detected (ghost connection). Retrying ID: ${existingId}...`, 'info');
+        reconnectTimeoutRef.current = setTimeout(() => initPeer(existingId), 5000);
       } else if (err.type === 'peer-unavailable') {
         callbacksRef.current.addLog?.('Peer unavailable or not found. Check the ID.', 'error');
         setStatus('error');
@@ -168,6 +167,9 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     myId,
     status,
     setStatus,
-    reconnect: () => initPeer(generatePeerId())
+    reconnect: () => {
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      initPeer(peerIdRef.current);
+    }
   };
 }
