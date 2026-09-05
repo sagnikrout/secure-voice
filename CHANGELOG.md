@@ -2,6 +2,13 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.6.2] - 2026-09-05
+
+### Changed (asymmetric link adaptation)
+- Added `estimatedIncomingBitrate` to telemetry snapshots, calculated from inbound byte deltas to track downlink throughput.
+- Evaluated worst-case directional jitter across both inbound (downlink) and remote RTCP (uplink) measurements, preventing high uplink jitter from being masked by clean download streams.
+- Updated Lyra dynamic bitrate scaling to account for directional packet loss asymmetry. The encoder now steps down bitrate if the remote peer reports elevated outbound packet loss, preventing uplink bufferbloat even when raw upload bandwidth appears available.
+
 ## [v3.6.1] - 2026-09-05
 
 ### Changed (audio tuning for throttled mobile networks)
