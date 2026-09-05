@@ -2,6 +2,12 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.2] - 2026-09-05
+
+### Fixed (signaling and state)
+- Resolved an issue where rapid page reloads caused PeerJS signaling ID collisions by properly terminating the WebSocket connection during the `beforeunload` lifecycle event.
+- Ensured newly generated signaling IDs fallback and persist correctly to `localStorage` when collision-induced regeneration occurs.
+
 ## [v3.7.1] - 2026-09-05
 
 ### Changed (build tools and styling)
