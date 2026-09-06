@@ -2,6 +2,20 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.8.0] - 2026-09-06
+
+### Added (platform abstraction layer and background persistence)
+- Introduced runtime platform abstraction layer separating pure web implementations from Android native plugins.
+- Implemented persistent foreground service on Android with low-importance ongoing notification to prevent process eviction.
+- Added KeepAlive watchdog service utilizing sticky service semantics and exact alarm scheduling on task removal.
+- Added boot completion broadcast receiver to restore background listening state on device startup.
+- Implemented automatic battery optimization exemption checks and intent handling.
+- Overrode root activity back navigation with background task transition to prevent process destruction.
+
+### Fixed (Capacitor plugin registration and service declaration)
+- Corrected foreground service component name in Android manifest to match actual library class.
+- Reordered custom plugin registration to precede base activity initialization.
+
 ## [v3.7.5] - 2026-09-06
 
 ### Fixed (Android signaling reconnect cadence and lifecycle cleanup)

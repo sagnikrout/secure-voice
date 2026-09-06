@@ -11,9 +11,15 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         registerPlugin(AudioRoutingPlugin.class);
+        registerPlugin(KeepAlivePlugin.class);
+        super.onCreate(savedInstanceState);
         createNotificationChannel();
+    }
+
+    @Override
+    public void onBackPressed() {
+        moveTaskToBack(true);
     }
 
     private void createNotificationChannel() {
