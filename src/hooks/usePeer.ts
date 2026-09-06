@@ -17,7 +17,7 @@ import { saveCallHistory } from '../components/RecentCalls';
 export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall }) {
   const [myId, setMyId] = useState('');
   const [status, setStatus] = useState('connecting'); // connecting, ready, reconnecting, error
-  const peerRef = useRef(null);
+  const peerRef = useRef<any>(null);
   const peerIdRef = useRef((() => {
     let id = localStorage.getItem('securevoice_my_id');
     if (!id) {
@@ -38,15 +38,35 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall]);
 
   /**
+   * Safely dismantle an existing peer instance without triggering false state events
+   */
+  const dismantlePeer = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (peerRef.current) {
+      const oldPeer = peerRef.current;
+      peerRef.current = null;
+      try {
+        oldPeer.removeAllListeners?.();
+      } catch (e) {}
+      try {
+        if (!oldPeer.destroyed) {
+          oldPeer.destroy();
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  /**
    * Initialize PeerJS connection with ICE servers
    */
-  const initPeer = useCallback((idToRegister) => {
+  const initPeer = useCallback((idToRegister: string) => {
     if (destroyedRef.current) return;
 
-    // Clean up existing peer
-    if (peerRef.current && !peerRef.current.destroyed) {
-      try { peerRef.current.destroy(); } catch (e) {}
-    }
+    // Completely silence and tear down any previous instance
+    dismantlePeer();
 
     setStatus('connecting');
     const peer = new Peer(idToRegister, {
@@ -57,7 +77,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     peerRef.current = peer;
 
     peer.on('open', (id) => {
-      if (destroyedRef.current) return;
+      if (destroyedRef.current || peerRef.current !== peer) return;
       retryCountRef.current = 0;
       setMyId(id);
       peerIdRef.current = id;
@@ -67,7 +87,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('call', (incomingCall) => {
-      if (destroyedRef.current) return;
+      if (destroyedRef.current || peerRef.current !== peer) return;
 
       // Validate incoming call object
       if (!incomingCall || !incomingCall.peer) {
@@ -109,58 +129,106 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
       callbacksRef.current.onIncomingCall?.(incomingCall);
     });
 
-    peer.on('error', (err) => {
-      if (destroyedRef.current) return;
+    peer.on('error', (err: any) => {
+      if (destroyedRef.current || peerRef.current !== peer) return;
 
-      if (err.type === 'unavailable-id' && retryCountRef.current < TIMINGS.MAX_RETRY_ATTEMPTS) {
-        retryCountRef.current += 1;
-        const existingId = peerIdRef.current;
-        callbacksRef.current.addLog?.(`ID collision detected (ghost connection). Retrying ID: ${existingId}...`, 'info');
-        reconnectTimeoutRef.current = setTimeout(() => initPeer(existingId), 5000);
-      } else if (err.type === 'peer-unavailable') {
+      if (err.type === 'unavailable-id') {
+        // Handle ghost connections on reload/restart
+        const maxRetries = 5;
+        if (retryCountRef.current < maxRetries) {
+          retryCountRef.current += 1;
+          const delays = [3000, 5000, 7000, 10000, 12000];
+          const delay = delays[retryCountRef.current - 1] || 5000;
+          callbacksRef.current.addLog?.(
+            `ID is temporarily locked on server (ghost connection). Retrying ID: ${peerIdRef.current} in ${delay / 1000}s (attempt ${retryCountRef.current}/${maxRetries})...`,
+            'info'
+          );
+          setStatus('connecting');
+          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (destroyedRef.current) return;
+            initPeer(peerIdRef.current);
+          }, delay);
+        } else {
+          // If 5 attempts spanning ~37s fail, the ID is truly occupied by another active device
+          callbacksRef.current.addLog?.('ID permanently collision-locked. Generating new permanent ID...', 'warn');
+          retryCountRef.current = 0;
+          const newId = generatePeerId();
+          peerIdRef.current = newId;
+          localStorage.setItem('securevoice_my_id', newId);
+          initPeer(newId);
+        }
+        return;
+      }
+
+      if (err.type === 'peer-unavailable') {
         callbacksRef.current.addLog?.('Peer unavailable or not found. Check the ID.', 'error');
         setStatus('error');
-      } else {
-        const errorMsg = err.type || err.message || 'Unknown PeerJS error';
-        callbacksRef.current.addLog?.(`PeerJS signaling error: ${errorMsg}`, 'error');
-        setStatus('error');
+        return;
       }
+
+      const errorMsg = err.type || err.message || 'Unknown PeerJS error';
+      callbacksRef.current.addLog?.(`PeerJS signaling error: ${errorMsg}`, 'error');
+      setStatus('error');
     });
 
     peer.on('disconnected', () => {
-      if (destroyedRef.current) return;
+      if (destroyedRef.current || peerRef.current !== peer) return;
       setStatus('reconnecting');
       callbacksRef.current.addLog?.('Disconnected from signaling server. Attempting reconnect...', 'warn');
-      try { peer.reconnect(); } catch (e) {}
+
+      // Controlled debounce reconnect, avoiding tight error loops
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (destroyedRef.current || peerRef.current !== peer) return;
+        if (!peer.destroyed && peer.disconnected) {
+          try {
+            peer.reconnect();
+          } catch (e) {
+            initPeer(peerIdRef.current);
+          }
+        }
+      }, 2500);
     });
 
     peer.on('close', () => {
-      if (destroyedRef.current) return;
+      if (destroyedRef.current || peerRef.current !== peer) return;
       callbacksRef.current.addLog?.('PeerJS connection closed', 'warn');
       setStatus('error');
     });
-  }, []);
+  }, [dismantlePeer]);
 
   useEffect(() => {
     destroyedRef.current = false;
     initPeer(peerIdRef.current);
 
     const handleBeforeUnload = () => {
-      if (peerRef.current && !peerRef.current.destroyed) {
-        try { peerRef.current.destroy(); } catch (e) {}
+      dismantlePeer();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !destroyedRef.current) {
+        // App returned to foreground: if peer is disconnected, probe clean reconnection
+        if (peerRef.current && peerRef.current.disconnected && !peerRef.current.destroyed) {
+          try {
+            peerRef.current.reconnect();
+          } catch (e) {
+            initPeer(peerIdRef.current);
+          }
+        }
       }
     };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       destroyedRef.current = true;
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (peerRef.current && !peerRef.current.destroyed) {
-        try { peerRef.current.destroy(); } catch (e) {}
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      dismantlePeer();
     };
-  }, [initPeer]);
+  }, [initPeer, dismantlePeer]);
 
   return {
     peer: peerRef.current,
@@ -168,7 +236,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     status,
     setStatus,
     reconnect: () => {
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      retryCountRef.current = 0;
       initPeer(peerIdRef.current);
     }
   };

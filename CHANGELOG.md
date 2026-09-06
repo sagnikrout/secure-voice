@@ -2,6 +2,14 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.4] - 2026-09-06
+
+### Fixed (signaling lifecycle and connection stability)
+- Eliminated event listener memory leaks and race conditions during PeerJS client dismantling by explicitly removing all listeners before destroying stale instances, preventing dead instances from emitting spurious close or disconnected events into application state.
+- Debounced automatic signaling reconnection to eliminate rapid thrashing between reconnecting and error states when socket disruptions occur.
+- Implemented a progressive backoff retry schedule (3s to 12s) for temporary ghost collisions on server restarts, retaining the permanent ID while allowing the signaling mesh to clear orphaned sockets without app crashes.
+- Added document visibility change listeners to gracefully restore signaling connections when the application returns from background on Android devices.
+
 ## [v3.7.3] - 2026-09-05
 
 ### Fixed (signaling and state)
