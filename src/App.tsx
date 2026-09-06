@@ -1,7 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { App as CapacitorApp } from '@capacitor/app';
-import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
+import { platform } from './platform';
 import {
   Shield,
   Phone,
@@ -89,51 +87,30 @@ export default function App() {
     }
   }, [callSession.isInCall]);
 
-  // Keep WebRTC background connectivity active via Android Foreground Service
+  // Initialize platform services (Foreground service, keepalive watchdog on Android; clean Web APIs on Web)
   useEffect(() => {
-    if (Capacitor.getPlatform() !== 'android') return;
+    platform.initialize().catch(err => {
+      addLog(`Platform init: ${err?.message || err}`, 'warn');
+    });
+    platform.requestPermissions().catch(() => {});
 
-    const startForeground = async () => {
-      try {
-        await ForegroundService.startForegroundService({
-          id: 112,
-          title: 'SecureVoice Active',
-          body: 'Waiting for P2P connections...',
-          smallIcon: 'ic_launcher'
-        });
-      } catch (err: any) {
-        addLog(`Foreground Service: ${err.message}`, 'error');
-      }
-    };
-    startForeground();
-
-    // Request notification permissions so local notifications work on Android 13+
-    const requestNotificationPermissions = async () => {
-      try {
-        const { LocalNotifications } = await import('@capacitor/local-notifications');
-        const perms = await LocalNotifications.checkPermissions();
-        if (perms.display !== 'granted') {
-          await LocalNotifications.requestPermissions();
-        }
-      } catch (e) {}
-    };
-    requestNotificationPermissions();
-
-    // Prevent hardware back button from closing the app; push it to background instead
-    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      if (!canGoBack) {
-        CapacitorApp.minimizeApp();
-      } else {
-        window.history.back();
-      }
+    const removeBackButton = platform.onBackButton(() => {
+      return false; // let platform handle default minimization
     });
 
     return () => {
-      // Clean up listener, but DO NOT stop the foreground service 
-      // so it survives React strict mode re-renders cleanly.
-      backButtonListener.then(listener => listener.remove()).catch(() => {});
+      removeBackButton();
     };
   }, [addLog]);
+
+  // Synchronize incoming call alerts across platforms
+  useEffect(() => {
+    if (callSession.incomingCall?.peer) {
+      platform.showIncomingCallNotification(callSession.incomingCall.peer).catch(() => {});
+    } else {
+      platform.cancelIncomingCallNotification().catch(() => {});
+    }
+  }, [callSession.incomingCall]);
 
   // Derive active UI status
   const currentStatus = callSession.isInCall
