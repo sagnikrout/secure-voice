@@ -15,7 +15,13 @@ import { saveCallHistory } from '../components/RecentCalls';
  * @returns {Object} Peer instance and control methods
  */
 export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall }) {
-  const [myId, setMyId] = useState('');
+  const [myId, setMyId] = useState(() => {
+    try {
+      return localStorage.getItem('securevoice_my_id') || '';
+    } catch (e) {
+      return '';
+    }
+  });
   const [status, setStatus] = useState('connecting'); // connecting, ready, reconnecting, error
   const peerRef = useRef<any>(null);
   const peerIdRef = useRef((() => {
@@ -78,6 +84,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
 
     peer.on('open', (id) => {
       if (destroyedRef.current || peerRef.current !== peer) return;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       retryCountRef.current = 0;
       setMyId(id);
       peerIdRef.current = id;
@@ -130,17 +140,18 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('error', (err: any) => {
+      console.error('[PeerJS-Error]', err?.type || err?.message || err);
       if (destroyedRef.current || peerRef.current !== peer) return;
 
       if (err.type === 'unavailable-id') {
         // Handle ghost connections on reload/restart
-        const maxRetries = 5;
+        const delays = [2000, 3000, 4000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000];
+        const maxRetries = delays.length;
         if (retryCountRef.current < maxRetries) {
           retryCountRef.current += 1;
-          const delays = [3000, 5000, 7000, 10000, 12000];
           const delay = delays[retryCountRef.current - 1] || 5000;
           callbacksRef.current.addLog?.(
-            `ID is temporarily locked on server (ghost connection). Retrying ID: ${peerIdRef.current} in ${delay / 1000}s (attempt ${retryCountRef.current}/${maxRetries})...`,
+            `ID is temporarily reserved on server (ghost connection). Re-claiming ID: ${peerIdRef.current} in ${delay / 1000}s (attempt ${retryCountRef.current}/${maxRetries})...`,
             'info'
           );
           setStatus('connecting');
@@ -150,7 +161,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
             initPeer(peerIdRef.current);
           }, delay);
         } else {
-          // If 5 attempts spanning ~37s fail, the ID is truly occupied by another active device
+          // If ~70s of attempts fail, the ID is truly occupied by another active device
           callbacksRef.current.addLog?.('ID permanently collision-locked. Generating new permanent ID...', 'warn');
           retryCountRef.current = 0;
           const newId = generatePeerId();
@@ -173,12 +184,14 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('disconnected', () => {
+      console.log('[PeerJS-Disconnected]');
       if (destroyedRef.current || peerRef.current !== peer) return;
+      if (reconnectTimeoutRef.current) return;
+
       setStatus('reconnecting');
       callbacksRef.current.addLog?.('Disconnected from signaling server. Attempting reconnect...', 'warn');
 
       // Controlled debounce reconnect, avoiding tight error loops
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = setTimeout(() => {
         if (destroyedRef.current || peerRef.current !== peer) return;
         if (!peer.destroyed && peer.disconnected) {
@@ -192,9 +205,12 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('close', () => {
+      console.log('[PeerJS-Close]');
       if (destroyedRef.current || peerRef.current !== peer) return;
       callbacksRef.current.addLog?.('PeerJS connection closed', 'warn');
-      setStatus('error');
+      if (!reconnectTimeoutRef.current) {
+        setStatus('error');
+      }
     });
   }, [dismantlePeer]);
 
@@ -220,11 +236,13 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       destroyedRef.current = true;
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       dismantlePeer();
     };

@@ -2,6 +2,14 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.7.5] - 2026-09-06
+
+### Fixed (Android signaling reconnect cadence and lifecycle cleanup)
+- Tightened ghost collision retry intervals to a 5-second polling cadence across 14 attempts (~70s total) to reclaim permanent IDs within seconds of the cloud signaling server clearing orphaned sockets.
+- Added pagehide lifecycle event listener to ensure immediate WebSocket closure frame transmission during mobile WebView disposal.
+- Pre-populated user peer ID from local storage during initial state initialization to prevent visual layout shifts and transient generating states.
+- Guarded signaling close and disconnected event handlers against active retry timers to prevent spurious error state transitions.
+
 ## [v3.7.4] - 2026-09-06
 
 ### Fixed (signaling lifecycle and connection stability)
