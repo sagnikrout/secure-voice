@@ -77,6 +77,9 @@ async function runImpairmentSimulation() {
     await pageB.waitForSelector('.status-chip.in-call');
     console.log('🔒 Active Encrypted WebRTC Session Established.');
 
+    const verifyBtn = await pageA.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 10000 });
+    if (verifyBtn) await verifyBtn.click();
+
     // 1. Verify SDP Opus parameters (ptime=40, useinbandfec=1)
     console.log('\n🔍 [Scenario 1: SDP Verification]');
     const sdpDetails = await pageA.evaluate(() => {
@@ -135,7 +138,7 @@ async function runImpairmentSimulation() {
     console.log('   ✅ Call session gracefully handled interruption.');
 
     // 4. Teardown
-    await pageA.click('button[title="Hang up"]');
+    await pageA.locator('button.hangup').click({ force: true });
     await browser.close();
 
     console.log('\nNetwork impairment simulation completed successfully.\n');

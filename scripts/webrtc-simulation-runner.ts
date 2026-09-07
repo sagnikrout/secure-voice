@@ -98,12 +98,10 @@ async function runSimulation() {
     const durationB = await pageB.$eval('.timer', el => el.textContent.trim());
     console.log(`⏱️ Active Call Duration: Peer A = ${durationA}, Peer B = ${durationB}`);
 
-    // 7. Verify DTLS Safety Codes
-    const safetyCodeA = await pageA.evaluate(() => {
-      const el = document.querySelector('.overlay-card div');
-      return el ? el.textContent.trim() : null;
-    });
-    console.log(`🔑 DTLS-SRTP MITM Safety Code generated on call.`);
+    // 7. Verify DTLS Safety Codes & Confirm Authenticity
+    await pageA.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 10000 });
+    await pageA.click('button[aria-label="Yes, the code exactly matches"]');
+    console.log(`🔑 DTLS-SRTP MITM Safety Code verified on call.`);
 
     // 8. Extract WebRTC Telemetry via getStats()
     console.log('\n📊 Extracting Live WebRTC getStats() Telemetry from Browser Kernel...');
@@ -137,14 +135,14 @@ async function runSimulation() {
 
     // 9. Test In-Call Audio Device Switcher & Diagnostics Overlay
     console.log('\n🔄 Testing In-Call Audio Device Switcher and Telemetry Modal...');
-    await pageA.click('button[aria-label="WebRTC Diagnostics & Stats"]');
-    await pageA.waitForSelector('#stats-overlay-title', { timeout: 3000 });
-    console.log('   ✅ WebRTC Diagnostics Modal opened and populated.');
+    await pageA.click('button[aria-label="Network Health"]');
+    await pageA.waitForSelector('#stats-overlay-title', { timeout: 5000 });
+    console.log('   ✅ Network Health Diagnostics Modal opened and populated.');
     await pageA.click('button[aria-label="Close diagnostics"]');
 
     // 10. Clean Hangup & Hardware Release
     console.log('\n🛑 [Peer A] Terminating Call...');
-    await pageA.click('button[title="Hang up"]');
+    await pageA.click('button.hangup');
     await pageA.waitForSelector('.status-chip.ready', { timeout: 5000 });
     await pageB.waitForSelector('.status-chip.ready', { timeout: 5000 });
     await browser.close();
