@@ -859,7 +859,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       pipelineNodesRef.current = nodes;
       pipelineCleanupRef.current = cleanup;
 
-      callbacksRef.current.addLog?.('Microphone switched seamlessly without renegotiation', 'ok');
+      callbacksRef.current.addLog?.('Microphone switched without renegotiation', 'ok');
       return true;
 
     } catch (err: any) {

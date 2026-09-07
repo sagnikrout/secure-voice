@@ -28,7 +28,7 @@ export class AudioResourceManager {
   }
 
   /**
-   * Register a single AudioNode associated with an AudioContext
+   * Register a single AudioNode of an AudioContext
    */
   registerNode<T extends AudioNode>(context: AudioContext | null | undefined, node: T | null | undefined): T | null {
     if (!node) return null;
@@ -147,7 +147,7 @@ export class AudioResourceManager {
   }
 
   /**
-   * Stop and release all tracks associated with a MediaStream
+   * Stop and release all tracks of a MediaStream
    */
   cleanupStream(stream: MediaStream | null | undefined): void {
     if (!stream) return;

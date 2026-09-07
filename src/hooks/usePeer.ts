@@ -184,7 +184,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('disconnected', () => {
-      console.log('[PeerJS-Disconnected]');
+      
       if (destroyedRef.current || peerRef.current !== peer) return;
       if (reconnectTimeoutRef.current) return;
 
@@ -205,7 +205,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('close', () => {
-      console.log('[PeerJS-Close]');
+      
       if (destroyedRef.current || peerRef.current !== peer) return;
       callbacksRef.current.addLog?.('PeerJS connection closed', 'warn');
       if (!reconnectTimeoutRef.current) {
