@@ -31,19 +31,6 @@ async function invokeNativeAudioRouting(mode: any) {
   }
 }
 
-/**
- * Checks if the current environment supports output switching.
- * @returns {boolean}
- */
-export function isOutputSwitchingSupported() {
-  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-    return true;
-  }
-  
-  // Standard web browser check
-  return typeof HTMLAudioElement !== 'undefined' && 
-         'setSinkId' in HTMLAudioElement.prototype;
-}
 
 /**
  * Sets the audio output mode (earpiece vs speaker vs bluetooth or specific hardware output deviceId)
@@ -158,13 +145,4 @@ export function addAudioDevicesListener(callback: (data: { outputs: string[] }) 
     }
   }
   return { remove: () => {} };
-}
-
-/**
- * Retrieves the currently saved audio output mode.
- * @returns {'earpiece' | 'speaker' | 'bluetooth' | 'default'}
- */
-export function getAudioOutputMode() {
-  const saved = localStorage.getItem(PREFERRED_OUTPUT_KEY);
-  return (saved === 'speaker' || saved === 'earpiece' || saved === 'bluetooth') ? saved : 'default';
 }

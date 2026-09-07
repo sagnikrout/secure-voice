@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IceRestartManager } from '../utils/iceRestartManager';
 import { AudioResourceManager } from '../utils/resourceManager';
 import { createMockPeerConnection } from './iceRestart.test';
-import { selectExtendedTier } from '../utils/networkAdaptation';
-import { transformOpusSdp, sanitizeSdp } from '../utils/webrtc';
+import { transformOpusSdp } from '../utils/webrtc';
 
 describe('Chaos Engineering & Adversarial Network Scenarios', () => {
   beforeEach(() => {
@@ -105,33 +104,9 @@ describe('Chaos Engineering & Adversarial Network Scenarios', () => {
     });
   });
 
-  describe('4. Extreme Survival Codec Adaptation Under Catastrophic Loss', () => {
-    it('selects ULTRA_LOW 1.2kbps tier under 60% catastrophic packet loss', () => {
-      const tier = selectExtendedTier({ loss: 0.60, rtt: 800, jitter: 150 });
-      expect(tier.name).toBe('ULTRA_LOW');
-      expect(tier.maxBitrateBps).toBe(1200);
-      expect(tier.ptimeMs).toBe(120);
-    });
-
-    it('selects EXTREME 2.4kbps tier under 40% severe packet loss', () => {
-      const tier = selectExtendedTier({ loss: 0.40, rtt: 600, jitter: 100 });
-      expect(tier.name).toBe('EXTREME');
-      expect(tier.maxBitrateBps).toBe(2400);
-      expect(tier.ptimeMs).toBe(100);
-    });
-
-    it('selects HQ_PLUS 24kbps wideband tier under clean high-speed network', () => {
-      const tier = selectExtendedTier({ loss: 0.001, rtt: 40, jitter: 8 });
-      expect(tier.name).toBe('HQ_PLUS');
-      expect(tier.maxBitrateBps).toBe(24000);
-      expect(tier.maxPlaybackRate).toBe(16000);
-    });
-  });
-
-  describe('5. Malformed SDP & Packet Tamper Resistance', () => {
+  describe('4. Malformed SDP & Packet Tamper Resistance', () => {
     it('safely handles empty or malformed SDP without throwing unhandled exceptions', () => {
       expect(transformOpusSdp('')).toBe('');
-      expect(sanitizeSdp('')).toBe('');
       expect(transformOpusSdp(null as any)).toBe(null);
 
       const malformedSdp = 'm=audio 9 UDP/TLS/RTP/SAVPF 111\r\ninvalid-corrupted-line\r\n';

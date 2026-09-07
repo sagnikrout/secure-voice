@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   transformOpusSdp,
-  configureAudioTransceiver,
   applySenderBitrate,
   getQualityRating,
   generateSafetyCode,
@@ -250,127 +249,6 @@ describe('WebRTC Adversarial Stress Suite — Milestone 2 (R1 Transport)', () =>
     });
   });
 
-  describe('3. Adversarial configureAudioTransceiver Robustness', () => {
-    let originalRTCRtpReceiver;
-
-    beforeEach(() => {
-      originalRTCRtpReceiver = window.RTCRtpReceiver;
-    });
-
-    afterEach(() => {
-      window.RTCRtpReceiver = originalRTCRtpReceiver;
-      vi.restoreAllMocks();
-    });
-
-    it('handles pathological inputs to transceiver without throwing uncaught exceptions', () => {
-      const badTransceivers = [
-        null,
-        undefined,
-        123,
-        'string',
-        true,
-        false,
-        [],
-        {},
-        { setCodecPreferences: 'not-a-function' },
-        { setCodecPreferences: null }
-      ];
-
-      for (const bad of badTransceivers) {
-        expect(() => {
-          const res = configureAudioTransceiver(bad);
-          expect(res).toBe(false);
-        }).not.toThrow();
-      }
-    });
-
-    it('handles corrupted RTCRtpReceiver capabilities (null, empty, malformed codec objects)', () => {
-      const corruptedCapabilities = [
-        null,
-        undefined,
-        {},
-        { codecs: null },
-        { codecs: 'not-an-array' },
-        { codecs: [] },
-        { codecs: [null, undefined, 123, 'str', {}] },
-        { codecs: [{ mimeType: null }, { mimeType: undefined }, { mimeType: 123 }] }
-      ];
-
-      for (const cap of corruptedCapabilities) {
-        window.RTCRtpReceiver = {
-          getCapabilities: vi.fn(() => cap)
-        };
-
-        const mockTransceiver = { setCodecPreferences: vi.fn() };
-        expect(() => {
-          const res = configureAudioTransceiver(mockTransceiver);
-          expect(res).toBe(false);
-          expect(mockTransceiver.setCodecPreferences).not.toHaveBeenCalled();
-        }).not.toThrow();
-      }
-    });
-
-    it('handles RTCRtpReceiver.getCapabilities throwing an error', () => {
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => {
-          throw new Error('SecurityError: Not allowed');
-        })
-      };
-
-      const mockTransceiver = { setCodecPreferences: vi.fn() };
-      expect(() => {
-        const res = configureAudioTransceiver(mockTransceiver);
-        expect(res).toBe(false);
-      }).not.toThrow();
-    });
-
-    it('handles setCodecPreferences throwing TypeError or InvalidModificationError', () => {
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => ({
-          codecs: [
-            { mimeType: 'audio/opus', clockRate: 48000, channels: 2 }
-          ]
-        }))
-      };
-
-      const mockTransceiver = {
-        setCodecPreferences: vi.fn(() => {
-          throw new TypeError('Invalid codec list');
-        })
-      };
-
-      expect(() => {
-        const res = configureAudioTransceiver(mockTransceiver);
-        expect(res).toBe(false);
-      }).not.toThrow();
-    });
-
-    it('preserves all non-matching codecs in preference list to prevent codec dropping', () => {
-      const mockCodecs = [
-        { mimeType: 'audio/PCMU', clockRate: 8000, channels: 1 },
-        { mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
-        { mimeType: 'audio/telephone-event', clockRate: 8000 },
-        { mimeType: 'audio/red', clockRate: 48000, channels: 2 },
-        { mimeType: 'audio/CN', clockRate: 8000 }
-      ];
-
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => ({ codecs: mockCodecs }))
-      };
-
-      const mockTransceiver = { setCodecPreferences: vi.fn() };
-      const success = configureAudioTransceiver(mockTransceiver);
-
-      expect(success).toBe(true);
-      const passedList = mockTransceiver.setCodecPreferences.mock.calls[0][0];
-      expect(passedList).toHaveLength(5);
-      expect(passedList[0].mimeType).toBe('audio/red');
-      expect(passedList[1].mimeType).toBe('audio/opus');
-      expect(passedList).toContain(mockCodecs[0]);
-      expect(passedList).toContain(mockCodecs[2]);
-      expect(passedList).toContain(mockCodecs[4]);
-    });
-  });
 
   describe('4. Adversarial applySenderBitrate Sender Constraints & Fault Tolerance', () => {
 

@@ -4,8 +4,6 @@ import {
   unlockAudioContext,
   createDenoisePipeline,
   playRingtone,
-  createMicLoopbackTest,
-  setAudioOutputDevice,
   stopMediaStream
 } from '../utils/audio';
 
@@ -193,74 +191,6 @@ describe('Deep Adversarial Stress Suite (Milestone 1 Iteration 2)', () => {
     });
   });
 
-  describe('C. Microphone Loopback Test Fault Tolerance', () => {
-    it('handles immediate stopLoopbackTest called before getUserMedia resolves', async () => {
-      let resolveGUM;
-      navigator.mediaDevices.getUserMedia.mockImplementationOnce(() => {
-        return new Promise((resolve) => {
-          resolveGUM = resolve;
-        });
-      });
-
-      const track = { stop: vi.fn(), enabled: true };
-      const stream = {
-        getTracks: () => [track],
-        getAudioTracks: () => [track]
-      };
-
-      const testPromise = createMicLoopbackTest('mic-delayed', vi.fn());
-
-      // Resolve stream
-      resolveGUM(stream);
-      const stop = await testPromise;
-
-      expect(typeof stop).toBe('function');
-      stop();
-      expect(track.stop).toHaveBeenCalled();
-    });
-
-    it('handles loopback test with throwing navigator.mediaDevices.getUserMedia', async () => {
-      navigator.mediaDevices.getUserMedia.mockRejectedValueOnce(
-        new DOMException('Permission denied by system policy', 'NotAllowedError')
-      );
-
-      await expect(createMicLoopbackTest('blocked-device', vi.fn())).rejects.toThrow('Permission denied');
-    });
-
-    it('handles multiple consecutive stop calls on loopback test (idempotency)', async () => {
-      const track = { stop: vi.fn(), enabled: true };
-      const stream = {
-        getTracks: () => [track],
-        getAudioTracks: () => [track]
-      };
-      navigator.mediaDevices.getUserMedia.mockResolvedValueOnce(stream);
-
-      const stop = await createMicLoopbackTest('mic-1', vi.fn());
-      expect(() => {
-        stop();
-        stop();
-        stop();
-      }).not.toThrow();
-      expect(track.stop).toHaveBeenCalled();
-    });
-
-    it('handles loopback test when audioCtx.close() fails on cleanup', async () => {
-      const originalAudioCtx = window.AudioContext;
-      try {
-        class FaultyCloseCtx extends originalAudioCtx {
-          close() {
-            return Promise.reject(new Error('Close rejection'));
-          }
-        }
-        window.AudioContext = FaultyCloseCtx;
-
-        const stop = await createMicLoopbackTest('mic-fail-close', vi.fn());
-        expect(() => stop()).not.toThrow();
-      } finally {
-        window.AudioContext = originalAudioCtx;
-      }
-    });
-  });
 
   describe('D. Ringtone & Vibration Stress Vectors', () => {
     it('handles navigator.vibrate throwing security exception gracefully', () => {
@@ -312,29 +242,4 @@ describe('Deep Adversarial Stress Suite (Milestone 1 Iteration 2)', () => {
     });
   });
 
-  describe('E. Audio Device Output Routing Resiliency', () => {
-    it('returns false safely when audioElement.setSinkId throws synchronously', async () => {
-      const mockAudio = {
-        setSinkId: () => {
-          throw new Error('Synchronous setSinkId failure');
-        }
-      };
-
-      const result = await setAudioOutputDevice(mockAudio, true);
-      expect(result).toBe(false);
-    });
-
-    it('returns false safely when audioElement is frozen or non-extensible', async () => {
-      const frozenObj = Object.freeze({});
-      const result = await setAudioOutputDevice(frozenObj, true);
-      expect(result).toBe(false);
-    });
-
-    it('returns false safely when audioElement is null, undefined, string, or number', async () => {
-      expect(await setAudioOutputDevice(null, true)).toBe(false);
-      expect(await setAudioOutputDevice(undefined, true)).toBe(false);
-      expect(await setAudioOutputDevice('speaker-1', true)).toBe(false);
-      expect(await setAudioOutputDevice(1234, false)).toBe(false);
-    });
-  });
 });

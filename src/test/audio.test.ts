@@ -4,8 +4,6 @@ import {
   unlockAudioContext,
   createDenoisePipeline,
   playRingtone,
-  createMicLoopbackTest,
-  setAudioOutputDevice,
   stopMediaStream
 } from '../utils/audio';
 import {
@@ -498,34 +496,7 @@ describe('Audio Utilities', () => {
     });
   });
 
-  describe('createMicLoopbackTest, playRingtone & setAudioOutputDevice', () => {
-    it('createMicLoopbackTest sets up 250ms delay, gain, analyser and triggers onLevel', async () => {
-      const onLevel = vi.fn();
-      const stop = await createMicLoopbackTest('default-mic', onLevel);
-
-      expect(typeof stop).toBe('function');
-      vi.advanceTimersByTime(60);
-      expect(onLevel).toHaveBeenCalled();
-
-      stop();
-    });
-
-    it('createMicLoopbackTest tolerates exceptions in onLevel callback without throwing unhandled exceptions', async () => {
-      const throwingOnLevel = vi.fn().mockImplementation(() => {
-        throw new Error('UI render error');
-      });
-      const stop = await createMicLoopbackTest('default-mic', throwingOnLevel);
-
-      expect(() => vi.advanceTimersByTime(60)).not.toThrow();
-      stop();
-    });
-
-    it('createMicLoopbackTest catches getUserMedia error and cleans up resources', async () => {
-      navigator.mediaDevices.getUserMedia.mockRejectedValueOnce(new Error('Permission denied'));
-
-      await expect(createMicLoopbackTest('blocked-mic', vi.fn())).rejects.toThrow('Permission denied');
-    });
-
+  describe('playRingtone', () => {
     it('playRingtone starts tone and vibration and returns working cleanup function', () => {
       const stop = playRingtone();
       expect(navigator.vibrate).toHaveBeenCalled();
@@ -533,35 +504,6 @@ describe('Audio Utilities', () => {
 
       stop();
       expect(navigator.vibrate).toHaveBeenCalledWith(0);
-    });
-
-    it('setAudioOutputDevice sets speaker and earpiece output modes', async () => {
-      const mockAudio = {
-        setSinkId: vi.fn().mockResolvedValue(undefined),
-      };
-
-      const speakerSuccess = await setAudioOutputDevice(mockAudio, true);
-      expect(mockAudio.setSinkId).toHaveBeenCalledWith('default');
-      expect(speakerSuccess).toBe(true);
-
-      const earpieceSuccess = await setAudioOutputDevice(mockAudio, false);
-      expect(mockAudio.setSinkId).toHaveBeenCalledWith('communications');
-      expect(earpieceSuccess).toBe(true);
-    });
-
-    it('setAudioOutputDevice returns false when setSinkId is not supported or rejects', async () => {
-      const mockAudioWithoutSink = {};
-      const success = await setAudioOutputDevice(mockAudioWithoutSink, true);
-      expect(success).toBe(false);
-
-      const mockAudioFailing = {
-        setSinkId: vi.fn().mockRejectedValue(new Error('Device not found')),
-      };
-      const failSuccess = await setAudioOutputDevice(mockAudioFailing, true);
-      expect(failSuccess).toBe(false);
-
-      const nullSuccess = await setAudioOutputDevice(null, true);
-      expect(nullSuccess).toBe(false);
     });
   });
 

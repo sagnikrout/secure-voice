@@ -78,13 +78,6 @@ export function generatePeerId(length = 9) {
  * @param {number|string} [options.redPayloadType] - Custom dynamic payload type for RED
  * @returns {string} Munged SDP string
  */
-/**
- * Sanitize SDP string to strip non-printable characters and malformed control bytes
- */
-export function sanitizeSdp(sdp: string): string {
-  if (!sdp || typeof sdp !== 'string') return '';
-  return sdp.replace(/[^\x20-\x7E\r\n]/g, '').trim();
-}
 
 export function transformOpusSdp(sdp: string, options: any = {}): string {
   if (!sdp || typeof sdp !== 'string') return sdp;
@@ -280,52 +273,6 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
   return allLines.join(delimiter);
 }
 
-/**
- * Configure RTCRtpTransceiver codec preferences to prioritize RFC 2198 RED and Opus
- * @param {RTCRtpTransceiver} transceiver - Audio transceiver instance
- * @returns {boolean} True if codec preferences were successfully set, false otherwise
- */
-export function configureAudioTransceiver(transceiver: any) {
-  if (!transceiver || typeof transceiver.setCodecPreferences !== 'function') {
-    return false;
-  }
-  if (typeof RTCRtpReceiver === 'undefined' || typeof RTCRtpReceiver.getCapabilities !== 'function') {
-    return false;
-  }
-
-  try {
-    const capabilities = RTCRtpReceiver.getCapabilities('audio');
-    if (!capabilities || !Array.isArray(capabilities.codecs) || capabilities.codecs.length === 0) {
-      return false;
-    }
-
-    const codecs = capabilities.codecs;
-    const redCodec = codecs.find(c => c && c.mimeType && c.mimeType.toLowerCase() === 'audio/red');
-    const opusCodec = codecs.find(c => c && c.mimeType && c.mimeType.toLowerCase() === 'audio/opus');
-
-    if (!opusCodec) {
-      return false;
-    }
-
-    const preferredCodecs = [];
-    if (redCodec) {
-      preferredCodecs.push(redCodec);
-    }
-    preferredCodecs.push(opusCodec);
-
-    // Append remaining audio codecs as fallbacks (preserving capability list integrity)
-    codecs.forEach(codec => {
-      if (codec && codec !== redCodec && codec !== opusCodec) {
-        preferredCodecs.push(codec);
-      }
-    });
-
-    transceiver.setCodecPreferences(preferredCodecs);
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
 
 /**
  * Apply bitrate constraint, sender priority, and DSCP network priority to an RTCRtpSender
@@ -410,7 +357,3 @@ export async function generateSafetyCode(localSdp: any, remoteSdp: any) {
   return String(num % 100000000).padStart(8, '0');
 }
 
-/**
- * Re-export Lyra frame validator for convenience
- */
-export { isLyraFrame } from './lyra/lyraTransform';

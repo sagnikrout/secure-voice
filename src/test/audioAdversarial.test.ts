@@ -4,8 +4,6 @@ import {
   unlockAudioContext,
   createDenoisePipeline,
   playRingtone,
-  createMicLoopbackTest,
-  setAudioOutputDevice,
   stopMediaStream
 } from '../utils/audio';
 
@@ -563,66 +561,9 @@ describe('Adversarial & Stress Testing: Web Audio Pipeline (Milestone 1)', () =>
   });
 
   // =========================================================================
-  // 4. MICROPHONE LOOPBACK TEST, RINGTONE & DEVICE ROUTING STRESS
+  // 4. RINGTONE ADVERSARIAL TESTS
   // =========================================================================
-  describe('Loopback, Ringtone & Audio Device Routing Adversarial Tests', () => {
-    it('createMicLoopbackTest handles exception inside onLevel callback cleanly', async () => {
-      const throwingOnLevel = vi.fn().mockImplementation(() => {
-        throw new Error('UI rendering exception in VU meter');
-      });
-
-      const stop = await createMicLoopbackTest('device-1', throwingOnLevel);
-      expect(typeof stop).toBe('function');
-
-      // Let interval fire
-      expect(() => vi.advanceTimersByTime(120)).not.toThrow();
-
-      // Clean up
-      expect(() => stop()).not.toThrow();
-    });
-
-    it('createMicLoopbackTest handles analyser exception inside tick callback cleanly', async () => {
-      const onLevel = vi.fn();
-      const originalAudioContext = window.AudioContext;
-      try {
-        class FaultyAnalyserContext extends originalAudioContext {
-          createAnalyser() {
-            const a = super.createAnalyser();
-            a.getByteFrequencyData = vi.fn().mockImplementation(() => {
-              throw new Error('Hardware analyser node error');
-            });
-            return a;
-          }
-        }
-        window.AudioContext = FaultyAnalyserContext;
-
-        const stop = await createMicLoopbackTest('device-1', onLevel);
-        expect(typeof stop).toBe('function');
-
-        expect(() => vi.advanceTimersByTime(120)).not.toThrow();
-
-        stop();
-      } finally {
-        window.AudioContext = originalAudioContext;
-      }
-    });
-
-    it('createMicLoopbackTest supports multiple concurrent loopback instances without collision', async () => {
-      const levels1 = [];
-      const levels2 = [];
-
-      const stop1 = await createMicLoopbackTest('mic-1', lvl => levels1.push(lvl));
-      const stop2 = await createMicLoopbackTest('mic-2', lvl => levels2.push(lvl));
-
-      vi.advanceTimersByTime(100);
-
-      expect(levels1.length).toBeGreaterThan(0);
-      expect(levels2.length).toBeGreaterThan(0);
-
-      stop1();
-      stop2();
-    });
-
+  describe('Ringtone Adversarial Tests', () => {
     it('playRingtone handles missing window.AudioContext gracefully', () => {
       const originalAudioCtx = window.AudioContext;
       const originalWebkitAudioCtx = window.webkitAudioContext;
@@ -656,29 +597,6 @@ describe('Adversarial & Stress Testing: Web Audio Pipeline (Milestone 1)', () =>
         // Call stop again (idempotent)
         expect(() => stop()).not.toThrow();
       });
-    });
-
-    it('setAudioOutputDevice handles non-standard arguments and rejection errors', async () => {
-      // 1. Primitive arguments
-      expect(await setAudioOutputDevice('audio-element-string', true)).toBe(false);
-      expect(await setAudioOutputDevice(12345, false)).toBe(false);
-      expect(await setAudioOutputDevice({}, true)).toBe(false);
-
-      // 2. Audio element with setSinkId rejecting with AbortError
-      const mockElement = {
-        setSinkId: vi.fn().mockRejectedValue(new Error('AbortError: audio device in exclusive mode'))
-      };
-      expect(await setAudioOutputDevice(mockElement, true)).toBe(false);
-
-      // 3. Truthy / Falsy non-boolean isSpeakerOn arguments
-      const successfulElement = {
-        setSinkId: vi.fn().mockResolvedValue(undefined)
-      };
-      expect(await setAudioOutputDevice(successfulElement, 1)).toBe(true);
-      expect(successfulElement.setSinkId).toHaveBeenCalledWith('default');
-
-      expect(await setAudioOutputDevice(successfulElement, 0)).toBe(true);
-      expect(successfulElement.setSinkId).toHaveBeenCalledWith('communications');
     });
   });
 

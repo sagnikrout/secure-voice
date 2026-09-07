@@ -112,7 +112,7 @@ secure-voice/
 ## Testing
 
 ```bash
-# Run unit and integration tests (433 tests across 25 test files)
+# Run unit and integration tests (387 tests across 25 test files)
 npm test
 
 # Run resilience and low-bandwidth benchmarks

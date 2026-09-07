@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   transformOpusSdp,
-  configureAudioTransceiver,
   applySenderBitrate,
   getQualityRating,
   generateSafetyCode
@@ -364,56 +363,6 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
     });
   });
 
-  describe('5. Transceiver Codec Preferences Robustness', () => {
-    let originalReceiver;
-
-    beforeEach(() => {
-      originalReceiver = window.RTCRtpReceiver;
-    });
-
-    afterEach(() => {
-      window.RTCRtpReceiver = originalReceiver;
-      vi.restoreAllMocks();
-    });
-
-    it('handles empty codec list from getCapabilities gracefully', () => {
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => ({ codecs: [] }))
-      };
-      const transceiver = { setCodecPreferences: vi.fn() };
-
-      const res = configureAudioTransceiver(transceiver);
-      expect(res).toBe(false);
-      expect(transceiver.setCodecPreferences).not.toHaveBeenCalled();
-    });
-
-    it('handles null codecs array gracefully', () => {
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => ({ codecs: null }))
-      };
-      const transceiver = { setCodecPreferences: vi.fn() };
-
-      const res = configureAudioTransceiver(transceiver);
-      expect(res).toBe(false);
-      expect(transceiver.setCodecPreferences).not.toHaveBeenCalled();
-    });
-
-    it('handles codec list with missing Opus gracefully', () => {
-      window.RTCRtpReceiver = {
-        getCapabilities: vi.fn(() => ({
-          codecs: [
-            { mimeType: 'audio/PCMU', clockRate: 8000 },
-            { mimeType: 'audio/PCMA', clockRate: 8000 }
-          ]
-        }))
-      };
-      const transceiver = { setCodecPreferences: vi.fn() };
-
-      const res = configureAudioTransceiver(transceiver);
-      expect(res).toBe(false);
-      expect(transceiver.setCodecPreferences).not.toHaveBeenCalled();
-    });
-  });
 
   describe('6. Safety Code Cryptographic Determinism Invariant', () => {
     it('produces identical safety code across extreme SDP transformations', async () => {

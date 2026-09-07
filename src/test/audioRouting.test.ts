@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setAudioOutputMode, isOutputSwitchingSupported, getAudioOutputMode, getAvailableOutputs } from '../utils/audioRouting';
+import { setAudioOutputMode, getAvailableOutputs } from '../utils/audioRouting';
 import { Capacitor } from '@capacitor/core';
 
 vi.mock('@capacitor/core', () => ({
@@ -28,21 +28,6 @@ describe('audioRouting Utility', () => {
     window.HTMLAudioElement = originalHTMLAudioElement;
   });
 
-  it('detects native platform support', () => {
-    Capacitor.isNativePlatform.mockReturnValue(true);
-    Capacitor.getPlatform.mockReturnValue('android');
-    
-    expect(isOutputSwitchingSupported()).toBe(true);
-  });
-
-  it('detects standard web setSinkId support', () => {
-    Capacitor.isNativePlatform.mockReturnValue(false);
-    
-    window.HTMLAudioElement = function() {};
-    window.HTMLAudioElement.prototype.setSinkId = vi.fn();
-    
-    expect(isOutputSwitchingSupported()).toBe(true);
-  });
 
   it('calls native plugin on Android', async () => {
     Capacitor.isNativePlatform.mockReturnValue(true);
@@ -81,8 +66,4 @@ describe('audioRouting Utility', () => {
     expect(outputs).toContain('bluetooth');
   });
 
-  it('retrieves saved mode', () => {
-    localStorage.setItem('securevoice_output_mode', 'speaker');
-    expect(getAudioOutputMode()).toBe('speaker');
-  });
 });

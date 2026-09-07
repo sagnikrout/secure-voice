@@ -3,10 +3,8 @@ import {
   getAudioContext,
   unlockAudioContext,
   createDenoisePipeline,
-  createMicLoopbackTest,
   stopMediaStream,
-  playRingtone,
-  setAudioOutputDevice
+  playRingtone
 } from '../utils/audio';
 
 describe('Adversarial Stress Test: Web Audio Pre-Processing & Voice Isolation (Milestone 1)', () => {
@@ -411,62 +409,7 @@ describe('Adversarial Stress Test: Web Audio Pre-Processing & Voice Isolation (M
     });
   });
 
-  describe('5. Hardware Loopback Test Rigor & Concurrency', () => {
-    it('sets up loopback with exact 250ms anti-feedback delay and 0.4 gain', async () => {
-      const onLevel = vi.fn();
-      const stop = await createMicLoopbackTest('test-mic-id', onLevel);
-
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        audio: {
-          deviceId: { exact: 'test-mic-id' },
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-        video: false,
-      });
-
-      vi.advanceTimersByTime(50);
-      expect(onLevel).toHaveBeenCalledWith(expect.any(Number));
-
-      stop();
-    });
-
-    it('clamps normalized VU meter levels to [0.0, 1.0] under extreme volume', async () => {
-      const levels = [];
-      const onLevel = (lvl) => levels.push(lvl);
-
-      const stop = await createMicLoopbackTest(null, onLevel);
-
-      // Advance by 200ms (4 intervals)
-      vi.advanceTimersByTime(200);
-
-      expect(levels.length).toBeGreaterThanOrEqual(4);
-      levels.forEach(lvl => {
-        expect(lvl).toBeGreaterThanOrEqual(0.0);
-        expect(lvl).toBeLessThanOrEqual(1.0);
-      });
-
-      stop();
-    });
-
-    it('cleans up stream and context when loopback getUserMedia rejects', async () => {
-      navigator.mediaDevices.getUserMedia.mockRejectedValueOnce(new Error('Device not found'));
-
-      await expect(createMicLoopbackTest('missing-mic', vi.fn())).rejects.toThrow('Device not found');
-    });
-
-    it('supports rapid multiple start/stop cycles of loopback without resource leaks', async () => {
-      for (let i = 0; i < 5; i++) {
-        const onLevel = vi.fn();
-        const stop = await createMicLoopbackTest(`mic-${i}`, onLevel);
-        vi.advanceTimersByTime(50);
-        expect(onLevel).toHaveBeenCalled();
-        stop();
-      }
-    });
-  });
-
-  describe('6. Ringtone Generator & Audio Routing', () => {
+  describe('5. Ringtone Generator', () => {
     it('starts dual-tone ringtone oscillators and stops all active oscillators on cleanup', () => {
       const stopRingtone = playRingtone();
       expect(navigator.vibrate).toHaveBeenCalledWith([800, 400, 800, 400, 800]);
@@ -476,20 +419,6 @@ describe('Adversarial Stress Test: Web Audio Pre-Processing & Voice Isolation (M
 
       stopRingtone();
       expect(navigator.vibrate).toHaveBeenCalledWith(0);
-    });
-
-    it('routes audio to speaker and communications sink without throwing', async () => {
-      const mockElement = {
-        setSinkId: vi.fn().mockResolvedValue(undefined),
-      };
-
-      const speakerRes = await setAudioOutputDevice(mockElement, true);
-      expect(speakerRes).toBe(true);
-      expect(mockElement.setSinkId).toHaveBeenCalledWith('default');
-
-      const earpieceRes = await setAudioOutputDevice(mockElement, false);
-      expect(earpieceRes).toBe(true);
-      expect(mockElement.setSinkId).toHaveBeenCalledWith('communications');
     });
   });
 });
