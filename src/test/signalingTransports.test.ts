@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DataChannelTransport } from '../utils/signaling/dataChannelTransport';
-import { SignalingManager } from '../utils/signaling/index';
-import { SignalingTransport, SignalingMessage, SignalingState } from '../utils/signaling/types';
-import { E2ESignalingProtocol } from '../utils/signaling/e2eSignaling';
+import {
+  DataChannelTransport,
+  SignalingManager,
+  SignalingTransport,
+  SignalingMessage,
+  SignalingState,
+  E2ESignalingProtocol
+} from '../utils/signaling';
 
 // Mock transport implementation for testing
 class MockSignalingTransport implements SignalingTransport {

@@ -282,25 +282,15 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
  * @returns {Promise<boolean>} True if parameters were successfully applied
  */
 export async function applySenderBitrate(sender: any, bitrateBps: any, priority = 'high') {
-  if (!sender || typeof sender.getParameters !== 'function' || typeof sender.setParameters !== 'function') {
-    return false;
-  }
+  if (!sender?.getParameters || !sender?.setParameters) return false;
 
   let bitrate = Number(bitrateBps);
-  if (isNaN(bitrate) || bitrate === null) {
-    bitrate = 12000;
-  }
-  if (bitrate < 3000) {
-    bitrate = 3000;
-  } else if (bitrate > 32000) {
-    bitrate = 32000;
-  }
+  if (isNaN(bitrate) || bitrate === null) bitrate = 12000;
+  bitrate = Math.max(3000, Math.min(32000, bitrate));
 
   try {
     const params = sender.getParameters();
-    if (!params || !Array.isArray(params.encodings) || params.encodings.length === 0) {
-      return false;
-    }
+    if (!params?.encodings?.[0]) return false;
 
     params.encodings[0].maxBitrate = bitrate;
     params.encodings[0].priority = priority;
@@ -308,7 +298,7 @@ export async function applySenderBitrate(sender: any, bitrateBps: any, priority 
 
     await sender.setParameters(params);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 }

@@ -4,24 +4,18 @@ export function useTheme() {
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('securevoice_theme');
-    if (saved === 'dark') return true;
-    if (saved === 'light') return false;
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+    return saved ? saved === 'dark' : (window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  // Listen for OS theme changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => {
-      const saved = localStorage.getItem('securevoice_theme');
-      if (!saved) {
-        setDarkMode(e.matches);
-      }
+      if (!localStorage.getItem('securevoice_theme')) setDarkMode(e.matches);
     };
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);

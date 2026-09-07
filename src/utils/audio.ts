@@ -490,81 +490,29 @@ export function playRingtone() {
  * @param {AudioContext|null} [audioCtx]
  * @param {Object|Array|null} [nodes]
  */
-export function stopMediaStream(stream: any, audioCtx = null, nodes = null) {
-  // 1. Stop all tracks and disable them
+export function stopMediaStream(stream: any, audioCtx: any = null, nodes: any = null) {
   if (stream) {
     audioResourceManager.cleanupStream(stream);
-    const safeStopTrack = (track: any) => {
-      if (!track) return;
-      try {
-        if (typeof track.stop === 'function') {
-          track.stop();
-        }
-      } catch (e) {
-        console.warn('Error stopping track:', e);
-      }
-      try {
-        track.enabled = false;
-      } catch (e) {}
+    const stopTrack = (track: any) => {
+      try { track?.stop?.(); } catch (e) { console.warn('Error stopping track:', e); }
+      try { if (track) track.enabled = false; } catch {}
     };
-
-    try {
-      if (typeof stream.getTracks === 'function') {
-        const tracks = stream.getTracks();
-        if (Array.isArray(tracks)) {
-          tracks.forEach(safeStopTrack);
-        }
-      }
-    } catch (e) {
-      console.warn('Error accessing stream.getTracks():', e);
-    }
-
-    try {
-      if (typeof stream.getAudioTracks === 'function') {
-        const audioTracks = stream.getAudioTracks();
-        if (Array.isArray(audioTracks)) {
-          audioTracks.forEach(safeStopTrack);
-        }
-      }
-    } catch (e) {
-      console.warn('Error accessing stream.getAudioTracks():', e);
-    }
+    try { stream.getTracks?.()?.forEach(stopTrack); } catch (e) { console.warn('Error accessing stream.getTracks():', e); }
+    try { stream.getAudioTracks?.()?.forEach(stopTrack); } catch (e) { console.warn('Error accessing stream.getAudioTracks():', e); }
   }
 
-  // 2. Disconnect nodes & invoke cleanup if present
   if (nodes) {
-    if (typeof nodes.cleanup === 'function') {
-      try {
-        nodes.cleanup();
-      } catch (e) {
-        console.warn('Error calling nodes.cleanup():', e);
-      }
-    }
+    try { nodes.cleanup?.(); } catch (e) { console.warn('Error calling nodes.cleanup():', e); }
     try {
-      const nodeList = Array.isArray(nodes) ? nodes : Object.values(nodes);
-      nodeList.forEach(node => {
-        if (node && typeof node.disconnect === 'function') {
-          try {
-            node.disconnect();
-          } catch (e) {}
-        }
-      });
-    } catch (e) {
-      console.warn('Error disconnecting audio nodes:', e);
-    }
+      const list = Array.isArray(nodes) ? nodes : Object.values(nodes);
+      list.forEach((n: any) => { try { n?.disconnect?.(); } catch {} });
+    } catch (e) { console.warn('Error disconnecting audio nodes:', e); }
   }
 
-  // 3. Close AudioContext & cleanup from resource manager
   if (audioCtx) {
     audioResourceManager.cleanupContext(audioCtx);
     if (audioCtx.state !== 'closed') {
-      try {
-        if (typeof audioCtx.close === 'function') {
-          audioCtx.close().catch(() => {});
-        }
-      } catch (e) {
-        console.warn('Error closing AudioContext:', e);
-      }
+      try { audioCtx.close?.().catch(() => {}); } catch (e) { console.warn('Error closing AudioContext:', e); }
     }
   }
 }

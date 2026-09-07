@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { E2ESignalingProtocol } from '../utils/signaling/e2eSignaling';
+import { E2ESignalingProtocol } from '../utils/signaling';
 
 describe('E2ESignalingProtocol (Web Crypto ECDH + AES-256-GCM)', () => {
   let alice: E2ESignalingProtocol;
