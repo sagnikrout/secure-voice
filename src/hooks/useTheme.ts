@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
+/**
+ * Automatically applies dark or light theme based on device settings.
+ */
 export function useTheme() {
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const saved = localStorage.getItem('securevoice_theme');
-    return saved ? saved === 'dark' : (window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   });
 
   useEffect(() => {
@@ -12,22 +14,12 @@ export function useTheme() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('securevoice_theme')) setDarkMode(e.matches);
-    };
+    const handler = (e: MediaQueryListEvent) => setDarkMode(e.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('securevoice_theme', next ? 'dark' : 'light');
-      return next;
-    });
-  }, []);
-
-  return { darkMode, toggleTheme };
+  return { darkMode };
 }

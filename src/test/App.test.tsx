@@ -35,22 +35,18 @@ describe('App Integration', () => {
     await act(async () => {
       render(<App />);
     });
-    const input = screen.getByPlaceholderText("Enter Friend's Peer ID...");
+    const input = screen.getByPlaceholderText("Enter Friend's Peer ID...") as HTMLInputElement;
     await act(async () => {
       fireEvent.change(input, { target: { value: 'test-123!' } });
     });
     expect(input.value).toBe('TES-T12-3');
   });
 
-  it('toggles theme on dark mode button click', async () => {
+  it('automatically sets theme based on device preferences', async () => {
     await act(async () => {
       render(<App />);
     });
-    const themeBtn = screen.getByTitle('Toggle theme');
-    await act(async () => {
-      fireEvent.click(themeBtn);
-    });
-    expect(document.documentElement.dataset.theme).toBeDefined();
+    expect(document.documentElement.getAttribute('data-theme')).toMatch(/dark|light/);
   });
 
   it('opens and closes audio settings modal', async () => {
@@ -70,4 +66,3 @@ describe('App Integration', () => {
     expect(screen.queryByText('Audio Settings')).not.toBeInTheDocument();
   });
 });
-

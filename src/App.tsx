@@ -9,8 +9,6 @@ import {
   MicOff,
   Copy,
   Check,
-  Moon,
-  Sun,
   Activity,
   ShieldAlert,
   PhoneMissed,
@@ -36,7 +34,7 @@ import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
  * SecureVoice Main Application Shell
  */
 export default function App() {
-  const { darkMode, toggleTheme } = useTheme();
+  useTheme();
   const { addLog } = useLogs();
 
   const [calleeInput, setCalleeInput] = useState('');
@@ -170,16 +168,6 @@ export default function App() {
           </div>
 
           <div className="header-right">
-            <button
-              type="button"
-              className="info-btn"
-              onClick={toggleTheme}
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              title="Toggle theme"
-            >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
             <button
               type="button"
               className="info-btn"
