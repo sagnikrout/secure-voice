@@ -6,16 +6,15 @@ SecureVoice uses Vitest for unit and integration testing, Playwright for automat
 
 | Type | Command | Scope |
 | :--- | :--- | :--- |
-| Unit and integration | `npm test` | All 26 suites in `src/test/` |
+| Unit and integration | `npm test` | All 25 test files in `src/test/` |
 | Typecheck and build | `npm run build` | `tsc && vite build` |
-| Resilience benchmark | `npm run benchmark` | `tsx scripts/benchmark-network-resilience.js` |
-| Network simulation | `npm run test:network` | `tsx scripts/simulate-network-impairments.js` |
+| Resilience benchmark | `npm run benchmark` | `tsx scripts/benchmark-network-resilience.ts` |
+| Network simulation | `npm run test:network` | `tsx scripts/simulate-network-impairments.ts` |
 
 ## Test files (`src/test/`)
 
 - `App.test.tsx`: Root UI mounting and global keyboard handlers.
 - `AudioSettingsModal.test.tsx`: Device selection dropdowns and routing triggers.
-- `InfoModal.test.tsx`: Specs modal rendering and close actions.
 - `RecentCalls.test.tsx`: Call history, missed call indicators, and dial buttons.
 - `audio.test.ts`: Web Audio node graph, noise gate timers, and loopback recorder.
 - `audioAdversarial.test.ts`: Fault handling for audio context failures and broken tracks.

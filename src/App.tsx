@@ -146,7 +146,7 @@ export default function App() {
   }, [calleeInput, peer, myId, callSession]);
 
   return (
-    <div className="app"><div aria-live="polite" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Call status: {STATUS_LABELS[currentStatus]?.text || currentStatus}</div>
+    <div className="app"><div aria-live="polite" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Call status: {STATUS_LABELS[currentStatus] || currentStatus}</div>
       {/* Hidden audio element for remote WebRTC stream playback */}
       <audio
         ref={callSession.remoteAudioRef}

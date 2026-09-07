@@ -28,4 +28,4 @@ WebRTC clients handle jitter buffer sizing through NetEQ. SecureVoice configures
 
 To prevent rapid tier oscillation on unstable connections, the adaptive controller uses Exponential Moving Average (EMA) smoothing for RTT and packet loss.
 - **Downgrade hysteresis**: 1 tick (1000ms). If network metrics degrade past a tier threshold, the system steps down immediately.
-- **Upgrade hysteresis**: 4 ticks (4000ms). The system requires 4 consecutive seconds of stable metrics before upgrading the tier.
+- **Upgrade hysteresis**: 8 ticks (8000ms). The system requires 8 consecutive seconds of stable metrics before upgrading the tier.
