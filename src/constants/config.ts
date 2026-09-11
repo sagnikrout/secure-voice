@@ -40,6 +40,7 @@ export const OPUS_CONFIG = {
   USE_DTX: '1',                 // Discontinuous Transmission (saves ~50% bandwidth during pauses)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
   PACKET_LOSS_PERC: '20',       // Expected packet loss target for FEC tuning
+  COMPLEXITY: '7',              // Balance quality and CPU load
   STEREO: '0',                  // Mono voice optimization (1 channel)
   CBR: '0',                     // Variable Bit Rate (VBR) for maximum acoustic efficiency
   MAX_PLAYBACK_RATE: '16000',   // 16 kHz Wideband HD limit (reproduces crisp consonants & vocal warmth)
@@ -324,20 +325,20 @@ export const EXTENDED_BITRATE_LADDER: ExtendedLadderTier[] = [
   {
     id: 8,
     name: 'HQ_PLUS',
-    label: 'Wideband HD 24kbps',
-    maxBitrateBps: 24000,
-    bandwidthCapKbps: 28,
+    label: 'Superwideband HD 32kbps',
+    maxBitrateBps: 32000,
+    bandwidthCapKbps: 36,
     ptimeMs: 40,
     maxPtimeMs: 60,
     fecPacketLossPerc: 10,
-    maxPlaybackRate: 16000,
+    maxPlaybackRate: 32000,
     lossThreshold: 0.005,
     rttThresholdMs: 80,
     jitterThresholdMs: 15,
     concealmentThreshold: 0.005,
     codec: 'opus',
     mode: 'wideband',
-    description: 'Premium wideband voice on high-speed broadband / 5G / Wi-Fi links'
+    description: 'Premium superwideband voice on high-speed broadband / 5G / Wi-Fi links'
   }
 ];
 

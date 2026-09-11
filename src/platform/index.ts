@@ -17,6 +17,8 @@ export interface PlatformService {
   cancelIncomingCallNotification(): Promise<void>;
   onAppStateChange(callback: (isActive: boolean) => void): () => void;
   onBackButton(callback: (canGoBack: boolean) => boolean | void): () => void;
+  acquireWakeLock(): Promise<void>;
+  releaseWakeLock(): Promise<void>;
 }
 
 class WebPlatformService implements PlatformService {
@@ -88,12 +90,17 @@ class WebPlatformService implements PlatformService {
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
   }
+
+  async acquireWakeLock(): Promise<void> {}
+  async releaseWakeLock(): Promise<void> {}
 }
 
 interface KeepAlivePlugin {
   isBatteryOptimizationIgnored(): Promise<{ ignored: boolean }>;
   requestIgnoreBatteryOptimization(): Promise<void>;
   startKeepAliveWatchdog(): Promise<void>;
+  acquireWakeLock(): Promise<void>;
+  releaseWakeLock(): Promise<void>;
 }
 
 interface AudioRoutingPlugin {
@@ -218,6 +225,22 @@ class AndroidPlatformService implements PlatformService {
       }
     }).then(h => { handle = h; }).catch(() => {});
     return () => { handle?.remove?.(); };
+  }
+
+  async acquireWakeLock(): Promise<void> {
+    try {
+      await KeepAlive.acquireWakeLock();
+    } catch (e) {
+      console.warn('[AndroidPlatform] Failed to acquire wake lock:', e);
+    }
+  }
+
+  async releaseWakeLock(): Promise<void> {
+    try {
+      await KeepAlive.releaseWakeLock();
+    } catch (e) {
+      console.warn('[AndroidPlatform] Failed to release wake lock:', e);
+    }
   }
 }
 

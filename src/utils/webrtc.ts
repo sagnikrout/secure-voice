@@ -237,6 +237,7 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
         paramMap.set('sprop-stereo', stereo);
         paramMap.set('maxplaybackrate', maxPlaybackRate);
         paramMap.set('sprop-maxcapturerate', spropMaxCaptureRate);
+        paramMap.set('complexity', opts.complexity ?? OPUS_CONFIG.COMPLEXITY ?? '7');
 
         const newParams = Array.from(paramMap.entries())
           .map(([k, v]) => `${k}=${v}`)
@@ -259,7 +260,8 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
     }
 
     if (!opusFmtpFound) {
-      const opusFmtp = `a=fmtp:${opusPayloadType} maxaveragebitrate=${targetBitrate};usedtx=${useDtx};useinbandfec=${useFec};packetlossperc=${packetLossPerc};cbr=${cbr};stereo=${stereo};sprop-stereo=${stereo};maxplaybackrate=${maxPlaybackRate};sprop-maxcapturerate=${spropMaxCaptureRate}`;
+      const complexity = opts.complexity ?? OPUS_CONFIG.COMPLEXITY ?? '7';
+      const opusFmtp = `a=fmtp:${opusPayloadType} maxaveragebitrate=${targetBitrate};usedtx=${useDtx};useinbandfec=${useFec};packetlossperc=${packetLossPerc};cbr=${cbr};stereo=${stereo};sprop-stereo=${stereo};maxplaybackrate=${maxPlaybackRate};sprop-maxcapturerate=${spropMaxCaptureRate};complexity=${complexity}`;
       filteredLines.push(opusFmtp);
       if (enableRed) {
         filteredLines.push(`a=fmtp:${redPt} ${opusPayloadType}/${opusPayloadType}`);

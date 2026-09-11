@@ -25,6 +25,7 @@ import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
 import { lyraManager, lyraTransformController, lyraWasmLoader } from '../utils/lyra';
 import { CodecType, CodecPreference, LyraBitrate } from '../types';
+import { platform } from '../platform';
 
 /**
  * Main call session hook managing call lifecycle, audio streams, and WebRTC state
@@ -91,8 +92,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
         if (saved === 'auto' || saved === 'opus' || saved === 'lyra') return saved as CodecPreference;
       } catch (e: any) {}
     }
-    // Default: Lyra v2 if SIMD supported, otherwise Opus
-    return lyraWasmLoader.checkCompatibility().simd ? 'lyra' : 'opus';
+    // Default: Opus for natural voice. Lyra is an ultra-low bandwidth fallback.
+    return 'opus';
   });
   const [activeCodec, setActiveCodec] = useState<CodecType>('opus');
   const crossoverHealthyTicksRef = useRef(0);
@@ -153,8 +154,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
    * Complete teardown of call session and hardware release
    */
   const endCall = useCallback(() => {
-    // 1. Abandon Native Audio Focus
+    // 1. Abandon Native Audio Focus and Wake Lock
     abandonAudioFocus();
+    platform.releaseWakeLock().catch(() => {});
     if (audioFocusListenerRef.current?.remove) {
       audioFocusListenerRef.current.remove();
       audioFocusListenerRef.current = null;
@@ -279,12 +281,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       pipelineNodesRef.current = nodes;
       pipelineCleanupRef.current = cleanup;
 
+      // Ensure CPU stays awake during call when screen turns off
+      platform.acquireWakeLock().catch(() => {});
+
       if (audioCtx) {
         callbacksRef.current.addLog?.('Web Audio 6-stage filter & noise gate active', 'ok');
       }
 
-      // Initialize Google Lyra v2 Neural Codec if preferred (or in Smart Auto Crossover mode)
-      if ((preferredCodec === 'auto' || preferredCodec === 'lyra') && lyraWasmLoader.checkCompatibility().simd) {
+      // Initialize Google Lyra v2 Neural Codec if 'lyra' is explicitly preferred
+      // If 'auto', we start with 'opus' and dynamically switch to Lyra only if the network degrades.
+      if (preferredCodec === 'lyra' && lyraWasmLoader.checkCompatibility().simd) {
         try {
           const lyraReady = await lyraManager.init({ audioCtx: audioCtx || undefined });
           if (lyraReady) {
@@ -298,7 +304,12 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
           setActiveCodec('opus');
         }
       } else {
+        if (preferredCodec === 'auto' && lyraWasmLoader.checkCompatibility().simd) {
+          // Pre-warm Lyra in the background for instant crossover if needed later
+          lyraManager.init({ audioCtx: audioCtx || undefined }).catch(() => {});
+        }
         setActiveCodec('opus');
+        callbacksRef.current.addLog?.('Opus codec active (natural human voice)', 'ok');
       }
 
       acquiringMicRef.current = false;

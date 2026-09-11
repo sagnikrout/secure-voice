@@ -58,6 +58,31 @@ public class KeepAlivePlugin extends Plugin {
         call.resolve();
     }
 
+    private PowerManager.WakeLock wakeLock;
+
+    @PluginMethod
+    public void acquireWakeLock(PluginCall call) {
+        if (wakeLock == null) {
+            PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SecureVoice:CallWakeLock");
+                wakeLock.acquire();
+                Log.d(TAG, "Partial wake lock acquired");
+            }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void releaseWakeLock(PluginCall call) {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            wakeLock = null;
+            Log.d(TAG, "Partial wake lock released");
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void startKeepAliveWatchdog(PluginCall call) {
         Context context = getContext();

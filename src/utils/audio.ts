@@ -48,11 +48,11 @@ export async function unlockAudioContext() {
 /**
  * Build 6-stage isolated Web Audio denoise and voice isolation pipeline:
  * MediaStreamSource
- *   -> Stage 1: 80Hz 2nd-order Butterworth Highpass (rumble/HVAC cut)
- *   -> Stage 2: 2.8kHz Peaking EQ (+2dB gain, Q=1.0) (vocal formant presence)
+ *   -> Stage 1: 85Hz 2nd-order Butterworth Highpass (rumble/HVAC cut)
+ *   -> Stage 2: 3.0kHz Peaking EQ (+2.5dB gain, Q=1.2) (vocal formant presence)
  *   -> Stage 3: 8.5kHz 2nd-order Lowpass (Q=0.7071) (hiss/fan cut while preserving consonants)
  *   -> Stage 4: Active downward RMS Noise Gate (AnalyserNode + GainNode envelope follower, threshold -48 dBFS, floor 0.10, attack 15ms, hold 120ms, release 220ms)
- *   -> Stage 5: Dynamics Compressor (-20dB threshold, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
+ *   -> Stage 5: Dynamics Compressor (-20dB threshold, 12dB knee, 2.5:1 ratio, 8ms attack, 130ms release)
  *   -> Stage 6: 1.15x Makeup Gain (+1.21 dB)
  *   -> MediaStreamDestination
  *
@@ -109,23 +109,23 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
 
     const source = ctx.createMediaStreamSource(stream);
 
-    // Stage 1: 80Hz 2nd-order Butterworth Highpass filter (cuts mic rumble / HVAC)
+    // Stage 1: 85Hz 2nd-order Butterworth Highpass filter (cuts mic rumble / HVAC)
     const highPass = ctx.createBiquadFilter();
     highPass.type = 'highpass';
-    highPass.frequency.setValueAtTime(80, ctx.currentTime);
+    highPass.frequency.setValueAtTime(85, ctx.currentTime);
     if (highPass.Q && highPass.Q.setValueAtTime) {
       highPass.Q.setValueAtTime(0.7071, ctx.currentTime);
     }
 
-    // Stage 2: 2.8kHz Peaking EQ (+2dB gain, Q=1.0) for vocal formant clarity
+    // Stage 2: 3.0kHz Peaking EQ (+2.5dB gain, Q=1.2) for vocal formant clarity
     const presenceEQ = ctx.createBiquadFilter();
     presenceEQ.type = 'peaking';
-    presenceEQ.frequency.setValueAtTime(2800, ctx.currentTime);
+    presenceEQ.frequency.setValueAtTime(3000, ctx.currentTime);
     if (presenceEQ.gain && presenceEQ.gain.setValueAtTime) {
-      presenceEQ.gain.setValueAtTime(2.0, ctx.currentTime);
+      presenceEQ.gain.setValueAtTime(2.5, ctx.currentTime);
     }
     if (presenceEQ.Q && presenceEQ.Q.setValueAtTime) {
-      presenceEQ.Q.setValueAtTime(1.0, ctx.currentTime);
+      presenceEQ.Q.setValueAtTime(1.2, ctx.currentTime);
     }
 
     // Stage 3: 8.5kHz 2nd-order Lowpass filter (Q=0.7071) to eliminate hiss while preserving speech articulation
@@ -281,13 +281,13 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       }).catch(() => {});
     }
 
-    // Stage 5: Dynamics Compressor (-20dB threshold, 15dB knee, 3:1 ratio, 5ms attack, 180ms release)
+    // Stage 5: Dynamics Compressor (-20dB threshold, 12dB knee, 2.5:1 ratio, 8ms attack, 130ms release)
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.setValueAtTime(-20, ctx.currentTime);
-    compressor.knee.setValueAtTime(15, ctx.currentTime);
-    compressor.ratio.setValueAtTime(3, ctx.currentTime);
-    compressor.attack.setValueAtTime(0.005, ctx.currentTime);
-    compressor.release.setValueAtTime(0.180, ctx.currentTime);
+    compressor.knee.setValueAtTime(12, ctx.currentTime);
+    compressor.ratio.setValueAtTime(2.5, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.008, ctx.currentTime);
+    compressor.release.setValueAtTime(0.130, ctx.currentTime);
 
     // Stage 6: 1.15x Makeup Gain (+1.21 dB)
     const makeupGain = ctx.createGain();

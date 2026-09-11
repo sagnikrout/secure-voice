@@ -157,7 +157,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       expect(transformed).toContain('sprop-maxcapturerate=8000');
     });
 
-    it('applies High Quality Mode parameters (20000 bps, b=AS:24, maxplaybackrate:16000)', () => {
+    it('applies High Quality Mode parameters (32000 bps, b=AS:36, maxplaybackrate:32000, complexity:7)', () => {
       const mockSdp = [
         'v=0',
         'm=audio 9 UDP/TLS/RTP/SAVPF 111',
@@ -166,20 +166,22 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       ].join('\r\n');
 
       const transformed = transformOpusSdp(mockSdp, {
-        bitrate: 20000,
-        bandwidthCapKbps: 24,
+        bitrate: 32000,
+        bandwidthCapKbps: 36,
         ptime: 40,
         maxptime: 60,
         packetLossPerc: 10,
-        maxPlaybackRate: 16000
+        maxPlaybackRate: 32000,
+        complexity: 7
       });
 
-      expect(transformed).toContain('b=AS:24');
+      expect(transformed).toContain('b=AS:36');
       expect(transformed).toContain('a=ptime:40');
       expect(transformed).toContain('a=maxptime:60');
-      expect(transformed).toContain('maxaveragebitrate=20000');
+      expect(transformed).toContain('maxaveragebitrate=32000');
       expect(transformed).toContain('packetlossperc=10');
-      expect(transformed).toContain('maxplaybackrate=16000');
+      expect(transformed).toContain('maxplaybackrate=32000');
+      expect(transformed).toContain('complexity=7');
     });
 
     it('supports toggling boolean flags (FEC off, DTX off, CBR on, Stereo on)', () => {

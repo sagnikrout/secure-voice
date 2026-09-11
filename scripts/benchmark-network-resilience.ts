@@ -64,6 +64,7 @@ assert(mungedSdpExt.includes('maxaveragebitrate=6000'), 'Opus bitrate capped to 
 assert(mungedSdpExt.includes('packetlossperc=50'), 'Opus packetlossperc configured for 50% loss tolerance');
 assert(mungedSdpExt.includes('usedtx=1'), 'Opus Discontinuous Transmission (DTX) enabled');
 assert(mungedSdpExt.includes('useinbandfec=1'), 'Opus in-band Forward Error Correction enabled');
+assert(mungedSdpExt.includes('complexity='), 'Opus complexity configured');
 assert(mungedSdpExt.includes('b=AS:8'), 'SDP session bandwidth constrained to 8 kbps');
 assert(mungedSdpExt.includes('a=ptime:60'), 'Opus ptime set to 60ms to reduce header overhead');
 assert(mungedSdpExt.includes('a=maxptime:120'), 'Opus maxptime set to 120ms');
