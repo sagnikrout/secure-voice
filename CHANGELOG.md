@@ -2,6 +2,20 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.8.1] - 2026-09-11
+
+### Added (system theme adaptation and automated E2E testing)
+- Implemented automated theme synchronization with device system dark and light display preferences.
+- Added automated end-to-end integration test suite orchestrating Android emulator and Web client calling, audio verification, diagnostics, and background keepalive workflows.
+
+### Fixed (UI presentation and test automation)
+- Enforced lowercase formatting for the version badge in the application interface.
+- Updated simulation test selectors for peer state transitions and the DTLS safety code modal.
+
+### Changed (repository hygiene and asset pruning)
+- Removed duplicate root asset files to reduce repository storage footprint.
+- Consolidated architectural modules and eliminated unused internal test utilities.
+
 ## [v3.8.0] - 2026-09-06
 
 ### Added (platform abstraction layer and background persistence)
