@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import AudioSettingsModal from '../components/AudioSettingsModal';
+import AudioSettingsModal, { CallAudioDeviceSwitcher } from '../components/AudioSettingsModal';
 
 describe('AudioSettingsModal Component', () => {
   const mockOutputs = [
@@ -111,5 +111,38 @@ describe('AudioSettingsModal Component', () => {
 
     fireEvent.click(screen.getByText('Done'));
     expect(handleClose).toHaveBeenCalledTimes(2);
+  });
+
+  describe('CallAudioDeviceSwitcher Component', () => {
+    it('renders the trigger button and toggles the settings modal on click', () => {
+      const handleToggleSpeaker = vi.fn();
+      const handleSwitchMic = vi.fn();
+
+      render(
+        <CallAudioDeviceSwitcher
+          isSpeakerOn={true}
+          onToggleSpeaker={handleToggleSpeaker}
+          activeOutputId="speaker"
+          outputDevices={[]}
+          micDevices={mockMics}
+          activeMicId="mic-1"
+          onSwitchMic={handleSwitchMic}
+        />
+      );
+
+      const triggerBtn = screen.getByLabelText('Audio Settings & Device Switcher');
+      expect(triggerBtn).toBeInTheDocument();
+
+      // Initially modal is closed
+      expect(screen.queryByText('Audio Settings')).not.toBeInTheDocument();
+
+      // Clicking trigger opens the modal
+      fireEvent.click(triggerBtn);
+      expect(screen.getByText('Audio Settings')).toBeInTheDocument();
+
+      // Clicking an output option delegates to onToggleSpeaker
+      fireEvent.click(screen.getByText('Earpiece (Handset)'));
+      expect(handleToggleSpeaker).toHaveBeenCalledWith('earpiece');
+    });
   });
 });

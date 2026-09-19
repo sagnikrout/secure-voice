@@ -15,19 +15,14 @@ import {
   Sliders
 } from 'lucide-react';
 
-import { useTheme } from './hooks/useTheme';
-import { useLogs } from './hooks/useLogs';
-import { usePeer } from './hooks/usePeer';
-import { useCallSession } from './hooks/useCallSession';
-import { useAudioDevices } from './hooks/useAudioDevices';
+import { useTheme, useLogs, usePeer, useCallSession, useAudioDevices } from './hooks';
 import { sanitizePeerId, formatTimer } from './utils/formatters';
 import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION } from './constants/config';
 
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
-import CallAudioDeviceSwitcher from './components/CallAudioDeviceSwitcher';
-import AudioSettingsModal from './components/AudioSettingsModal';
+import AudioSettingsModal, { CallAudioDeviceSwitcher } from './components/AudioSettingsModal';
 import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
 
 /**

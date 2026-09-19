@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { structuredLogger } from '../utils/structuredLogger';
 
 /**
  * Automatically applies dark or light theme based on device settings.
@@ -22,4 +23,19 @@ export function useTheme() {
   }, []);
 
   return { darkMode };
+}
+
+/**
+ * Diagnostic logging hook integrating with structured logger.
+ */
+export function useLogs() {
+  const addLog = useCallback((msg: string, level = 'info') => {
+    structuredLogger.log(level as any, 'system-log', { message: msg }, msg);
+  }, []);
+
+  return {
+    addLog,
+    clearLogs: () => structuredLogger.clearLogs(),
+    exportLogs: () => structuredLogger.exportLogs(true)
+  };
 }

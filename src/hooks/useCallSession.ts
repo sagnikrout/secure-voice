@@ -6,12 +6,8 @@ import {
   playRingtone,
   stopMediaStream
 } from '../utils/audio';
-import { transformOpusSdp, getQualityRating, generateSafetyCode, applySenderBitrate } from '../utils/webrtc';
-import { NetworkTelemetryMonitor, AdaptiveBitrateController, evaluateCodecCrossover } from '../utils/networkAdaptation';
-import { IceRestartManager } from '../utils/iceRestartManager';
-import { JitterBufferController } from '../utils/jitterBufferController';
-import { PacketPacer } from '../utils/packetPacer';
-import { TurnRelayManager } from '../utils/turnManager';
+import { transformOpusSdp } from '../utils/webrtc';
+import { CallPeerCoordinator } from '../utils/callPeerCoordinator';
 import { saveCallHistory } from '../components/RecentCalls';
 import {
   setAudioOutputMode,
@@ -46,19 +42,36 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
 
-  // Telemetry monitor, bitrate controller, ICE restart, jitter buffer, packet pacer, and TURN manager refs
-  const telemetryMonitorRef = useRef(null);
-  const bitrateControllerRef = useRef(null);
-  const iceRestartManagerRef = useRef(null);
-  const jitterControllerRef = useRef(null);
-  const packetPacerRef = useRef(null);
-  const turnRelayManagerRef = useRef(null);
+  // WebRTC Peer Connection & Telemetry Coordinator
+  const endCallRef = useRef<() => void>(() => {});
+  const coordinatorRef = useRef<CallPeerCoordinator | null>(null);
 
-  // Lazy initialization (runs once, not on every render)
-  if (!bitrateControllerRef.current) bitrateControllerRef.current = new AdaptiveBitrateController();
-  if (!jitterControllerRef.current) jitterControllerRef.current = new JitterBufferController({ onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
-  if (!packetPacerRef.current) packetPacerRef.current = new PacketPacer({ onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
-  if (!turnRelayManagerRef.current) turnRelayManagerRef.current = new TurnRelayManager(null, { onLog: (msg, level) => callbacksRef.current?.addLog?.(msg, level) });
+  // Lazy initialization of CallPeerCoordinator
+  if (!coordinatorRef.current) {
+    coordinatorRef.current = new CallPeerCoordinator({
+      onStatusChange: (status) => {
+        if (status === 'in-call') {
+          setIsInCall(true);
+        }
+        callbacksRef.current.onStatusChange?.(status);
+      },
+      onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
+      onSafetyCode: (code) => setSafetyCode(prev => prev || code),
+      onQualityChange: (q) => setQuality(q),
+      onTierChange: (tier, bps) => {
+        setActiveTier(tier);
+        currentBitrateRef.current = bps;
+      },
+      onTelemetrySnapshot: (snapshot) => setLiveTelemetry(snapshot),
+      onCodecChange: (codec) => setActiveCodec(codec),
+      onFatalDisconnect: () => {
+        callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
+        endCallRef.current?.();
+      },
+      getPreferredCodec: () => preferredCodecRef.current,
+      getActiveCodec: () => activeCodecRef.current
+    });
+  }
 
   // Timers & Stats Tracking
   const dialTimeoutRef = useRef(null);
@@ -116,7 +129,6 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
   // Ringtone player cleanup ref
   const stopRingtoneRef = useRef(null);
   const acquiringMicRef = useRef(false);
-  const safetyIntervalRef = useRef(null);
   const setupTimeoutsRef = useRef([]);
 
   // Store callbacks in a ref to prevent infinite re-renders & stale closures
@@ -162,18 +174,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       audioFocusListenerRef.current = null;
     }
 
-    // 2. Stop Telemetry Monitor, Reset Bitrate Controller and ICE Restart Manager
-    if (telemetryMonitorRef.current) {
-      telemetryMonitorRef.current.stop();
-      telemetryMonitorRef.current = null;
-    }
-    if (iceRestartManagerRef.current) {
-      iceRestartManagerRef.current.reset();
-      iceRestartManagerRef.current = null;
-    }
-    if (bitrateControllerRef.current) {
-      bitrateControllerRef.current.reset();
-    }
+    // 2. Detach and reset WebRTC peer coordinator
+    coordinatorRef.current?.detach();
 
     // 3. Close PeerJS call
     if (callRef.current) {
@@ -205,7 +207,6 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     // 6. Clear all timeouts and intervals
     if (dialTimeoutRef.current) { clearTimeout(dialTimeoutRef.current); dialTimeoutRef.current = null; }
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
-    if (safetyIntervalRef.current) { clearInterval(safetyIntervalRef.current); safetyIntervalRef.current = null; }
     setupTimeoutsRef.current.forEach(id => clearTimeout(id));
     setupTimeoutsRef.current = [];
 
@@ -242,6 +243,33 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
     callbacksRef.current.onStatusChange?.('ready');
     callbacksRef.current.addLog?.('Call terminated and audio pipeline cleanly released', 'info');
   }, [stopTimer]);
+
+  useEffect(() => {
+    endCallRef.current = endCall;
+    coordinatorRef.current?.updateCallbacks({
+      onStatusChange: (status) => {
+        if (status === 'in-call') {
+          setIsInCall(true);
+        }
+        callbacksRef.current.onStatusChange?.(status);
+      },
+      onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
+      onSafetyCode: (code) => setSafetyCode(prev => prev || code),
+      onQualityChange: (q) => setQuality(q),
+      onTierChange: (tier, bps) => {
+        setActiveTier(tier);
+        currentBitrateRef.current = bps;
+      },
+      onTelemetrySnapshot: (snapshot) => setLiveTelemetry(snapshot),
+      onCodecChange: (codec) => setActiveCodec(codec),
+      onFatalDisconnect: () => {
+        callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
+        endCall();
+      },
+      getPreferredCodec: () => preferredCodecRef.current,
+      getActiveCodec: () => activeCodecRef.current
+    });
+  }, [endCall]);
 
   /**
    * Request & build microphone stream with Web Audio processing
@@ -351,234 +379,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       const pc = call.peerConnection || (call as any)._peerConnection;
       if (!pc) return;
 
-      if (typeof window !== 'undefined') {
-        window.__SECUREVOICE_ACTIVE_PC__ = pc;
-      }
-
-      // Direct DataChannel creation for instantaneous Safety Code synchronization
-      try {
-        if (!(pc as any)._safetyChannel) {
-          const dc = pc.createDataChannel('securevoice_security_sync', { negotiated: true, id: 0 });
-          (pc as any)._safetyChannel = dc;
-          dc.onmessage = (event: any) => {
-            try {
-              const data = JSON.parse(event.data);
-              if (data && data.type === 'safety_code' && data.code) {
-                setSafetyCode(prev => prev || data.code);
-              }
-            } catch (e: any) {}
-          };
-        }
-      } catch (e: any) {}
-
-      // Generate MITM Safety Code from DTLS Fingerprints with multi-event settlement checks
-      const computeAndSetSafetyCode = async () => {
-        const localSdp = pc.currentLocalDescription?.sdp || pc.localDescription?.sdp;
-        const remoteSdp = pc.currentRemoteDescription?.sdp || pc.remoteDescription?.sdp;
-        if (localSdp && remoteSdp) {
-          try {
-            const code = await generateSafetyCode(localSdp, remoteSdp);
-            if (code) {
-              setSafetyCode(code);
-              const dc = (pc as any)._safetyChannel;
-              if (dc && dc.readyState === 'open') {
-                try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e: any) {}
-              } else if (dc) {
-                dc.onopen = () => {
-                  try { dc.send(JSON.stringify({ type: 'safety_code', code })); } catch (e: any) {}
-                };
-              }
-            }
-          } catch (err: any) {
-            callbacksRef.current.addLog?.(`Safety code generation failed: ${err.message}`, 'warn');
-          }
-        }
-      };
-
-      // Try immediately and on continuous interval during handshake
-      computeAndSetSafetyCode();
-      if (safetyIntervalRef.current) clearInterval(safetyIntervalRef.current);
-      safetyIntervalRef.current = setInterval(computeAndSetSafetyCode, 250);
-      setTimeout(() => { if (safetyIntervalRef.current) { clearInterval(safetyIntervalRef.current); safetyIntervalRef.current = null; } }, 8000);
-
-      if (pcInitialized) return;
-      pcInitialized = true;
-
       const isCaller = Boolean(call.options && call.options._isCaller);
-
-      // Instantiate IceRestartManager
-      const iceManager = new IceRestartManager({
-        onStatusChange: (status) => {
-          if (status === 'in-call') {
-            setIsInCall(true);
-          } else if (status === 'reconnecting') {
-            auditoryFeedback.notifyReconnecting();
-          }
-          callbacksRef.current.onStatusChange?.(status);
-        },
-        onLog: (msg, level) => callbacksRef.current.addLog?.(msg, level),
-        onDiagnostic: (event, data) => {
-          const level = event.includes('fail') || event.includes('tripped') ? 'warn' : 'info';
-          structuredLogger.log(level, event, data);
-        },
-        onFatalDisconnect: () => {
-          callbacksRef.current.addLog?.('Connection recovery failed after 5 attempts. Terminating call.', 'error');
-          endCall();
-        },
-        sendRenegotiation: async (msg) => {
-          if (call.dataChannel && call.dataChannel.readyState === 'open') {
-            try {
-              call.dataChannel.send(JSON.stringify(msg));
-            } catch (e: any) {}
-          }
-        },
-        sdpTransform: (sdp) => {
-          const currentTier = bitrateControllerRef.current.getCurrentTier();
-          return transformOpusSdp(sdp, {
-            bitrate: currentTier.maxBitrateBps,
-            bandwidthCapKbps: currentTier.bandwidthCapKbps,
-            ptime: currentTier.ptimeMs,
-            maxptime: currentTier.maxPtimeMs,
-            packetLossPerc: currentTier.fecPacketLossPerc,
-            maxPlaybackRate: currentTier.maxPlaybackRate
-          });
-        }
-      });
-      iceRestartManagerRef.current = iceManager;
-
-      pc.onsignalingstatechange = () => {
-        computeAndSetSafetyCode();
-      };
-
-      pc.onconnectionstatechange = () => {
-        computeAndSetSafetyCode();
-        iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
-        if (pc.connectionState === 'connected') {
-          turnRelayManagerRef.current.recordP2PSuccess();
-        } else if (pc.connectionState === 'failed') {
-          turnRelayManagerRef.current.recordP2PFailure();
-        }
-        if (pc.connectionState === 'closed') {
-          endCall();
-        }
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        computeAndSetSafetyCode();
-        iceManager.handleStateChange(pc.connectionState, pc.iceConnectionState, pc, isCaller);
-        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-          turnRelayManagerRef.current.recordP2PSuccess();
-        } else if (pc.iceConnectionState === 'failed') {
-          turnRelayManagerRef.current.recordP2PFailure();
-        }
-      };
-
-      // Instantiate NetworkTelemetryMonitor & wire to AdaptiveBitrateController
-      if (telemetryMonitorRef.current) {
-        telemetryMonitorRef.current.stop();
-        telemetryMonitorRef.current = null;
-      }
-
-      const monitor = new NetworkTelemetryMonitor(pc, async (snapshot) => {
-        setLiveTelemetry(snapshot);
-        if (snapshot && snapshot.rttMs !== null && snapshot.rttMs !== undefined) {
-          setQuality(getQualityRating(snapshot.rttSeconds));
-        }
-
-        // Dynamic Adaptive Headroom Scaling for Packet Pacer
-        if (snapshot) {
-          packetPacerRef.current.updateHeadroom({
-            bufferOccupancy: snapshot.avgJitterBufferDelayMs ? Math.min(100, Math.round(snapshot.avgJitterBufferDelayMs / 2)) : undefined,
-            loss: snapshot.effectiveLossRate,
-            jitter: snapshot.jitterMs,
-            rtt: snapshot.rttMs ?? undefined
-          });
-        }
-
-        // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation
-        const evaluation = bitrateControllerRef.current.evaluate(snapshot);
-        if (evaluation.tierChanged) {
-          setActiveTier(evaluation.currentTier);
-          currentBitrateRef.current = evaluation.targetBitrateBps;
-          const audioSender = pc.getSenders?.()?.find(s => s.track && s.track.kind === 'audio');
-          if (audioSender) {
-            await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
-            callbacksRef.current.addLog?.(evaluation.reason, 'info');
-          }
-
-          // 1. Dynamic Jitter Buffer Target Adjustment (NetEQ margin tuning)
-          jitterControllerRef.current.applyForTier(evaluation.currentTier.name, pc);
-
-          // 2. Packet Pacing & Traffic Shaping (router queue overflow prevention)
-          await packetPacerRef.current.applyForTierObject(evaluation.currentTier, pc);
-        }
-
-          // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
-          if (preferredCodecRef.current === 'auto') {
-            const crossover = evaluateCodecCrossover({
-              snapshot,
-              currentCodec: activeCodecRef.current,
-              consecutiveHealthyTicks: crossoverHealthyTicksRef.current,
-              simdSupported: lyraWasmLoader.checkCompatibility().simd
-            });
-            crossoverHealthyTicksRef.current = crossover.consecutiveHealthyTicks;
-            if (crossover.codecChanged) {
-              lyraManager.setActiveCodec(crossover.targetCodec);
-              setActiveCodec(crossover.targetCodec);
-              callbacksRef.current.addLog?.(crossover.reason, 'info');
-            }
-
-            // Asymmetry-Aware Lyra Bitrate Scaling (3.2 → 6.0 → 9.2 kbps)
-            // Uplink and downlink are often asymmetric on throttled mobile networks (e.g. Jio post-cap).
-            // 1. availableOutgoingBitrate provides our upload headroom estimate.
-            // 2. outboundLossRate (from RTCP) reveals if the remote peer is dropping our outgoing packets.
-            // 3. inboundLossRate / effectiveLossRate indicates overall path distress.
-            // If the upload path is dropping packets (>= 4%), we step down bitrate to avoid bufferbloat.
-            if ((!crossover.codecChanged ? activeCodecRef.current : crossover.targetCodec) === 'lyra' && snapshot) {
-              const bps = snapshot.availableOutgoingBitrate || 0;
-              const outboundLoss = snapshot.outboundLossRate || 0;
-              const inboundLoss = snapshot.inboundLossRate || 0;
-              const effectiveLoss = Math.max(outboundLoss, inboundLoss);
-
-              let targetLyraBitrate: LyraBitrate = 3200;
-              if (bps >= 10000 && effectiveLoss < 0.04) {
-                targetLyraBitrate = 9200; // Uplink headroom and clean delivery -> maximum quality
-              } else if (bps >= 6500 && effectiveLoss < 0.08) {
-                targetLyraBitrate = 6000; // Moderate uplink or minor loss -> balanced quality
-              } else {
-                targetLyraBitrate = 3200; // Constrained uplink (<6.5 kbps) or loss >= 8% -> survival mode
-              }
-
-              const currentStats = lyraManager.getStats();
-              if (currentStats && currentStats.bitrateBps !== targetLyraBitrate) {
-                lyraManager.setBitrate(targetLyraBitrate);
-                callbacksRef.current.addLog?.(`Lyra v2 scaled to ${(targetLyraBitrate / 1000).toFixed(1)} kbps (Uplink: ${bps > 0 ? Math.round(bps / 1000) + 'k' : 'N/A'}, Loss: ${(effectiveLoss * 100).toFixed(1)}%)`, 'info');
-              }
-            }
-          }
-      }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
-
-      monitor.start();
-      telemetryMonitorRef.current = monitor;
-
-      // Attach Lyra neural transform streams to audio senders and receivers
-      try {
-        const audioSenders = pc.getSenders?.()?.filter(s => s.track && s.track.kind === 'audio');
-        if (audioSenders && audioSenders.length > 0) {
-          audioSenders.forEach(s => lyraTransformController.attachSender(s));
-        }
-        const audioReceivers = pc.getReceivers?.()?.filter(r => r.track && r.track.kind === 'audio');
-        if (audioReceivers && audioReceivers.length > 0) {
-          audioReceivers.forEach(r => lyraTransformController.attachReceiver(r));
-        }
-      } catch (e: any) {
-        console.warn('Lyra transform attachment notice:', e);
-      }
-
-      // Enforce constant-latency jitter buffer target and traffic pacing on startup
-      const initialTier = bitrateControllerRef.current.getCurrentTier();
-      jitterControllerRef.current.applyForTier(initialTier.name, pc);
-      packetPacerRef.current.applyForTierObject(initialTier, pc).catch(() => {});
+      coordinatorRef.current?.attach(call, isCaller);
     };
 
     // Initialize immediately if peer connection already exists on call object
