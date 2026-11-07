@@ -199,6 +199,12 @@ export class CallPeerCoordinator {
           jitter: snapshot.jitterMs,
           rtt: snapshot.rttMs ?? undefined
         });
+
+        // Continuous Elastic Jitter Buffer Adjustment (Shock Absorber)
+        this.jitterController.applyContinuousTarget({
+          jitterMs: snapshot.jitterMs,
+          lossRate: snapshot.effectiveLossRate
+        }, pc);
       }
 
       // Adaptive Bitrate & Jitter Buffer & Packet Pacing Evaluation

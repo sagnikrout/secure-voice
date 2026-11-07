@@ -36,6 +36,7 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   const lastIncomingCallTimeRef = useRef(0);
   const destroyedRef = useRef(false);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatIntervalRef = useRef<any>(null);
 
   // Store callbacks in a ref to avoid infinite re-initialization loops
   const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall });
@@ -50,6 +51,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
     }
     if (peerRef.current) {
       const oldPeer = peerRef.current;
@@ -94,6 +99,18 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
       localStorage.setItem('securevoice_my_id', id);
       setStatus('ready');
       callbacksRef.current.addLog?.(`Connected to signaling mesh. ID: ${id}`, 'ok');
+
+      // 15-second signaling keep-alive heartbeat to prevent cellular carrier NAT timeouts
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = setInterval(() => {
+        if (peerRef.current && !peerRef.current.destroyed && !peerRef.current.disconnected) {
+          try {
+            if ((peerRef.current as any).socket && typeof (peerRef.current as any).socket.send === 'function') {
+              (peerRef.current as any).socket.send({ type: 'HEARTBEAT' });
+            }
+          } catch (e) {}
+        }
+      }, 15000);
     });
 
     peer.on('call', (incomingCall) => {

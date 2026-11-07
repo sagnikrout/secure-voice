@@ -85,7 +85,7 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
   const opts: any = options && typeof options === 'object' ? options : {};
 
   // Options normalization with fallbacks to OPUS_CONFIG
-  const targetBitrate = String(opts.bitrate ?? opts.maxaveragebitrate ?? OPUS_CONFIG.MAX_AVERAGE_BITRATE ?? '12000');
+  const targetBitrate = String(opts.bitrate ?? opts.maxaveragebitrate ?? OPUS_CONFIG.MAX_AVERAGE_BITRATE ?? '32000');
 
   const normalizeBool = (val: any, defaultVal: any) => {
     if (val === undefined || val === null) return defaultVal;
@@ -100,12 +100,12 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
   const cbr = normalizeBool(opts.cbr, OPUS_CONFIG.CBR ?? '0');
   const stereo = normalizeBool(opts.stereo, OPUS_CONFIG.STEREO ?? '0');
 
-  const packetLossPerc = String(opts.packetLossPerc ?? opts.packetlossperc ?? opts.packetLossPercentage ?? OPUS_CONFIG.PACKET_LOSS_PERC ?? '20');
-  const maxPlaybackRate = String(opts.maxPlaybackRate ?? opts.maxplaybackrate ?? OPUS_CONFIG.MAX_PLAYBACK_RATE ?? '16000');
-  const spropMaxCaptureRate = String(opts.spropMaxCaptureRate ?? opts.spropmaxcapturerate ?? OPUS_CONFIG.SPROP_MAX_CAPTURE_RATE ?? '16000');
-  const ptime = opts.ptime !== undefined ? String(opts.ptime) : (OPUS_CONFIG.PTIME ? String(OPUS_CONFIG.PTIME) : '60');
-  const maxPtime = opts.maxptime !== undefined ? String(opts.maxptime) : (opts.maxPtime !== undefined ? String(opts.maxPtime) : (OPUS_CONFIG.MAX_PTIME ? String(OPUS_CONFIG.MAX_PTIME) : '120'));
-  const bandwidthCap = opts.bandwidthCapKbps ?? opts.bandwidth ?? opts.bAs ?? OPUS_CONFIG.BANDWIDTH_CAP_KBPS ?? 16;
+  const packetLossPerc = String(opts.packetLossPerc ?? opts.packetlossperc ?? opts.packetLossPercentage ?? OPUS_CONFIG.PACKET_LOSS_PERC ?? '25');
+  const maxPlaybackRate = String(opts.maxPlaybackRate ?? opts.maxplaybackrate ?? OPUS_CONFIG.MAX_PLAYBACK_RATE ?? '48000');
+  const spropMaxCaptureRate = String(opts.spropMaxCaptureRate ?? opts.spropmaxcapturerate ?? OPUS_CONFIG.SPROP_MAX_CAPTURE_RATE ?? '48000');
+  const ptime = opts.ptime !== undefined ? String(opts.ptime) : (OPUS_CONFIG.PTIME ? String(OPUS_CONFIG.PTIME) : '20');
+  const maxPtime = opts.maxptime !== undefined ? String(opts.maxptime) : (opts.maxPtime !== undefined ? String(opts.maxPtime) : (OPUS_CONFIG.MAX_PTIME ? String(OPUS_CONFIG.MAX_PTIME) : '60'));
+  const bandwidthCap = opts.bandwidthCapKbps ?? opts.bandwidth ?? opts.bAs ?? OPUS_CONFIG.BANDWIDTH_CAP_KBPS ?? 42;
   const enableRed = opts.enableRed !== undefined ? Boolean(opts.enableRed) : (OPUS_CONFIG.ENABLE_RED !== false);
   const customRedPt = opts.redPayloadType ?? OPUS_CONFIG.RED_PAYLOAD_TYPE ?? 63;
 

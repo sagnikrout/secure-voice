@@ -95,9 +95,9 @@ describe('Audio Utilities', () => {
       expect(presenceEQ.gain.setValueAtTime).toHaveBeenCalledWith(2.5, expect.any(Number));
       expect(presenceEQ.Q.setValueAtTime).toHaveBeenCalledWith(1.2, expect.any(Number));
 
-      // Stage 3: Lowpass 8.5kHz (Q=0.7071)
+      // Stage 3: Lowpass 18kHz Fullband HD (Q=0.7071)
       expect(hissCut.type).toBe('lowpass');
-      expect(hissCut.frequency.setValueAtTime).toHaveBeenCalledWith(8500, expect.any(Number));
+      expect(hissCut.frequency.setValueAtTime).toHaveBeenCalledWith(18000, expect.any(Number));
       expect(hissCut.Q.setValueAtTime).toHaveBeenCalledWith(0.7071, expect.any(Number));
 
       // Stage 4: Noise Gate GainNode & AnalyserNode

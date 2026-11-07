@@ -279,10 +279,10 @@ export default function App() {
                 <span>Call</span>
               </button>
             </div>
-            <div style={{ marginTop: '16px', fontSize: '11px', color: 'var(--text-2)', display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'var(--card-2)', border: '1px solid var(--border)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+            <div className="privacy-banner">
               <Shield className="w-4 h-4 text-green" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ lineHeight: 1.4 }}>
-                <strong style={{ color: 'var(--text)' }}>Privacy Note:</strong> Your microphone is fully disabled until a call is explicitly answered. Audio is routed P2P and is end-to-end encrypted.
+              <span>
+                <strong>Privacy note:</strong> Microphone remains disabled until a call is explicitly answered. Audio routes direct peer-to-peer with end-to-end encryption.
               </span>
             </div>
           </section>
@@ -299,7 +299,7 @@ export default function App() {
               onClick={callSession.cancelCall}
               aria-label="Cancel outgoing call"
             >
-              <span>✕ Cancel</span>
+              <span>Cancel</span>
             </button>
           </section>
         ) : (
@@ -310,8 +310,9 @@ export default function App() {
 
             <p className="call-peer">
               <span>{callSession.connectedPeer}</span>
-              <span className="quality-dot" title={`Quality: ${callSession.quality}`}>
-                {QUALITY_BADGES[callSession.quality] || '🟢'}
+              <span className={`quality-badge quality-${callSession.quality}`} title={`Quality: ${callSession.quality}`}>
+                <span className={`dot dot-${callSession.quality || 'good'}`} aria-hidden="true" />
+                <span>{QUALITY_BADGES[callSession.quality] || 'Good'}</span>
               </span>
             </p>
 
@@ -321,23 +322,11 @@ export default function App() {
 
             {/* Interactive Security Verification Code Badge */}
             {callSession.safetyCode && (
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <div className="verification-badge-wrapper">
                 <button
                   type="button"
                   onClick={() => setVerificationDismissed(false)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 12px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    borderRadius: '99px',
-                    background: callSession.isVerified ? 'var(--green-light)' : 'var(--blue-light)',
-                    color: callSession.isVerified ? 'var(--green)' : 'var(--blue)',
-                    border: `1px solid ${callSession.isVerified ? 'var(--green)' : 'var(--blue)'}`,
-                    cursor: 'pointer'
-                  }}
+                  className={`verification-badge ${callSession.isVerified ? 'verified' : ''}`}
                   title="Click to view full security verification dialog"
                   aria-label="Security Verification Code"
                 >
@@ -354,10 +343,10 @@ export default function App() {
             {/* Visualizer Canvas */}
             <AudioVisualizer stream={callSession.activeStream} isActive={callSession.isInCall} />
 
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: callSession.isMuted ? 'var(--red-light)' : 'var(--green-light)', color: callSession.isMuted ? 'var(--red)' : 'var(--green)', borderRadius: '99px', fontSize: '11px', fontWeight: '600' }}>
-                 {callSession.isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                 <span>{callSession.isMuted ? 'Microphone Muted' : 'Microphone Live'}</span>
+            <div className="mic-status-wrapper">
+              <div className={`mic-status-badge ${callSession.isMuted ? 'muted' : 'live'}`}>
+                {callSession.isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                <span>{callSession.isMuted ? 'Microphone muted' : 'Microphone live'}</span>
               </div>
             </div>
 

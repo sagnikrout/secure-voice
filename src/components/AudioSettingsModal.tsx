@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Volume2, Mic, Check, X, Sliders, Bluetooth, Speaker, Headphones, Sparkles, Activity } from 'lucide-react';
+import { Volume2, Mic, Check, X, Sliders, Bluetooth, Speaker, Headphones, Activity } from 'lucide-react';
 import { CodecPreference, AcousticProfileId } from '../types';
 import { ACOUSTIC_PROFILES, STORAGE_KEYS } from '../constants/config';
 import { getAvailableOutputs } from '../utils/audioRouting';
@@ -275,8 +275,8 @@ export function AudioSettingsModal({
         {/* Acoustic Clarity Profile Section */}
         <div className="audio-settings-section" style={{ marginTop: '16px' }}>
           <div className="audio-settings-section-title">
-            <Sparkles className="w-4 h-4 text-muted" />
-            <span>Acoustic Clarity & Noise Profile</span>
+            <Sliders className="w-4 h-4 text-muted" />
+            <span>Acoustic clarity & noise profile</span>
           </div>
 
           <div className="audio-settings-options" style={{ marginTop: '8px' }}>
@@ -297,7 +297,7 @@ export function AudioSettingsModal({
                 >
                   <div className="audio-settings-option-left">
                     <div className="audio-settings-option-icon">
-                      <Sparkles className="w-4 h-4" />
+                      <Sliders className="w-4 h-4" />
                     </div>
                     <div className="audio-settings-option-text">
                       <div className="audio-settings-option-name">{profile.label}</div>

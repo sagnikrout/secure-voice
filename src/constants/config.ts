@@ -3,14 +3,13 @@ import { ExtendedLadderTier, AcousticProfile, AcousticProfileId } from '../types
 export const APP_NAME = 'SecureVoice';
 export const APP_VERSION = 'v3.8.2';
 
-// WebRTC ICE Servers Configuration (Google STUN + OpenRelay TURN Fallback)
+// WebRTC ICE Servers Configuration (Google STUN + Cloudflare Anycast STUN + OpenRelay TURN Fallback)
 export const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
     {
       urls: 'turn:openrelay.metered.ca:80',
       username: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_USERNAME) || 'openrelayproject',
@@ -26,28 +25,31 @@ export const ICE_SERVERS = {
       username: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_USERNAME) || 'openrelayproject',
       credential: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_TURN_CREDENTIAL) || 'openrelayproject'
     }
-  ]
+  ],
+  iceCandidatePoolSize: 2,
+  bundlePolicy: 'max-bundle' as const,
+  rtcpMuxPolicy: 'require' as const
 };
 
 // Character set for generating readable 9-character Peer IDs (omits confusing 0/O, 1/I, L)
 export const PEER_ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Opus Codec & Packetization Constraints (Highest Quality-per-Bit Wideband Engine)
+// Opus Codec & Packetization Constraints (Fullband 48 kHz HD Voice & 2G Shock Absorber Floor)
 export const OPUS_CONFIG = {
-  MAX_AVERAGE_BITRATE: '14000', // 14 kbps Pareto optimal bitrate (Wideband HD at ~1.5 KB/s)
-  MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps ultra-survival bandwidth floor
-  HIGH_AVERAGE_BITRATE: '18000', // 18 kbps maximum ceiling
-  USE_DTX: '1',                 // Discontinuous Transmission (saves ~50% bandwidth during pauses)
+  MAX_AVERAGE_BITRATE: '32000', // 32 kbps Fullband Studio HD ceiling on broadband/5G/Wi-Fi
+  MIN_AVERAGE_BITRATE: '3200',  // 3.2 kbps 2G survival floor
+  HIGH_AVERAGE_BITRATE: '40000', // 40 kbps maximum headroom
+  USE_DTX: '1',                 // 1 = Discontinuous Transmission enabled for bandwidth conservation (can override via dynamic options)
   USE_INBAND_FEC: '1',          // Opus In-band Forward Error Correction
-  PACKET_LOSS_PERC: '20',       // Expected packet loss target for FEC tuning
-  COMPLEXITY: '7',              // Balance quality and CPU load
+  PACKET_LOSS_PERC: '25',       // Target FEC packet loss percentage
+  COMPLEXITY: '10',             // 10 = Maximum algorithmic speech fidelity
   STEREO: '0',                  // Mono voice optimization (1 channel)
-  CBR: '0',                     // Variable Bit Rate (VBR) for maximum acoustic efficiency
-  MAX_PLAYBACK_RATE: '16000',   // 16 kHz Wideband HD limit (reproduces crisp consonants & vocal warmth)
-  SPROP_MAX_CAPTURE_RATE: '16000', // Capture rate matching playback rate
-  BANDWIDTH_CAP_KBPS: 18,       // SDP b=AS session bandwidth constraint
-  PTIME: '40',                  // 40ms packetization (reduces IP/RTP packet header overhead by 50%)
-  MAX_PTIME: '60',              // 60ms maximum acceptable packetization time
+  CBR: '0',                     // Constrained Variable Bit Rate (VBR)
+  MAX_PLAYBACK_RATE: '48000',   // 48 kHz Fullband HD limit (reproduces complete human vocal range)
+  SPROP_MAX_CAPTURE_RATE: '48000', // 48 kHz capture rate
+  BANDWIDTH_CAP_KBPS: 42,       // SDP b=AS session bandwidth constraint
+  PTIME: '20',                  // 20ms low-latency default packetization
+  MAX_PTIME: '60',              // 60ms maximum packetization for low-bandwidth survival
   RED_PAYLOAD_TYPE: 63,         // RFC 2198 RED dynamic payload type
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
 };
@@ -153,7 +155,7 @@ export const LADDER_TIERS = [
     ptimeMs: 80,
     maxPtimeMs: 120,
     fecPacketLossPerc: 50,
-    maxPlaybackRate: 8000,        // Narrowband SILK focus
+    maxPlaybackRate: 8000,
     lossThreshold: 0.35,          // 25% - 35% loss
     rttThresholdMs: 1100,         // 850ms - 1100ms RTT
     jitterThresholdMs: 250,       // 200ms - 250ms jitter
@@ -387,9 +389,9 @@ export const STATUS_LABELS = {
 
 // Quality Ratings based on Round Trip Time (seconds)
 export const QUALITY_BADGES = {
-  good: '🟢 Good',      // RTT < 150ms
-  fair: '🟡 Fair',      // RTT 150-400ms
-  poor: '🔴 Poor'       // RTT ≥ 400ms
+  good: 'Good',      // RTT < 150ms
+  fair: 'Fair',      // RTT 150-400ms
+  poor: 'Poor'       // RTT ≥ 400ms
 };
 
 // Acoustic DSP Profiles (Advanced Multi-Stage Voice Pre-Processing Engine)
@@ -398,11 +400,11 @@ export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
     id: 'balanced',
     name: 'Balanced Clarity',
     label: 'Balanced (Default)',
-    description: 'Natural vocal warmth with smooth background noise suppression.',
+    description: 'Natural vocal warmth with smooth background noise suppression and Fullband range.',
     highpassFreq: 85,
     presenceGain: 2.5,
     presenceFreq: 3000,
-    hissCutFreq: 8500,
+    hissCutFreq: 18000,
     gateThreshold: -46,
     gateFloor: 0.02,
     compressorRatio: 2.5,
@@ -432,7 +434,7 @@ export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
     highpassFreq: 50,
     presenceGain: 1.0,
     presenceFreq: 2800,
-    hissCutFreq: 12000,
+    hissCutFreq: 20000,
     gateThreshold: -54,
     gateFloor: 0.05,
     compressorRatio: 1.8,

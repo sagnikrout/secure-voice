@@ -25,7 +25,7 @@ export default function SecurityVerificationModal({ safetyCode, onVerify, onReje
           <Shield className="w-8 h-8" />
         </div>
         
-        <p className="inc-label" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Verifying Secure Connection</p>
+        <p className="inc-label" style={{ fontSize: '12px', fontWeight: '500', color: 'var(--muted)', marginBottom: '4px' }}>Verifying secure connection</p>
         <p className="inc-caller" id="verification-title" style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '12px' }}>Peer: {connectedPeer}</p>
         
         <p className="inc-sub" style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: '1.4', marginBottom: '12px' }}>
