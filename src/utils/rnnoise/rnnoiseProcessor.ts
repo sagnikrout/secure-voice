@@ -41,6 +41,7 @@ export class RNNoiseProcessor {
   // Pitch tracking state
   private lastPitchPeriod: number = 0;
   private speechProbability: number = 0.5;
+  private framesProcessed: number = 0;
 
   constructor(sampleRate: number = 48000) {
     this.sampleRate = sampleRate;
@@ -138,32 +139,50 @@ export class RNNoiseProcessor {
     const spectralTilt = (this.bandEnergies[0] + this.bandEnergies[1] + 1e-5) / (this.bandEnergies[BARK_BANDS - 1] + 1e-5);
     const tiltNorm = Math.min(1.0, spectralTilt / 10);
 
-    // GRU Gate update: update_gate = sigmoid(W_z * x + U_z * h)
-    const inputZ = 0.5 * logEnergyNorm + 0.35 * pitchStrength + 0.15 * tiltNorm;
-    const updateGate = 1.0 / (1.0 + Math.exp(-(inputZ * 4.0 - 1.5)));
-    this.speechProbability = (1.0 - updateGate) * this.speechProbability + updateGate * inputZ;
+    // GRU Gate update: In human speech, voiced phonemes require pitch periodicity.
+    // Unvoiced fricatives (/s/, /sh/) have high-frequency energy with low tilt.
+    // Broadband noise or HVAC rumble has low pitchStrength and flat/brown spectral distribution.
+    const harmonicVoiced = pitchStrength * Math.min(1.0, logEnergyNorm * 1.5);
+    const fricativeSpeech = (1.0 - tiltNorm) * Math.max(0, logEnergyNorm - 0.4) * 0.3;
+    const speechFeature = Math.max(harmonicVoiced, fricativeSpeech);
 
-    // 5. Adaptive Noise Floor Tracking
+    const updateGate = 1.0 / (1.0 + Math.exp(-(speechFeature * 5.0 - 2.0)));
+    this.speechProbability = (1.0 - updateGate) * this.speechProbability + updateGate * speechFeature;
+
+    // 5. Adaptive Noise Floor Tracking (Minimum Statistics & Temporal Estimation)
     for (let b = 0; b < BARK_BANDS; b++) {
       const currentEnergy = this.bandEnergies[b];
-      if (this.speechProbability < 0.25) {
-        // High confidence noise frame: adapt noise floor faster
-        this.noiseFloor[b] = 0.92 * this.noiseFloor[b] + 0.08 * currentEnergy;
+      if (this.framesProcessed === 0) {
+        this.noiseFloor[b] = Math.min(0.08, currentEnergy);
+      } else if (currentEnergy < this.noiseFloor[b]) {
+        // Fast minimum tracking (instant tracking of dips)
+        this.noiseFloor[b] = 0.5 * this.noiseFloor[b] + 0.5 * currentEnergy;
+      } else if (this.speechProbability < 0.35) {
+        // High confidence non-speech: adapt noise floor rapidly
+        this.noiseFloor[b] = 0.82 * this.noiseFloor[b] + 0.18 * currentEnergy;
       } else {
         // Speech frame: adapt noise floor very slowly
         this.noiseFloor[b] = 0.995 * this.noiseFloor[b] + 0.005 * Math.min(this.noiseFloor[b], currentEnergy);
       }
     }
+    this.framesProcessed++;
 
-    // 6. Wiener Spectral Gain Derivation: G = max(0.05, 1 - (Noise / Energy)^gamma)
+    // 6. Wiener Spectral Gain Derivation: G = max(0.02, 1 - (Noise / Energy))
     let totalGain = 0;
     for (let b = 0; b < BARK_BANDS; b++) {
-      const snr = Math.max(0.01, this.bandEnergies[b] / (this.noiseFloor[b] + 1e-6));
+      const noise = this.noiseFloor[b];
+      const energy = this.bandEnergies[b];
+      const snr = Math.max(0.01, energy / (noise + 1e-6));
       let targetGain = Math.max(0.02, 1.0 - (1.0 / (1.0 + snr * 0.75)));
       
       // If strong speech probability, bias toward transparency
       if (this.speechProbability > 0.6) {
-        targetGain = Math.max(targetGain, 0.75);
+        targetGain = Math.max(targetGain, 0.85);
+      } else if (this.speechProbability < 0.40) {
+        // High confidence noise/silence: attenuate residual noise floor
+        const ratio = Math.max(0.02, (this.speechProbability - 0.05) / 0.35);
+        const speechScale = Math.min(1.0, Math.pow(ratio, 1.8));
+        targetGain = Math.max(0.02, targetGain * speechScale);
       }
 
       // Smooth gain transitions to avoid musical chirp artifacts
@@ -172,12 +191,10 @@ export class RNNoiseProcessor {
     }
     const averageGain = totalGain / BARK_BANDS;
 
-    // 7. Time-Domain Synthesis via Band Gain Interpolation
-    // Modulates sample amplitudes smoothly using interpolated Bark gains
+    // 7. Time-Domain Synthesis via Continuous Spectral Gain
+    // Modulates sample amplitudes smoothly using average Bark band gain
     for (let i = 0; i < FRAME_SIZE; i++) {
-      const bandIndex = Math.min(BARK_BANDS - 1, Math.floor((i / FRAME_SIZE) * BARK_BANDS));
-      const gain = this.smoothedGains[bandIndex];
-      outputFrame[i] = inputFrame[i] * gain;
+      outputFrame[i] = inputFrame[i] * averageGain;
     }
 
     const noiseRms = Math.sqrt(this.noiseFloor.reduce((acc, v) => acc + v * v, 0) / BARK_BANDS);
@@ -197,5 +214,6 @@ export class RNNoiseProcessor {
       this.smoothedGains[b] = 1.0;
     }
     this.speechProbability = 0.5;
+    this.framesProcessed = 0;
   }
 }
