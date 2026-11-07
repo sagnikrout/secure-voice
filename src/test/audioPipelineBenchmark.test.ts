@@ -68,12 +68,12 @@ describe('Audio Pipeline Benchmark & Acoustic Verification Suite', () => {
   });
 
   it('enhances speech and suppresses inter-phrase noise in mixed 0 dB audio', () => {
-    const duration = 1.2;
+    const duration = 3.0;
     const numSamples = Math.floor(duration * SAMPLE_RATE);
     const numFrames = Math.floor(numSamples / FRAME_SIZE);
 
-    const speechTrack = generateConversationalSpeech(duration, SAMPLE_RATE, 0.3);
-    const noiseTrack = generateNoise(duration, SAMPLE_RATE, 'combined', 0.05);
+    const speechTrack = generateConversationalSpeech(duration, SAMPLE_RATE, 0.4);
+    const noiseTrack = generateNoise(duration, SAMPLE_RATE, 'combined', 0.08);
     const { mixed } = mixAudio(speechTrack, noiseTrack, 0);
 
     const processor = new RNNoiseProcessor(SAMPLE_RATE);
@@ -84,16 +84,16 @@ describe('Audio Pipeline Benchmark & Acoustic Verification Suite', () => {
       processor.processFrame(mixed.subarray(offset, offset + FRAME_SIZE), output.subarray(offset, offset + FRAME_SIZE));
     }
 
-    // Pause analysis (0.53s - 0.68s)
-    const pauseStart = Math.floor(0.53 * SAMPLE_RATE);
-    const pauseEnd = Math.floor(0.68 * SAMPLE_RATE);
+    // Pause analysis (1.05s - 1.50s)
+    const pauseStart = Math.floor(1.05 * SAMPLE_RATE);
+    const pauseEnd = Math.floor(1.50 * SAMPLE_RATE);
     const pauseInRms = computeRmsDb(mixed.subarray(pauseStart, pauseEnd));
     const pauseOutRms = computeRmsDb(output.subarray(pauseStart, pauseEnd));
     const pauseSuppressionDb = pauseInRms - pauseOutRms;
 
-    // Active speech analysis (0.05s - 0.40s)
-    const speechStart = Math.floor(0.05 * SAMPLE_RATE);
-    const speechEnd = Math.floor(0.40 * SAMPLE_RATE);
+    // Active speech analysis (0.10s - 0.80s)
+    const speechStart = Math.floor(0.10 * SAMPLE_RATE);
+    const speechEnd = Math.floor(0.80 * SAMPLE_RATE);
     const speechInRms = computeRmsDb(speechTrack.subarray(speechStart, speechEnd));
     const speechOutRms = computeRmsDb(output.subarray(speechStart, speechEnd));
     const speechLossDb = Math.abs(speechOutRms - speechInRms);
@@ -127,9 +127,16 @@ describe('Audio Pipeline Benchmark & Acoustic Verification Suite', () => {
 
   it('encodes valid 44-byte RIFF/WAVE header and 16-bit PCM payload', () => {
     const samples = new Float32Array(480);
+    for (let i = 0; i < 480; i++) {
+      samples[i] = 0.5 * Math.sin((2 * Math.PI * 440 * i) / SAMPLE_RATE);
+    }
     const wavBytes = encodeWavFile(samples, SAMPLE_RATE);
 
     expect(wavBytes.length).toBe(44 + 480 * 2);
+    // Non-zero PCM samples guard
+    const nonZeroCount = wavBytes.subarray(44).filter(x => x !== 0).length;
+    expect(nonZeroCount).toBeGreaterThan(400);
+
     // "RIFF"
     expect(String.fromCharCode(wavBytes[0], wavBytes[1], wavBytes[2], wavBytes[3])).toBe('RIFF');
     // "WAVE"

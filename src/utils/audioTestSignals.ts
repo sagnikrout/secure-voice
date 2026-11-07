@@ -3,10 +3,11 @@
  *
  * Provides:
  * - Synthetic human vocal formant generator (F0 fundamental + resonant F1/F2/F3 vocal tract).
+ * - Multi-phrase conversational speech generator with natural pauses and vowel inflections.
  * - Multi-source background acoustic noise generator (HVAC rumble, high-frequency hiss, transient clicks).
  * - Calibrated signal mixing at specified SNR (dB).
  * - RMS, SNR, and harmonic power measurement.
- * - Standard 16-bit PCM RIFF/WAVE file encoder for physical listening and spectral verification.
+ * - Standard 16-bit PCM RIFF/WAVE file encoder and decoder for acoustic inspection.
  */
 
 export interface FormantConfig {
@@ -24,13 +25,13 @@ export const DEFAULT_VOWEL_FORMANTS: FormantConfig = {
 };
 
 /**
- * Synthesize speech-like vocal tones with realistic formant filtering
+ * Synthesize speech-like vocal tones with realistic formant filtering and natural vibrato
  */
 export function generateVocalTone(
   durationSec: number,
   sampleRate: number = 48000,
   formants: FormantConfig = DEFAULT_VOWEL_FORMANTS,
-  amplitude: number = 0.3
+  amplitude: number = 0.4
 ): Float32Array {
   const totalSamples = Math.floor(durationSec * sampleRate);
   const buffer = new Float32Array(totalSamples);
@@ -44,11 +45,16 @@ export function generateVocalTone(
 
   for (let i = 0; i < totalSamples; i++) {
     const t = i / sampleRate;
+
+    // Subtle 5 Hz vocal vibrato (+/- 2 Hz)
+    const vibrato = 2.0 * Math.sin(2 * Math.PI * 5.0 * t);
+    const instantaneousF0 = formants.f0 + vibrato;
+
     let sample = 0;
 
     // Sum glottal pulse harmonics filtered by vocal tract formant transfer functions
     for (let k = 1; k <= maxHarmonic; k++) {
-      const freq = k * formants.f0;
+      const freq = k * instantaneousF0;
 
       // Resonant peak gains (Lorentzian resonator model)
       const res1 = 1.0 / (1.0 + Math.pow((freq - formants.f1) / b1, 2));
@@ -90,13 +96,43 @@ export function generateVocalTone(
 }
 
 /**
+ * Synthesize conversational speech with natural inter-phrase pauses and distinct vowels
+ */
+export function generateConversationalSpeech(
+  durationSec: number = 3.0,
+  sampleRate: number = 48000,
+  amplitude: number = 0.4
+): Float32Array {
+  const totalSamples = Math.floor(durationSec * sampleRate);
+  const buffer = new Float32Array(totalSamples);
+
+  // Phrase 1: 0.0s - 0.9s (Vowel /a/ "father", 150Hz F0, 700Hz/1200Hz formants)
+  const p1Len = 0.9;
+  const p1 = generateVocalTone(p1Len, sampleRate, { f0: 150, f1: 700, f2: 1200, f3: 2500 }, amplitude);
+
+  // Pause: 0.9s - 1.6s (700ms silence for noise floor evaluation)
+
+  // Phrase 2: 1.6s - 2.6s (Vowel /i/ "see", 175Hz F0, 300Hz/2300Hz formants)
+  const p2Len = 1.0;
+  const p2Start = Math.floor(1.6 * sampleRate);
+  const p2 = generateVocalTone(p2Len, sampleRate, { f0: 175, f1: 300, f2: 2300, f3: 3000 }, amplitude);
+
+  buffer.set(p1, 0);
+  if (p2Start + p2.length <= totalSamples) {
+    buffer.set(p2, p2Start);
+  }
+
+  return buffer;
+}
+
+/**
  * Generate synthetic background noise (HVAC rumble, hiss, and transient spikes)
  */
 export function generateNoise(
   durationSec: number,
   sampleRate: number = 48000,
   profile: 'hvac' | 'hiss' | 'clicks' | 'combined' = 'combined',
-  amplitude: number = 0.05
+  amplitude: number = 0.08
 ): Float32Array {
   const totalSamples = Math.floor(durationSec * sampleRate);
   const buffer = new Float32Array(totalSamples);
@@ -233,35 +269,48 @@ export function encodeWavFile(samples: Float32Array, sampleRate: number = 48000)
   buffer.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
   view.setUint32(40, dataSize, true);
 
+  // Write 16-bit signed PCM samples
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const clamped = Math.max(-1.0, Math.min(1.0, samples[i]));
+    const intSample = clamped < 0 ? clamped * 32768 : clamped * 32767;
+    view.setInt16(offset, Math.floor(intSample), true);
+    offset += 2;
+  }
+
   return buffer;
 }
 
 /**
- * Synthesize conversational speech with natural inter-phrase pauses
+ * Decode 16-bit PCM RIFF/WAVE buffer into a Float32Array (-1.0 to +1.0)
  */
-export function generateConversationalSpeech(
-  durationSec: number = 1.2,
-  sampleRate: number = 48000,
-  amplitude: number = 0.3
-): Float32Array {
-  const totalSamples = Math.floor(durationSec * sampleRate);
-  const buffer = new Float32Array(totalSamples);
+export function decodeWavFile(buffer: Buffer | Uint8Array): { samples: Float32Array; sampleRate: number } {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  const sampleRate = view.getUint32(24, true);
 
-  // Phrase 1: 0.0s - 0.45s (Formants /a/: 160Hz, 500Hz, 1500Hz)
-  const p1Len = 0.45;
-  const p1 = generateVocalTone(p1Len, sampleRate, { f0: 160, f1: 500, f2: 1500, f3: 2500 }, amplitude);
-
-  // Pause: 0.45s - 0.70s (250ms inter-phrase pause)
-
-  // Phrase 2: 0.70s - 1.15s (Formants /i/: 175Hz, 300Hz, 2200Hz)
-  const p2Len = 0.45;
-  const p2Start = Math.floor(0.70 * sampleRate);
-  const p2 = generateVocalTone(p2Len, sampleRate, { f0: 175, f1: 300, f2: 2200, f3: 3000 }, amplitude);
-
-  buffer.set(p1, 0);
-  if (p2Start + p2.length <= totalSamples) {
-    buffer.set(p2, p2Start);
+  // Scan for "data" chunk
+  let offset = 12;
+  while (offset < buffer.byteLength - 8) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(offset),
+      view.getUint8(offset + 1),
+      view.getUint8(offset + 2),
+      view.getUint8(offset + 3)
+    );
+    const chunkSize = view.getUint32(offset + 4, true);
+    if (chunkId === 'data') {
+      offset += 8;
+      break;
+    }
+    offset += 8 + chunkSize;
   }
 
-  return buffer;
+  const dataBytes = buffer.byteLength - offset;
+  const numSamples = Math.floor(dataBytes / 2);
+  const samples = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const intSample = view.getInt16(offset + i * 2, true);
+    samples[i] = intSample / 32768.0;
+  }
+  return { samples, sampleRate };
 }

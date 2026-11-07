@@ -28,7 +28,8 @@ dist-ssr
 .coverage
 coverage
 
-# Android Build Artifacts & Local Config
+# Audio test data
+test-data/
 android/.gradle
 android/build
 android/app/build

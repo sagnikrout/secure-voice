@@ -114,12 +114,12 @@ assert(noiseSuppressionDb > 12.0, `Significant acoustic noise suppression achiev
 // -------------------------------------------------------------
 console.log('\n🎛️  Benchmark 3: Mixed Speech Enhancement at 0 dB SNR');
 
-const convDuration = 1.2;
+const convDuration = 3.0;
 const convSamples = Math.floor(convDuration * SAMPLE_RATE);
 const convFrames = Math.floor(convSamples / FRAME_SIZE);
 
-const speechTrack = generateConversationalSpeech(convDuration, SAMPLE_RATE, 0.3);
-const noiseTrack = generateNoise(convDuration, SAMPLE_RATE, 'combined', 0.05);
+const speechTrack = generateConversationalSpeech(convDuration, SAMPLE_RATE, 0.4);
+const noiseTrack = generateNoise(convDuration, SAMPLE_RATE, 'combined', 0.08);
 const { mixed: noisyInput } = mixAudio(speechTrack, noiseTrack, 0); // 0 dB SNR
 
 const mixedProcessor = new RNNoiseProcessor(SAMPLE_RATE);
@@ -132,16 +132,16 @@ for (let f = 0; f < convFrames; f++) {
   mixedProcessor.processFrame(inFrame, outFrame);
 }
 
-// Inter-phrase pause analysis (0.53s - 0.68s, allowing 80ms VAD hangover release)
-const pauseStart = Math.floor(0.53 * SAMPLE_RATE);
-const pauseEnd = Math.floor(0.68 * SAMPLE_RATE);
+// Inter-phrase pause analysis (1.05s - 1.50s, pure pause between phrase 1 and 2)
+const pauseStart = Math.floor(1.05 * SAMPLE_RATE);
+const pauseEnd = Math.floor(1.50 * SAMPLE_RATE);
 const pauseNoiseIn = computeRmsDb(noisyInput.subarray(pauseStart, pauseEnd));
 const pauseNoiseOut = computeRmsDb(enhancedOutput.subarray(pauseStart, pauseEnd));
 const pauseSuppressionDb = pauseNoiseIn - pauseNoiseOut;
 
-// Active speech analysis (0.05s - 0.40s)
-const speechStart = Math.floor(0.05 * SAMPLE_RATE);
-const speechEnd = Math.floor(0.40 * SAMPLE_RATE);
+// Active speech analysis (0.10s - 0.80s)
+const speechStart = Math.floor(0.10 * SAMPLE_RATE);
+const speechEnd = Math.floor(0.80 * SAMPLE_RATE);
 const activeSpeechIn = computeRmsDb(speechTrack.subarray(speechStart, speechEnd));
 const activeSpeechOut = computeRmsDb(enhancedOutput.subarray(speechStart, speechEnd));
 const speechEnergyLossDb = Math.abs(activeSpeechOut - activeSpeechIn);
