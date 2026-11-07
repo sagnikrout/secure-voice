@@ -1,5 +1,7 @@
 import { audioResourceManager } from './resourceManager';
 import { registerNoiseGateWorklet, NOISE_GATE_WORKLET_NAME } from './noiseGateWorklet';
+import { ACOUSTIC_PROFILES } from '../constants/config';
+import { AcousticProfileId } from '../types';
 
 /**
  * Get or create a shared AudioContext for UI audio / ringtones safely handling autoplay restrictions.
@@ -79,6 +81,8 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
     nodes: null,
     setNoiseGateEnabled: () => {},
     setNoiseGateThreshold: () => {},
+    setAcousticProfile: () => {},
+    getAcousticProfile: () => 'balanced' as AcousticProfileId,
     cleanup: () => {}
   };
 
@@ -107,31 +111,37 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       ctx.resume().catch(() => {});
     }
 
+    const opts = options || {};
+    const initialProfileId: AcousticProfileId = (opts.profile && ACOUSTIC_PROFILES[opts.profile as AcousticProfileId])
+      ? (opts.profile as AcousticProfileId)
+      : 'balanced';
+    let currentProfile = ACOUSTIC_PROFILES[initialProfileId];
+
     const source = ctx.createMediaStreamSource(stream);
 
-    // Stage 1: 85Hz 2nd-order Butterworth Highpass filter (cuts mic rumble / HVAC)
+    // Stage 1: Highpass filter (cuts mic rumble / HVAC)
     const highPass = ctx.createBiquadFilter();
     highPass.type = 'highpass';
-    highPass.frequency.setValueAtTime(85, ctx.currentTime);
+    highPass.frequency.setValueAtTime(currentProfile.highpassFreq, ctx.currentTime);
     if (highPass.Q && highPass.Q.setValueAtTime) {
       highPass.Q.setValueAtTime(0.7071, ctx.currentTime);
     }
 
-    // Stage 2: 3.0kHz Peaking EQ (+2.5dB gain, Q=1.2) for vocal formant clarity
+    // Stage 2: Peaking EQ for vocal formant clarity
     const presenceEQ = ctx.createBiquadFilter();
     presenceEQ.type = 'peaking';
-    presenceEQ.frequency.setValueAtTime(3000, ctx.currentTime);
+    presenceEQ.frequency.setValueAtTime(currentProfile.presenceFreq, ctx.currentTime);
     if (presenceEQ.gain && presenceEQ.gain.setValueAtTime) {
-      presenceEQ.gain.setValueAtTime(2.5, ctx.currentTime);
+      presenceEQ.gain.setValueAtTime(currentProfile.presenceGain, ctx.currentTime);
     }
     if (presenceEQ.Q && presenceEQ.Q.setValueAtTime) {
       presenceEQ.Q.setValueAtTime(1.2, ctx.currentTime);
     }
 
-    // Stage 3: 8.5kHz 2nd-order Lowpass filter (Q=0.7071) to eliminate hiss while preserving speech articulation
+    // Stage 3: Lowpass filter to eliminate hiss while preserving speech articulation
     const hissCut = ctx.createBiquadFilter();
     hissCut.type = 'lowpass';
-    hissCut.frequency.setValueAtTime(8500, ctx.currentTime);
+    hissCut.frequency.setValueAtTime(currentProfile.hissCutFreq, ctx.currentTime);
     if (hissCut.Q && hissCut.Q.setValueAtTime) {
       hissCut.Q.setValueAtTime(0.7071, ctx.currentTime);
     }
@@ -144,16 +154,15 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
     analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.0;
     
-    const opts = options || {};
     let gateEnabled = opts.gateEnabled !== false && opts.noiseGateEnabled !== false;
     let gateThreshold = (typeof opts.gateThreshold === 'number' && Number.isFinite(opts.gateThreshold))
       ? opts.gateThreshold
       : ((typeof opts.noiseGateThreshold === 'number' && Number.isFinite(opts.noiseGateThreshold))
           ? opts.noiseGateThreshold
-          : -46);
-    const gateFloor = (typeof opts.gateFloor === 'number' && Number.isFinite(opts.gateFloor))
+          : currentProfile.gateThreshold);
+    let gateFloor = (typeof opts.gateFloor === 'number' && Number.isFinite(opts.gateFloor))
       ? opts.gateFloor
-      : 0.02;
+      : currentProfile.gateFloor;
     const attackTime = 0.010;  // 10ms
     const holdTimeMs = 80;     // 80ms
     const releaseTime = 0.150; // 150ms
@@ -281,17 +290,17 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       }).catch(() => {});
     }
 
-    // Stage 5: Dynamics Compressor (-20dB threshold, 12dB knee, 2.5:1 ratio, 8ms attack, 130ms release)
+    // Stage 5: Dynamics Compressor
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-20, ctx.currentTime);
+    compressor.threshold.setValueAtTime(currentProfile.compressorThreshold, ctx.currentTime);
     compressor.knee.setValueAtTime(12, ctx.currentTime);
-    compressor.ratio.setValueAtTime(2.5, ctx.currentTime);
+    compressor.ratio.setValueAtTime(currentProfile.compressorRatio, ctx.currentTime);
     compressor.attack.setValueAtTime(0.008, ctx.currentTime);
     compressor.release.setValueAtTime(0.130, ctx.currentTime);
 
-    // Stage 6: 1.15x Makeup Gain (+1.21 dB)
+    // Stage 6: Makeup Gain
     const makeupGain = ctx.createGain();
-    makeupGain.gain.setValueAtTime(1.15, ctx.currentTime);
+    makeupGain.gain.setValueAtTime(currentProfile.makeupGain, ctx.currentTime);
 
     // Destination
     const dest = ctx.createMediaStreamDestination();
@@ -382,6 +391,64 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
           }
         }
       },
+      setAcousticProfile: (profileId: AcousticProfileId) => {
+        if (!ACOUSTIC_PROFILES[profileId]) return;
+        currentProfile = ACOUSTIC_PROFILES[profileId];
+        const now = ctx.currentTime;
+        try {
+          if (highPass.frequency.setTargetAtTime) {
+            highPass.frequency.setTargetAtTime(currentProfile.highpassFreq, now, 0.02);
+          } else if (highPass.frequency.setValueAtTime) {
+            highPass.frequency.setValueAtTime(currentProfile.highpassFreq, now);
+          }
+
+          if (presenceEQ.frequency.setTargetAtTime) {
+            presenceEQ.frequency.setTargetAtTime(currentProfile.presenceFreq, now, 0.02);
+          } else if (presenceEQ.frequency.setValueAtTime) {
+            presenceEQ.frequency.setValueAtTime(currentProfile.presenceFreq, now);
+          }
+
+          if (presenceEQ.gain.setTargetAtTime) {
+            presenceEQ.gain.setTargetAtTime(currentProfile.presenceGain, now, 0.02);
+          } else if (presenceEQ.gain.setValueAtTime) {
+            presenceEQ.gain.setValueAtTime(currentProfile.presenceGain, now);
+          }
+
+          if (hissCut.frequency.setTargetAtTime) {
+            hissCut.frequency.setTargetAtTime(currentProfile.hissCutFreq, now, 0.02);
+          } else if (hissCut.frequency.setValueAtTime) {
+            hissCut.frequency.setValueAtTime(currentProfile.hissCutFreq, now);
+          }
+
+          gateThreshold = currentProfile.gateThreshold;
+          gateFloor = currentProfile.gateFloor;
+
+          if (compressor.threshold.setTargetAtTime) {
+            compressor.threshold.setTargetAtTime(currentProfile.compressorThreshold, now, 0.02);
+          } else if (compressor.threshold.setValueAtTime) {
+            compressor.threshold.setValueAtTime(currentProfile.compressorThreshold, now);
+          }
+
+          if (compressor.ratio.setTargetAtTime) {
+            compressor.ratio.setTargetAtTime(currentProfile.compressorRatio, now, 0.02);
+          } else if (compressor.ratio.setValueAtTime) {
+            compressor.ratio.setValueAtTime(currentProfile.compressorRatio, now);
+          }
+
+          if (makeupGain.gain.setTargetAtTime) {
+            makeupGain.gain.setTargetAtTime(currentProfile.makeupGain, now, 0.02);
+          } else if (makeupGain.gain.setValueAtTime) {
+            makeupGain.gain.setValueAtTime(currentProfile.makeupGain, now);
+          }
+
+          if (workletNode && workletNode.port) {
+            try {
+              workletNode.port.postMessage({ thresholdDb: gateThreshold, floor: gateFloor });
+            } catch (e) {}
+          }
+        } catch (e) {}
+      },
+      getAcousticProfile: () => currentProfile.id,
       cleanup
     };
   } catch (err) {

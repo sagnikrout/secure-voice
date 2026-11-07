@@ -20,7 +20,7 @@ import { audioResourceManager } from '../utils/resourceManager';
 import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
 import { lyraManager, lyraTransformController, lyraWasmLoader } from '../utils/lyra';
-import { CodecType, CodecPreference, LyraBitrate } from '../types';
+import { CodecType, CodecPreference, LyraBitrate, AcousticProfileId } from '../types';
 import { platform } from '../platform';
 
 /**
@@ -31,13 +31,19 @@ import { platform } from '../platform';
  * @param {string} options.selectedInputId - Preferred microphone device ID
  * @returns {Object} Call session controls and state
  */
-export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
+export function useCallSession({ addLog, onStatusChange, selectedInputId, acousticProfile }: {
+  addLog?: (msg: string, level?: any) => void;
+  onStatusChange?: (status: any) => void;
+  selectedInputId?: string | null;
+  acousticProfile?: AcousticProfileId;
+}) {
   // Active Streams & Refs
   const rawStreamRef = useRef(null);
   const processedStreamRef = useRef(null);
   const audioCtxRef = useRef(null);
   const pipelineNodesRef = useRef(null);
   const pipelineCleanupRef = useRef(null);
+  const pipelineRef = useRef<any>(null);
   const callRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const audioFocusListenerRef = useRef(null);
@@ -125,6 +131,13 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       : (codec === 'lyra' ? 'Google Lyra v2 Neural (3.2 kbps)' : 'Standard Opus');
     callbacksRef.current.addLog?.(`Preferred voice codec set to: ${label}`, 'info');
   }, []);
+
+  // React to acoustic profile changes dynamically during active session
+  useEffect(() => {
+    if (pipelineRef.current?.setAcousticProfile && acousticProfile) {
+      pipelineRef.current.setAcousticProfile(acousticProfile);
+    }
+  }, [acousticProfile]);
 
   // Ringtone player cleanup ref
   const stopRingtoneRef = useRef(null);
@@ -303,7 +316,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       rawStreamRef.current = stream;
       callbacksRef.current.addLog?.('Microphone access granted', 'ok');
 
-      const { processedStream, audioCtx, nodes, cleanup } = createDenoisePipeline(stream);
+      const pipeline = createDenoisePipeline(stream, { profile: acousticProfile });
+      pipelineRef.current = pipeline;
+      const { processedStream, audioCtx, nodes, cleanup } = pipeline;
       processedStreamRef.current = processedStream;
       audioCtxRef.current = audioCtx;
       pipelineNodesRef.current = nodes;
@@ -635,7 +650,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId }) {
       if (!newTrack) throw new Error('No audio track obtained from new device');
 
       // Build new denoise pipeline with isolated AudioContext
-      const { processedStream, audioCtx, nodes, cleanup } = createDenoisePipeline(newStream);
+      const pipeline = createDenoisePipeline(newStream, { profile: acousticProfile });
+      pipelineRef.current = pipeline;
+      const { processedStream, audioCtx, nodes, cleanup } = pipeline;
       newAudioCtx = audioCtx;
       const processedTrack = processedStream.getAudioTracks()[0];
 

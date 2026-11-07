@@ -1,14 +1,14 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Volume2, Mic, Check, X, Sliders, Bluetooth, Speaker, Headphones } from 'lucide-react';
-import { CodecPreference } from '../types';
+import { Volume2, Mic, Check, X, Sliders, Bluetooth, Speaker, Headphones, Sparkles, Activity } from 'lucide-react';
+import { CodecPreference, AcousticProfileId } from '../types';
+import { ACOUSTIC_PROFILES, STORAGE_KEYS } from '../constants/config';
 import { getAvailableOutputs } from '../utils/audioRouting';
 import './DeviceSelectors.css';
 
 /**
  * Audio Settings & Device Routing Modal Component.
- * Allows users to choose between all enumerated hardware speakers,
- * headphones, earpieces, bluetooth devices, hardware microphones,
- * and the Google Lyra v2 Neural Speech Codec.
+ * Allows users to choose between hardware outputs, inputs,
+ * acoustic clarity profiles, live mic test, and codecs.
  */
 export function AudioSettingsModal({
   isOpen,
@@ -20,7 +20,9 @@ export function AudioSettingsModal({
   activeMicId,
   onSelectMic,
   preferredCodec = 'auto',
-  onSelectCodec
+  onSelectCodec,
+  activeAcousticProfile = 'balanced',
+  onSelectAcousticProfile
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -32,18 +34,74 @@ export function AudioSettingsModal({
   onSelectMic?: (id: string) => void;
   preferredCodec?: CodecPreference;
   onSelectCodec?: (codec: CodecPreference) => void;
+  activeAcousticProfile?: AcousticProfileId;
+  onSelectAcousticProfile?: (profile: AcousticProfileId) => void;
 }) {
   const modalRef = useRef(null);
   const closeBtnRef = useRef(null);
   const [blockedList, setBlockedList] = React.useState([]);
+  const [micTesting, setMicTesting] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+  const testStreamRef = useRef<MediaStream | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       try {
         setBlockedList(JSON.parse(localStorage.getItem('securevoice_blocked') || '[]'));
       } catch(e){}
+    } else {
+      stopMicTest();
     }
   }, [isOpen]);
+
+  const stopMicTest = () => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (testStreamRef.current) {
+      testStreamRef.current.getTracks().forEach(t => t.stop());
+      testStreamRef.current = null;
+    }
+    setMicTesting(false);
+    setMicLevel(0);
+  };
+
+  const startMicTest = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: activeMicId ? { deviceId: { exact: activeMicId } } : true
+      });
+      testStreamRef.current = stream;
+      setMicTesting(true);
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const buffer = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteFrequencyData(buffer);
+        let sum = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          sum += buffer[i];
+        }
+        const avg = sum / buffer.length;
+        const normalized = Math.min(100, Math.round((avg / 128) * 100));
+        setMicLevel(normalized);
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch (e) {
+      console.warn('Failed to start mic test:', e);
+      stopMicTest();
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -179,6 +237,81 @@ export function AudioSettingsModal({
                 <span>Default System Microphone Active</span>
               </div>
             )}
+            {/* Live Mic Test Meter */}
+            <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--card-2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>Microphone Input Test</span>
+                <button
+                  type="button"
+                  onClick={micTesting ? stopMicTest : startMicTest}
+                  style={{
+                    background: micTesting ? 'var(--red-light)' : 'var(--blue-light)',
+                    color: micTesting ? 'var(--red)' : 'var(--blue)',
+                    border: '1px solid var(--border)',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  {micTesting ? 'Stop Test' : 'Test Mic'}
+                </button>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${micTesting ? micLevel : 0}%`,
+                    height: '100%',
+                    background: micLevel > 75 ? 'var(--red)' : micLevel > 40 ? 'var(--green)' : 'var(--blue)',
+                    transition: 'width 80ms ease'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Acoustic Clarity Profile Section */}
+        <div className="audio-settings-section" style={{ marginTop: '16px' }}>
+          <div className="audio-settings-section-title">
+            <Sparkles className="w-4 h-4 text-muted" />
+            <span>Acoustic Clarity & Noise Profile</span>
+          </div>
+
+          <div className="audio-settings-options" style={{ marginTop: '8px' }}>
+            {Object.values(ACOUSTIC_PROFILES).map((profile) => {
+              const isSelected = activeAcousticProfile === profile.id;
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  className={`audio-settings-option ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(STORAGE_KEYS.ACOUSTIC_PROFILE, profile.id);
+                    } catch {}
+                    onSelectAcousticProfile?.(profile.id);
+                  }}
+                  aria-pressed={isSelected}
+                >
+                  <div className="audio-settings-option-left">
+                    <div className="audio-settings-option-icon">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="audio-settings-option-text">
+                      <div className="audio-settings-option-name">{profile.label}</div>
+                      <div className="audio-settings-option-desc">{profile.description}</div>
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div className="audio-settings-check">
+                      <Check className="w-4 h-4" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -244,7 +377,9 @@ export function CallAudioDeviceSwitcher({
   activeMicId, 
   onSwitchMic,
   preferredCodec = 'auto',
-  onSelectCodec
+  onSelectCodec,
+  activeAcousticProfile = 'balanced',
+  onSelectAcousticProfile
 }: {
   isSpeakerOn?: boolean;
   onToggleSpeaker: (mode: any) => void;
@@ -255,6 +390,8 @@ export function CallAudioDeviceSwitcher({
   onSwitchMic: (deviceId: string) => void;
   preferredCodec?: any;
   onSelectCodec?: (codec: any) => void;
+  activeAcousticProfile?: AcousticProfileId;
+  onSelectAcousticProfile?: (profile: AcousticProfileId) => void;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [nativeOutputs, setNativeOutputs] = useState(['speaker', 'earpiece']);
@@ -366,6 +503,8 @@ export function CallAudioDeviceSwitcher({
         onSelectMic={(deviceId) => onSwitchMic(deviceId)}
         preferredCodec={preferredCodec}
         onSelectCodec={onSelectCodec}
+        activeAcousticProfile={activeAcousticProfile}
+        onSelectAcousticProfile={onSelectAcousticProfile}
       />
     </div>
   );

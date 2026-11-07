@@ -36,26 +36,24 @@ public class AudioRoutingPlugin extends Plugin {
             // Proximity sensor not available
         }
 
-        // Register reactive hardware audio device listener (API 23+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-                if (audioManager != null) {
-                    audioDeviceCallback = new android.media.AudioDeviceCallback() {
-                        @Override
-                        public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
-                            notifyAudioDevicesChanged();
-                        }
+        // Register reactive hardware audio device listener (API 28+)
+        try {
+            AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager != null) {
+                audioDeviceCallback = new android.media.AudioDeviceCallback() {
+                    @Override
+                    public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+                        notifyAudioDevicesChanged();
+                    }
 
-                        @Override
-                        public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
-                            notifyAudioDevicesChanged();
-                        }
-                    };
-                    audioManager.registerAudioDeviceCallback(audioDeviceCallback, null);
-                }
-            } catch (Exception ignored) {}
-        }
+                    @Override
+                    public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+                        notifyAudioDevicesChanged();
+                    }
+                };
+                audioManager.registerAudioDeviceCallback(audioDeviceCallback, null);
+            }
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -83,23 +81,18 @@ public class AudioRoutingPlugin extends Plugin {
                 };
             }
 
-            int res;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                AudioAttributes playbackAttributes = new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build();
+            AudioAttributes playbackAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build();
 
-                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                        .setAudioAttributes(playbackAttributes)
-                        .setAcceptsDelayedFocusGain(false)
-                        .setOnAudioFocusChangeListener(focusChangeListener)
-                        .build();
+            audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(playbackAttributes)
+                    .setAcceptsDelayedFocusGain(false)
+                    .setOnAudioFocusChangeListener(focusChangeListener)
+                    .build();
 
-                res = audioManager.requestAudioFocus(audioFocusRequest);
-            } else {
-                res = audioManager.requestAudioFocus(focusChangeListener, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-            }
+            int res = audioManager.requestAudioFocus(audioFocusRequest);
 
             JSObject result = new JSObject();
             result.put("granted", res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
@@ -114,10 +107,8 @@ public class AudioRoutingPlugin extends Plugin {
         AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
         if (audioManager != null) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
+                if (audioFocusRequest != null) {
                     audioManager.abandonAudioFocusRequest(audioFocusRequest);
-                } else if (focusChangeListener != null) {
-                    audioManager.abandonAudioFocus(focusChangeListener);
                 }
             } catch (Exception ignored) {}
         }

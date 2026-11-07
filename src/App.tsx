@@ -12,18 +12,22 @@ import {
   Activity,
   ShieldAlert,
   PhoneMissed,
-  Sliders
+  Sliders,
+  QrCode
 } from 'lucide-react';
 
 import { useTheme, useLogs, usePeer, useCallSession, useAudioDevices } from './hooks';
 import { sanitizePeerId, formatTimer } from './utils/formatters';
-import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION } from './constants/config';
+import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION, STORAGE_KEYS } from './constants/config';
+import { parseCallTargetFromUrl } from './utils/qrCode';
+import { AcousticProfileId } from './types';
 
 import AudioVisualizer from './components/AudioVisualizer';
 import RecentCalls from './components/RecentCalls';
 import SecurityVerificationModal from './components/SecurityVerificationModal';
 import AudioSettingsModal, { CallAudioDeviceSwitcher } from './components/AudioSettingsModal';
 import WebRtcStatsOverlay from './components/WebRtcStatsOverlay';
+import QRCodeModal from './components/QRCodeModal';
 
 /**
  * SecureVoice Main Application Shell
@@ -36,11 +40,33 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const [missedCallNotice, setMissedCallNotice] = useState(null);
   const [verificationDismissed, setVerificationDismissed] = useState(false);
+  const [acousticProfile, setAcousticProfile] = useState<AcousticProfileId>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.ACOUSTIC_PROFILE);
+        if (saved === 'balanced' || saved === 'voice-boost' || saved === 'studio-clean') {
+          return saved as AcousticProfileId;
+        }
+      } catch {}
+    }
+    return 'balanced';
+  });
   const copyTimeoutRef = useRef(null);
   const missedCallTimeoutRef = useRef(null);
+
+  // Parse deep-link invite on launch
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const target = parseCallTargetFromUrl(window.location.hash);
+    if (target) {
+      setCalleeInput(sanitizePeerId(target));
+      addLog(`Prepared call target from link: ${target}`, 'info');
+    }
+  }, [addLog]);
 
   // Audio Device hook (dynamic inputs & outputs)
   const audioDevices = useAudioDevices();
@@ -49,7 +75,8 @@ export default function App() {
   const callSession = useCallSession({
     addLog,
     onStatusChange: (s) => setPeerStatus(s),
-    selectedInputId: audioDevices.selectedInputId
+    selectedInputId: audioDevices.selectedInputId,
+    acousticProfile
   });
 
   // PeerJS signaling hook
@@ -208,6 +235,18 @@ export default function App() {
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               <span>{copied ? 'Copied' : 'Copy'}</span>
             </button>
+            <button
+              type="button"
+              className="copy-btn"
+              onClick={() => setShowQrModal(true)}
+              disabled={!myId}
+              aria-label="Share QR Code"
+              title="Share QR Code"
+              style={{ marginLeft: '6px' }}
+            >
+              <QrCode className="w-4 h-4" />
+              <span>QR</span>
+            </button>
           </div>
         </section>
 
@@ -357,6 +396,8 @@ export default function App() {
                 }}
                 preferredCodec={callSession.preferredCodec}
                 onSelectCodec={callSession.setPreferredCodec}
+                activeAcousticProfile={acousticProfile}
+                onSelectAcousticProfile={setAcousticProfile}
               />
             </div>
           </section>
@@ -475,6 +516,17 @@ export default function App() {
             }}
             preferredCodec={callSession.preferredCodec}
             onSelectCodec={callSession.setPreferredCodec}
+            activeAcousticProfile={acousticProfile}
+            onSelectAcousticProfile={setAcousticProfile}
+          />
+        )}
+
+        {/* QR Code Air-Gapped Share Modal */}
+        {showQrModal && (
+          <QRCodeModal
+            isOpen={showQrModal}
+            onClose={() => setShowQrModal(false)}
+            peerId={myId}
           />
         )}
 

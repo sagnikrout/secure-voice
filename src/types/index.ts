@@ -212,3 +212,21 @@ export interface LyraWorkerResponse {
   seq?: number;
   error?: string;
 }
+
+export type AcousticProfileId = 'balanced' | 'voice-boost' | 'studio-clean';
+
+export interface AcousticProfile {
+  id: AcousticProfileId;
+  name: string;
+  label: string;
+  description: string;
+  highpassFreq: number;
+  presenceGain: number;
+  presenceFreq: number;
+  hissCutFreq: number;
+  gateThreshold: number;
+  gateFloor: number;
+  compressorRatio: number;
+  compressorThreshold: number;
+  makeupGain: number;
+}

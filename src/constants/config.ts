@@ -1,4 +1,4 @@
-import { ExtendedLadderTier } from '../types';
+import { ExtendedLadderTier, AcousticProfile, AcousticProfileId } from '../types';
 
 export const APP_NAME = 'SecureVoice';
 export const APP_VERSION = 'v3.8.2';
@@ -392,11 +392,61 @@ export const QUALITY_BADGES = {
   poor: '🔴 Poor'       // RTT ≥ 400ms
 };
 
+// Acoustic DSP Profiles (Advanced Multi-Stage Voice Pre-Processing Engine)
+export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
+  balanced: {
+    id: 'balanced',
+    name: 'Balanced Clarity',
+    label: 'Balanced (Default)',
+    description: 'Natural vocal warmth with smooth background noise suppression.',
+    highpassFreq: 85,
+    presenceGain: 2.5,
+    presenceFreq: 3000,
+    hissCutFreq: 8500,
+    gateThreshold: -46,
+    gateFloor: 0.02,
+    compressorRatio: 2.5,
+    compressorThreshold: -20,
+    makeupGain: 1.15
+  },
+  'voice-boost': {
+    id: 'voice-boost',
+    name: 'Voice Boost & High Denoise',
+    label: 'Voice Boost (Noisy Environment)',
+    description: 'Steep rumble cut, enhanced vocal formant EQ, and tight gate for noisy streets or outdoors.',
+    highpassFreq: 130,
+    presenceGain: 4.5,
+    presenceFreq: 3200,
+    hissCutFreq: 7500,
+    gateThreshold: -38,
+    gateFloor: 0.005,
+    compressorRatio: 3.5,
+    compressorThreshold: -24,
+    makeupGain: 1.30
+  },
+  'studio-clean': {
+    id: 'studio-clean',
+    name: 'Studio Clean',
+    label: 'Studio Clean (Quiet Room)',
+    description: 'Ultra-transparent wideband response with gentle gating for quiet spaces and studio mics.',
+    highpassFreq: 50,
+    presenceGain: 1.0,
+    presenceFreq: 2800,
+    hissCutFreq: 12000,
+    gateThreshold: -54,
+    gateFloor: 0.05,
+    compressorRatio: 1.8,
+    compressorThreshold: -16,
+    makeupGain: 1.05
+  }
+};
+
 // LocalStorage Keys for persistence
 export const STORAGE_KEYS = {
   THEME: 'secure_voice_theme',
   RECENT_CALLS: 'secure_voice_recent_calls',
   PREFERRED_INPUT: 'securevoice_preferred_input_id',
   PREFERRED_OUTPUT: 'securevoice_output_mode',
-  PREFERRED_CODEC: 'securevoice_preferred_codec'
+  PREFERRED_CODEC: 'securevoice_preferred_codec',
+  ACOUSTIC_PROFILE: 'securevoice_acoustic_profile'
 };
