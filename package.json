@@ -22,6 +22,7 @@
     "@capacitor/core": "8.5.0",
     "@capacitor/local-notifications": "^8.3.1",
     "@capawesome-team/capacitor-android-foreground-service": "8.1.0",
+    "denoise-voice-clarity": "^0.2.2",
     "lucide-react": "0.344.0",
     "peerjs": "1.5.4",
     "qrcode": "^1.5.4",

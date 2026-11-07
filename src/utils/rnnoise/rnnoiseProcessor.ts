@@ -42,6 +42,11 @@ export class RNNoiseProcessor {
   private lastPitchPeriod: number = 0;
   private speechProbability: number = 0.5;
   private framesProcessed: number = 0;
+  private previousAverageGain: number = 1.0;
+
+  // DeepFilterNet 3 WASM instance (when loaded)
+  private dfnWasm: any = null;
+  private dfnBuffer: Float32Array = new Float32Array(FRAME_SIZE);
 
   constructor(sampleRate: number = 48000) {
     this.sampleRate = sampleRate;
@@ -71,6 +76,55 @@ export class RNNoiseProcessor {
   }
 
   /**
+   * Initialize DeepFilterNet 3 WASM engine for high-fidelity speech enhancement
+   */
+  public initDeepFilter(wasmBytesOrModule?: any): boolean {
+    try {
+      if (wasmBytesOrModule && typeof wasmBytesOrModule.process === 'function') {
+        this.dfnWasm = wasmBytesOrModule;
+        return true;
+      }
+      if (wasmBytesOrModule && typeof wasmBytesOrModule.VoiceClarityWasm === 'function') {
+        const clar = new wasmBytesOrModule.VoiceClarityWasm();
+        clar.set_enabled(true);
+        clar.set_attenuation_limit_db(30);
+        clar.set_presence_gain_db(4);
+        this.dfnWasm = clar;
+        return true;
+      }
+      if (typeof window === 'undefined') {
+        // Node.js / Vitest test environment (CJS or ESM with polyfilled require)
+        const req = typeof require !== 'undefined' ? require : (globalThis as any).require;
+        if (req) {
+          const fs = req('fs');
+          const path = req('path');
+          const wasmPath = path.resolve(process.cwd(), 'node_modules/denoise-voice-clarity/dist/wasm/denoise_voice_core_bg.wasm');
+          if (fs.existsSync(wasmPath)) {
+            const wasmBytes = wasmBytesOrModule || fs.readFileSync(wasmPath);
+            const corePath = path.resolve(wasmPath, '../denoise_voice_core.js');
+            const { initSync, VoiceClarityWasm } = req(corePath);
+            initSync({ module: wasmBytes });
+            const clar = new VoiceClarityWasm();
+            clar.set_enabled(true);
+            clar.set_attenuation_limit_db(30);
+            clar.set_presence_gain_db(4);
+            this.dfnWasm = clar;
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('initDeepFilter error:', e);
+      this.dfnWasm = null;
+    }
+    return false;
+  }
+
+  public isDeepFilterActive(): boolean {
+    return this.dfnWasm !== null;
+  }
+
+  /**
    * Process a single 480-sample frame in-place.
    * Modulates the acoustic spectrum by predicted vocal tract gains.
    *
@@ -82,6 +136,40 @@ export class RNNoiseProcessor {
     if (inputFrame.length !== FRAME_SIZE || outputFrame.length !== FRAME_SIZE) {
       outputFrame.set(inputFrame);
       return { vadProbability: 1.0, noiseLevelDb: -90, averageGain: 1.0 };
+    }
+
+    // High-performance DeepFilterNet 3 WASM path (when initialized)
+    if (this.dfnWasm) {
+      let inSum = 0;
+      for (let i = 0; i < FRAME_SIZE; i++) {
+        const s = inputFrame[i];
+        inSum += s * s;
+        this.dfnBuffer[i] = s;
+      }
+      const inRms = Math.sqrt(inSum / FRAME_SIZE);
+
+      this.dfnWasm.process(this.dfnBuffer);
+      outputFrame.set(this.dfnBuffer);
+
+      let outSum = 0;
+      for (let i = 0; i < FRAME_SIZE; i++) {
+        const s = outputFrame[i];
+        outSum += s * s;
+      }
+      const outRms = Math.sqrt(outSum / FRAME_SIZE);
+
+      const ratio = inRms > 1e-5 ? Math.min(1.0, outRms / inRms) : 1.0;
+      const vad = inRms > 0.005 ? (ratio > 0.35 ? 0.95 : Math.max(0.01, ratio * 2.0)) : 0.05;
+      this.speechProbability = 0.6 * this.speechProbability + 0.4 * vad;
+
+      const noiseFloorDb = 20 * Math.log10(Math.max(outRms, 1e-5));
+      this.framesProcessed++;
+
+      return {
+        vadProbability: this.speechProbability,
+        noiseLevelDb: noiseFloorDb,
+        averageGain: ratio
+      };
     }
 
     // 1. Windowing and Signal Energy Calculation
@@ -118,12 +206,15 @@ export class RNNoiseProcessor {
     for (let p = minPeriod; p < searchLimit; p += 4) {
       let corr = 0;
       let energySegment = 0;
+      let energyShift = 0;
       for (let i = 0; i < FRAME_SIZE - p; i += 4) {
         corr += inputFrame[i] * inputFrame[i + p];
         energySegment += inputFrame[i] * inputFrame[i];
+        energyShift += inputFrame[i + p] * inputFrame[i + p];
       }
-      if (energySegment > 1e-6) {
-        const normCorr = corr / energySegment;
+      const denom = Math.sqrt(energySegment * energyShift);
+      if (denom > 1e-6) {
+        const normCorr = corr / denom;
         if (normCorr > maxCorr) {
           maxCorr = normCorr;
           bestPeriod = p;
@@ -192,10 +283,17 @@ export class RNNoiseProcessor {
     const averageGain = totalGain / BARK_BANDS;
 
     // 7. Time-Domain Synthesis via Continuous Spectral Gain
-    // Modulates sample amplitudes smoothly using average Bark band gain
+    // Modulates sample amplitudes smoothly using interpolated Bark band gain across the frame
+    const startGain = this.previousAverageGain;
+    const endGain = averageGain;
+    const gainStep = (endGain - startGain) / FRAME_SIZE;
+
+    let currentGain = startGain;
     for (let i = 0; i < FRAME_SIZE; i++) {
-      outputFrame[i] = inputFrame[i] * averageGain;
+      currentGain += gainStep;
+      outputFrame[i] = inputFrame[i] * currentGain;
     }
+    this.previousAverageGain = endGain;
 
     const noiseRms = Math.sqrt(this.noiseFloor.reduce((acc, v) => acc + v * v, 0) / BARK_BANDS);
     const noiseLevelDb = 20 * Math.log10(Math.max(noiseRms, 1e-5));
@@ -208,6 +306,9 @@ export class RNNoiseProcessor {
   }
 
   public reset(): void {
+    if (this.dfnWasm) {
+      try { this.dfnWasm.reset(); } catch (e) {}
+    }
     for (let b = 0; b < BARK_BANDS; b++) {
       this.noiseFloor[b] = 1e-4;
       this.bandGains[b] = 1.0;
@@ -215,5 +316,6 @@ export class RNNoiseProcessor {
     }
     this.speechProbability = 0.5;
     this.framesProcessed = 0;
+    this.previousAverageGain = 1.0;
   }
 }
