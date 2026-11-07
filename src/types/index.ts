@@ -214,7 +214,7 @@ export interface LyraWorkerResponse {
   error?: string;
 }
 
-export type AcousticProfileId = 'balanced' | 'voice-boost' | 'studio-clean';
+export type AcousticProfileId = 'balanced' | 'voice-boost' | 'studio-clean' | 'neural-enhanced';
 
 export interface AcousticProfile {
   id: AcousticProfileId;

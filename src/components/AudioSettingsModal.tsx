@@ -300,7 +300,14 @@ export function AudioSettingsModal({
                       <Sliders className="w-4 h-4" />
                     </div>
                     <div className="audio-settings-option-text">
-                      <div className="audio-settings-option-name">{profile.label}</div>
+                      <div className="audio-settings-option-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{profile.label}</span>
+                        {profile.id === 'neural-enhanced' && (
+                          <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '4px', background: 'var(--border-subtle, rgba(255,255,255,0.08))', color: 'var(--text-muted)' }}>
+                            AI Edge
+                          </span>
+                        )}
+                      </div>
                       <div className="audio-settings-option-desc">{profile.description}</div>
                     </div>
                   </div>

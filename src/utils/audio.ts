@@ -1,5 +1,6 @@
 import { audioResourceManager } from './resourceManager';
 import { registerNoiseGateWorklet, NOISE_GATE_WORKLET_NAME } from './noiseGateWorklet';
+import { registerRNNoiseWorklet, RNNOISE_WORKLET_NAME } from './rnnoise/rnnoiseWorklet';
 import { ACOUSTIC_PROFILES } from '../constants/config';
 import { AcousticProfileId } from '../types';
 
@@ -263,10 +264,11 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
     gateIntervalId = setInterval(evaluateNoiseGate, 16);
 
     // AudioWorklet Optimization:
-    // When AudioWorklet is supported, offload RMS noise gating from the main thread
+    // When AudioWorklet is supported, offload RMS noise gating and RNNoise enhancement
     // to the real-time audio thread, stopping the 16ms setInterval.
     let isCleanedUp = false;
     let workletNode: any = null;
+    let rnnoiseNode: any = null;
 
     if (ctx && ctx.audioWorklet && typeof ctx.audioWorklet.addModule === 'function') {
       registerNoiseGateWorklet(ctx).then(registered => {
@@ -285,6 +287,20 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
             }
           } catch (workletErr) {
             // Retain fallback interval timer
+          }
+        }
+      }).catch(() => {});
+
+      registerRNNoiseWorklet(ctx).then(registered => {
+        if (registered && !isCleanedUp && typeof AudioWorkletNode !== 'undefined') {
+          try {
+            rnnoiseNode = new AudioWorkletNode(ctx, RNNOISE_WORKLET_NAME, {
+              processorOptions: {
+                enabled: initialProfileId === 'neural-enhanced'
+              }
+            });
+          } catch (rnnoiseErr) {
+            // Retain fallback parametric DSP
           }
         }
       }).catch(() => {});
@@ -325,7 +341,8 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       gateAnalyser: analyser,
       compressor,
       makeupGain,
-      dest
+      dest,
+      get rnnoiseNode() { return rnnoiseNode; }
     };
 
     // Register resources with AudioResourceManager
@@ -343,6 +360,10 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
       if (workletNode) {
         try { workletNode.disconnect(); } catch (e) {}
         workletNode = null;
+      }
+      if (rnnoiseNode) {
+        try { rnnoiseNode.disconnect(); } catch (e) {}
+        rnnoiseNode = null;
       }
       audioResourceManager.cleanupContext(ctx);
       Object.values(nodes).forEach(node => {
@@ -444,6 +465,12 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
           if (workletNode && workletNode.port) {
             try {
               workletNode.port.postMessage({ thresholdDb: gateThreshold, floor: gateFloor });
+            } catch (e) {}
+          }
+
+          if (rnnoiseNode && rnnoiseNode.port) {
+            try {
+              rnnoiseNode.port.postMessage({ enabled: profileId === 'neural-enhanced', bypassed: false });
             } catch (e) {}
           }
         } catch (e) {}

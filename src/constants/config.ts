@@ -446,6 +446,21 @@ export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
     compressorRatio: 1.8,
     compressorThreshold: -16,
     makeupGain: 1.05
+  },
+  'neural-enhanced': {
+    id: 'neural-enhanced',
+    name: 'Neural Enhanced (AI Denoise)',
+    label: 'Neural Denoise (Deep Voice Extraction)',
+    description: 'Real-time neural noise suppression targeting traffic, sirens, dogs, and background babble while preserving vocal warmth.',
+    highpassFreq: 85,
+    presenceGain: 3.0,
+    presenceFreq: 3000,
+    hissCutFreq: 18000,
+    gateThreshold: -44,
+    gateFloor: 0.015,
+    compressorRatio: 2.8,
+    compressorThreshold: -22,
+    makeupGain: 1.20
   }
 };
 
