@@ -479,14 +479,14 @@ export function CallAudioDeviceSwitcher({
       <button 
         ref={triggerRef}
         type="button"
-        className={`icon-btn ${modalOpen ? 'active' : ''}`}
+        className={`dock-btn icon-btn ${modalOpen ? 'active' : ''} ${isSpeakerOn ? 'active-speaker' : ''}`}
         onClick={() => setModalOpen(prev => !prev)}
         aria-label="Audio Settings & Device Switcher"
         title="Audio Settings"
         aria-expanded={modalOpen}
         aria-haspopup="dialog"
       >
-        <ActiveIcon className="w-5 h-5" />
+        <ActiveIcon className="w-6 h-6" />
       </button>
 
       <AudioSettingsModal

@@ -13,7 +13,10 @@ import {
   ShieldAlert,
   PhoneMissed,
   Sliders,
-  QrCode
+  QrCode,
+  Volume2,
+  Speaker,
+  Lock
 } from 'lucide-react';
 
 import { useTheme, useLogs, usePeer, useCallSession, useAudioDevices } from './hooks';
@@ -177,230 +180,297 @@ export default function App() {
       />
 
       <div className="shell">
-        {/* Header Bar */}
-        <header className="card header">
-          <div className="brand">
-            <div className="brand-icon" aria-hidden="true">
-              <img src="./logo.svg" alt="" />
-            </div>
-            <div className="brand-text">
-              <h1>SecureVoice</h1>
-              <span className="v2-badge">{APP_VERSION}</span>
-            </div>
-          </div>
+        {/* Main Call State: Active Call Console */}
+        {callSession.isInCall ? (
+          <div className="call-screen" role="region" aria-label="Active call center">
+            {/* Top Bar: Security & Diagnostics */}
+            <div className="call-top-bar">
+              <div className="call-security-badge" title="Direct peer-to-peer connection with DTLS-SRTP encryption">
+                <Lock className="w-3.5 h-3.5 text-green" />
+                <span>End-to-End Encrypted</span>
+              </div>
 
-          <div className="header-right">
-            <button
-              type="button"
-              className="info-btn"
-              onClick={() => setShowAudioSettings(true)}
-              aria-label="Audio & Codec Settings"
-              title="Audio & Codec Settings"
-            >
-              <Sliders className="w-4 h-4" />
-            </button>
+              <div className="call-top-actions">
+                {callSession.safetyCode && (
+                  <button
+                    type="button"
+                    onClick={() => setVerificationDismissed(false)}
+                    className={`call-safety-btn ${callSession.isVerified ? 'verified' : ''}`}
+                    title="Click to view full security verification dialog"
+                    aria-label="Security Verification Code"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>
+                      {callSession.isVerified
+                        ? `Verified (${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)})`
+                        : `Code: ${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)}`}
+                    </span>
+                  </button>
+                )}
 
-            <button
-              type="button"
-              className="info-btn"
-              onClick={() => setShowStats(true)}
-              aria-label="Network Health"
-              title="Network Health"
-            >
-              <Activity className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* Peer ID Box */}
-        <section className="card" aria-labelledby="peer-id-label">
-          <div className="card-header-row">
-            <p id="peer-id-label" className="label">Your Peer ID</p>
-            <div className={`status-chip ${currentStatus}`} role="status" aria-live="polite">
-              <span className="dot" aria-hidden="true" />
-              <span>{STATUS_LABELS[currentStatus] || currentStatus}</span>
-            </div>
-          </div>
-          <div className="id-box">
-            <span className={`id-text ${myId ? '' : 'dim'}`} aria-label="Your assigned peer ID">
-              {myId || 'Generating...'}
-            </span>
-            <button
-              type="button"
-              className={`copy-btn ${copied ? 'copied' : ''}`}
-              onClick={copyMyId}
-              disabled={!myId}
-              aria-label="Copy ID to clipboard"
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
-            </button>
-            <button
-              type="button"
-              className="copy-btn"
-              onClick={() => setShowQrModal(true)}
-              disabled={!myId}
-              aria-label="Share QR Code"
-              title="Share QR Code"
-              style={{ marginLeft: '6px' }}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>QR</span>
-            </button>
-          </div>
-        </section>
-
-        {/* Main Call State Action Cards */}
-        {!callSession.isInCall && !callSession.isCalling ? (
-          <section className="card" aria-labelledby="new-call-label">
-            <p id="new-call-label" className="label">New Call</p>
-            <div className="input-row">
-              <input
-                type="text"
-                className="peer-input"
-                placeholder="Enter Friend's Peer ID..."
-                value={calleeInput}
-                onChange={e => setCalleeInput(sanitizePeerId(e.target.value))}
-                onKeyDown={e => e.key === 'Enter' && handleStartCall(calleeInput)}
-                disabled={peerStatus !== 'ready'}
-                spellCheck={false}
-                autoComplete="off"
-                maxLength={16}
-                aria-label="Enter recipient peer ID"
-              />
-              <button
-                type="button"
-                className="btn btn-blue"
-                onClick={() => handleStartCall(calleeInput)}
-                disabled={peerStatus !== 'ready' || !calleeInput.trim()}
-                aria-label="Initiate encrypted call"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Call</span>
-              </button>
-            </div>
-            <div className="privacy-banner">
-              <Shield className="w-4 h-4 text-green" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span>
-                <strong>Privacy note:</strong> Microphone remains disabled until a call is explicitly answered. Audio routes direct peer-to-peer with end-to-end encryption.
-              </span>
-            </div>
-          </section>
-        ) : callSession.isCalling && !callSession.isInCall ? (
-          <section className="card call-center" aria-label="Outgoing call in progress">
-            <div className="call-avatar calling-pulse" aria-hidden="true">
-              <PhoneCall className="w-8 h-8 text-blue" />
-            </div>
-            <p className="call-peer">{calleeInput}</p>
-            <p className="calling-label">Connecting encrypted link...</p>
-            <button
-              type="button"
-              className="btn btn-red"
-              onClick={callSession.cancelCall}
-              aria-label="Cancel outgoing call"
-            >
-              <span>Cancel</span>
-            </button>
-          </section>
-        ) : (
-          <section className="card call-center" aria-label="Active call center">
-            <div className="call-avatar" aria-hidden="true">
-              <Mic className="w-8 h-8 text-blue" />
-            </div>
-
-            <p className="call-peer">
-              <span>{callSession.connectedPeer}</span>
-              <span className={`quality-badge quality-${callSession.quality}`} title={`Quality: ${callSession.quality}`}>
-                <span className={`dot dot-${callSession.quality || 'good'}`} aria-hidden="true" />
-                <span>{QUALITY_BADGES[callSession.quality] || 'Good'}</span>
-              </span>
-            </p>
-
-            <div className="timer" aria-live="polite" aria-label="Call duration">
-              {formatTimer(callSession.callDuration)}
-            </div>
-
-            {/* Interactive Security Verification Code Badge */}
-            {callSession.safetyCode && (
-              <div className="verification-badge-wrapper">
                 <button
                   type="button"
-                  onClick={() => setVerificationDismissed(false)}
-                  className={`verification-badge ${callSession.isVerified ? 'verified' : ''}`}
-                  title="Click to view full security verification dialog"
-                  aria-label="Security Verification Code"
+                  className="call-top-btn"
+                  onClick={() => setShowStats(true)}
+                  aria-label="Network Health"
+                  title="Network Health"
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>
-                    {callSession.isVerified
-                      ? `Verified (${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)})`
-                      : `Code: ${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)}`}
-                  </span>
+                  <Activity className="w-4 h-4" />
                 </button>
               </div>
-            )}
+            </div>
 
-            {/* Visualizer Canvas */}
-            <AudioVisualizer stream={callSession.activeStream} isActive={callSession.isInCall} />
+            {/* Central Call Hero Stage */}
+            <div className="call-hero">
+              <div className="call-avatar" aria-hidden="true">
+                <span className="call-avatar-initials">
+                  {callSession.connectedPeer ? callSession.connectedPeer.slice(0, 2) : 'SV'}
+                </span>
+              </div>
 
-            <div className="mic-status-wrapper">
-              <div className={`mic-status-badge ${callSession.isMuted ? 'muted' : 'live'}`}>
-                {callSession.isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                <span>{callSession.isMuted ? 'Microphone muted' : 'Microphone live'}</span>
+              <p className="call-peer">
+                <span>{callSession.connectedPeer}</span>
+                <span className={`quality-badge quality-${callSession.quality}`} title={`Quality: ${callSession.quality}`}>
+                  <span className={`dot dot-${callSession.quality || 'good'}`} aria-hidden="true" />
+                  <span>{QUALITY_BADGES[callSession.quality] || 'Good'}</span>
+                </span>
+              </p>
+
+              <div className="timer" aria-live="polite" aria-label="Call duration">
+                {formatTimer(callSession.callDuration)}
+              </div>
+
+              {/* Visualizer Canvas */}
+              <AudioVisualizer stream={callSession.activeStream} isActive={callSession.isInCall} />
+
+              <div className="mic-status-wrapper">
+                <div className={`mic-status-badge ${callSession.isMuted ? 'muted' : 'live'}`}>
+                  {callSession.isMuted ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
+                  <span>{callSession.isMuted ? 'Microphone muted' : 'Microphone live'}</span>
+                </div>
               </div>
             </div>
 
-            <div className="call-btns">
-              <button
-                type="button"
-                className={`icon-btn ${callSession.isMuted ? 'muted' : ''}`}
-                onClick={callSession.toggleMute}
-                aria-pressed={callSession.isMuted}
-                aria-label={callSession.isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                title={callSession.isMuted ? 'Unmute' : 'Mute'}
-              >
-                {callSession.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </button>
+            {/* Ergonomic Bottom Action Dock (Thumb-Zone) */}
+            <div className="call-dock call-btns">
+              {/* 1. Mute */}
+              <div className="dock-btn-wrapper">
+                <button
+                  type="button"
+                  className={`dock-btn icon-btn ${callSession.isMuted ? 'muted active-mute' : ''}`}
+                  onClick={callSession.toggleMute}
+                  aria-pressed={callSession.isMuted}
+                  aria-label={callSession.isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                  title={callSession.isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {callSession.isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </button>
+                <span className="dock-label">{callSession.isMuted ? 'Unmute' : 'Mute'}</span>
+              </div>
 
-              <button
-                type="button"
-                className="hangup"
-                onClick={callSession.endCall}
-                aria-label="End call"
-                title="Hang up"
-              >
-                <PhoneOff className="w-6 h-6" />
-              </button>
+              {/* 2. Speaker / Audio Route */}
+              <div className="dock-btn-wrapper">
+                <CallAudioDeviceSwitcher
+                  isSpeakerOn={callSession.isSpeakerOn}
+                  onToggleSpeaker={callSession.toggleSpeaker}
+                  activeOutputId={callSession.activeOutputId}
+                  outputDevices={audioDevices.audioOutputs}
+                  micDevices={audioDevices.audioInputs}
+                  activeMicId={audioDevices.selectedInputId}
+                  onSwitchMic={(deviceId) => {
+                    audioDevices.selectAudioInput(deviceId);
+                    callSession.switchMicrophone(deviceId);
+                  }}
+                  preferredCodec={callSession.preferredCodec}
+                  onSelectCodec={callSession.setPreferredCodec}
+                  activeAcousticProfile={acousticProfile}
+                  onSelectAcousticProfile={setAcousticProfile}
+                />
+                <span className="dock-label">{callSession.isSpeakerOn ? 'Speaker' : 'Audio'}</span>
+              </div>
 
-              <CallAudioDeviceSwitcher
-                isSpeakerOn={callSession.isSpeakerOn}
-                onToggleSpeaker={callSession.toggleSpeaker}
-                activeOutputId={callSession.activeOutputId}
-                outputDevices={audioDevices.audioOutputs}
-                micDevices={audioDevices.audioInputs}
-                activeMicId={audioDevices.selectedInputId}
-                onSwitchMic={(deviceId) => {
-                  audioDevices.selectAudioInput(deviceId);
-                  callSession.switchMicrophone(deviceId);
-                }}
-                preferredCodec={callSession.preferredCodec}
-                onSelectCodec={callSession.setPreferredCodec}
-                activeAcousticProfile={acousticProfile}
-                onSelectAcousticProfile={setAcousticProfile}
-              />
+              {/* 3. Acoustic Clarity */}
+              <div className="dock-btn-wrapper">
+                <button
+                  type="button"
+                  className="dock-btn icon-btn"
+                  onClick={() => setShowAudioSettings(true)}
+                  aria-label="Audio & Codec Settings"
+                  title="Audio & Codec Settings"
+                >
+                  <Sliders className="w-6 h-6" />
+                </button>
+                <span className="dock-label">Clarity</span>
+              </div>
+
+              {/* 4. End Call */}
+              <div className="dock-btn-wrapper">
+                <button
+                  type="button"
+                  className="dock-btn dock-hangup hangup"
+                  onClick={callSession.endCall}
+                  aria-label="End call"
+                  title="Hang up"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+                <span className="dock-label">End</span>
+              </div>
             </div>
-          </section>
-        )}
+          </div>
+        ) : callSession.isCalling && !callSession.isInCall ? (
+          <div className="call-screen calling-screen" role="region" aria-label="Outgoing call in progress">
+            <div className="call-top-bar">
+              <div className="call-security-badge">
+                <Lock className="w-3.5 h-3.5 text-blue" />
+                <span>Outgoing Encrypted Link</span>
+              </div>
+            </div>
 
-        {/* Recent Contacts Drawer */}
-        {!callSession.isInCall && !callSession.isCalling && (
-          <RecentCalls
-            onSelectPeer={(id) => {
-              setCalleeInput(id);
-              handleStartCall(id);
-            }}
-            currentPeerId={myId}
-          />
+            <div className="call-hero">
+              <div className="call-avatar calling-pulse" aria-hidden="true">
+                <PhoneCall className="w-8 h-8 text-blue" />
+              </div>
+              <p className="call-peer" style={{ fontSize: '22px' }}>{calleeInput}</p>
+              <p className="calling-label">Connecting encrypted link...</p>
+            </div>
+
+            <div className="call-dock" style={{ justifyContent: 'center' }}>
+              <div className="dock-btn-wrapper">
+                <button
+                  type="button"
+                  className="dock-btn dock-hangup hangup btn-red"
+                  onClick={callSession.cancelCall}
+                  aria-label="Cancel outgoing call"
+                  title="Cancel call"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+                <span className="dock-label">Cancel</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header Bar */}
+            <header className="card header">
+              <div className="brand">
+                <div className="brand-icon" aria-hidden="true">
+                  <img src="./logo.svg" alt="" />
+                </div>
+                <div className="brand-text">
+                  <h1>SecureVoice</h1>
+                  <span className="v2-badge">{APP_VERSION}</span>
+                </div>
+              </div>
+
+              <div className="header-right">
+                <button
+                  type="button"
+                  className="info-btn"
+                  onClick={() => setShowAudioSettings(true)}
+                  aria-label="Audio & Codec Settings"
+                  title="Audio & Codec Settings"
+                >
+                  <Sliders className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  className="info-btn"
+                  onClick={() => setShowStats(true)}
+                  aria-label="Network Health"
+                  title="Network Health"
+                >
+                  <Activity className="w-4 h-4" />
+                </button>
+              </div>
+            </header>
+
+            {/* Peer ID Box */}
+            <section className="card" aria-labelledby="peer-id-label">
+              <div className="card-header-row">
+                <p id="peer-id-label" className="label">Your Peer ID</p>
+                <div className={`status-chip ${currentStatus}`} role="status" aria-live="polite">
+                  <span className="dot" aria-hidden="true" />
+                  <span>{STATUS_LABELS[currentStatus] || currentStatus}</span>
+                </div>
+              </div>
+              <div className="id-box">
+                <span className={`id-text ${myId ? '' : 'dim'}`} aria-label="Your assigned peer ID">
+                  {myId || 'Generating...'}
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    className={`copy-btn ${copied ? 'copied' : ''}`}
+                    onClick={copyMyId}
+                    disabled={!myId}
+                    aria-label="Copy ID to clipboard"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="copy-btn"
+                    onClick={() => setShowQrModal(true)}
+                    disabled={!myId}
+                    aria-label="Share QR Code"
+                    title="Share QR Code"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>QR</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* New Call Action Card */}
+            <section className="card" aria-labelledby="new-call-label">
+              <p id="new-call-label" className="label">New Call</p>
+              <div className="input-row">
+                <input
+                  type="text"
+                  className="peer-input"
+                  placeholder="Enter Friend's Peer ID..."
+                  value={calleeInput}
+                  onChange={e => setCalleeInput(sanitizePeerId(e.target.value))}
+                  onKeyDown={e => e.key === 'Enter' && handleStartCall(calleeInput)}
+                  disabled={peerStatus !== 'ready'}
+                  spellCheck={false}
+                  autoComplete="off"
+                  maxLength={16}
+                  aria-label="Enter recipient peer ID"
+                />
+                <button
+                  type="button"
+                  className="btn btn-blue"
+                  onClick={() => handleStartCall(calleeInput)}
+                  disabled={peerStatus !== 'ready' || !calleeInput.trim()}
+                  aria-label="Initiate encrypted call"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>Call</span>
+                </button>
+              </div>
+              <div className="privacy-banner">
+                <Shield className="w-4 h-4 text-green" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>
+                  <strong>Privacy note:</strong> Microphone remains disabled until a call is explicitly answered. Audio routes direct peer-to-peer with end-to-end encryption.
+                </span>
+              </div>
+            </section>
+
+            {/* Recent Contacts List */}
+            <RecentCalls
+              onSelectPeer={(id) => {
+                setCalleeInput(id);
+                handleStartCall(id);
+              }}
+              currentPeerId={myId}
+            />
+          </>
         )}
 
         {/* Global Rate Limit Toast */}
