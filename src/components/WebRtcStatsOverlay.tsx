@@ -6,8 +6,6 @@ import { OPUS_CONFIG, LADDER_TIERS } from '../constants/config';
  * Real-time In-App WebRTC Diagnostic & Stats Inspector Overlay
  */
 export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
-  const isLyra = callSession?.activeCodec === 'lyra';
-
   const [statsData, setStatsData] = useState({
     rttMs: 0,
     packetsLost: 0,
@@ -18,20 +16,18 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
     jitterMs: 0,
     jitterBufferDelayMs: 0,
     concealmentPct: '0.0',
-    tierName: isLyra ? 'LYRA_NEURAL' : 'HQ',
-    tierBitrateKbps: isLyra ? 3.2 : 8,
+    tierName: 'HQ',
+    tierBitrateKbps: 8,
     candidateType: 'HOST (UDP)',
     audioLevel: 0,
-    codec: isLyra ? 'Google Lyra v2 Neural (3.2 kbps)' : 'Opus 8kHz SILK Mono (CBR)',
-    ptime: isLyra ? '20ms (320 samples)' : `${OPUS_CONFIG.PTIME || 80}ms`,
-    fec: isLyra ? 'Generative Neural PLC' : (OPUS_CONFIG.USE_INBAND_FEC === '1' ? 'Enabled' : 'Disabled'),
-    red: isLyra ? 'Native RVQ Bitstream' : (OPUS_CONFIG.ENABLE_RED ? 'Active (RFC 2198)' : 'Disabled')
+    codec: 'Opus 48kHz HD (Fullband Dynamic DTX)',
+    ptime: `${OPUS_CONFIG.PTIME || 20}ms`,
+    fec: OPUS_CONFIG.USE_INBAND_FEC === '1' ? 'Enabled' : 'Disabled',
+    red: OPUS_CONFIG.ENABLE_RED ? 'Active (RFC 2198)' : 'Disabled'
   });
 
   useEffect(() => {
     if (!isOpen || !callSession?.isInCall) return;
-
-    const isLyraActive = callSession.activeCodec === 'lyra';
 
     // Synchronize directly from callSession if telemetry is available
     if (callSession.liveTelemetry) {
@@ -48,14 +44,14 @@ export default function WebRtcStatsOverlay({ isOpen, onClose, callSession }) {
         jitterMs: tel.jitterMs || 0,
         jitterBufferDelayMs: tel.avgJitterBufferDelayMs || 0,
         concealmentPct: ((tel.concealmentRatio || 0) * 100).toFixed(1),
-        tierName: isLyraActive ? 'LYRA_3.2K' : (tier.name || 'STD'),
-        tierBitrateKbps: isLyraActive ? 3.2 : Math.round((tier.maxBitrateBps || 14000) / 1000),
+        tierName: tier.name || 'STD',
+        tierBitrateKbps: Math.round((tier.maxBitrateBps || 14000) / 1000),
         candidateType: `${(tel.candidateType || 'host').toUpperCase()} (${(tel.protocol || 'udp').toUpperCase()})`,
         audioLevel: tel.audioLevel ? Math.round(tel.audioLevel * 100) : 0,
-        codec: isLyraActive ? 'Google Lyra v2 Neural (3.2 kbps)' : 'Opus 8kHz SILK Mono (CBR)',
-        ptime: isLyraActive ? '20ms (320 samples)' : `${tier.ptimeMs || OPUS_CONFIG.PTIME || 40}ms`,
-        fec: isLyraActive ? `Neural PLC (${callSession.lyraStats?.plcFramesSynthesized || 0} synthesized)` : (OPUS_CONFIG.USE_INBAND_FEC === '1' ? 'Enabled' : 'Disabled'),
-        red: isLyraActive ? 'Sub-1 kB/s RVQ Stream' : (OPUS_CONFIG.ENABLE_RED ? 'Active (RFC 2198)' : 'Disabled')
+        codec: 'Opus 48kHz HD (Fullband Dynamic DTX)',
+        ptime: `${tier.ptimeMs || OPUS_CONFIG.PTIME || 40}ms`,
+        fec: OPUS_CONFIG.USE_INBAND_FEC === '1' ? 'Enabled' : 'Disabled',
+        red: OPUS_CONFIG.ENABLE_RED ? 'Active (RFC 2198)' : 'Disabled'
       }));
     }
 

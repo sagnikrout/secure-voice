@@ -4,11 +4,11 @@
  * Coordinates peer connection state, DataChannel security synchronization,
  * DTLS safety code computation, ICE restart state machine, network telemetry monitoring,
  * adaptive bitrate ladder progression, NetEQ jitter buffer margin adjustment,
- * packet pacing headroom scaling, and Lyra/Opus neural codec transform streaming.
+ * packet pacing headroom scaling, and dynamic DTX bitrate ladder adaptation.
  */
 
 import { transformOpusSdp, getQualityRating, generateSafetyCode, applySenderBitrate } from './webrtc';
-import { NetworkTelemetryMonitor, AdaptiveBitrateController, evaluateCodecCrossover } from './networkAdaptation';
+import { NetworkTelemetryMonitor, AdaptiveBitrateController } from './networkAdaptation';
 import { IceRestartManager } from './iceRestartManager';
 import { JitterBufferController } from './jitterBufferController';
 import { PacketPacer } from './packetPacer';
@@ -16,8 +16,7 @@ import { TurnRelayManager } from './turnManager';
 import { TIMINGS, LADDER_TIERS } from '../constants/config';
 import { structuredLogger } from './structuredLogger';
 import { auditoryFeedback } from './auditoryFeedback';
-import { lyraManager, lyraTransformController, lyraWasmLoader } from './lyra';
-import { CodecType, CodecPreference, LyraBitrate } from '../types';
+import { CodecType, CodecPreference } from '../types';
 
 export interface CallPeerCoordinatorCallbacks {
   onStatusChange?: (status: string) => void;
@@ -42,7 +41,6 @@ export class CallPeerCoordinator {
   private iceRestartManager: IceRestartManager | null = null;
   private safetyInterval: any = null;
   private safetyChannel: RTCDataChannel | null = null;
-  private crossoverHealthyTicks: number = 0;
   private callbacks: CallPeerCoordinatorCallbacks;
   private attachedPc: RTCPeerConnection | null = null;
   private isInitialized: boolean = false;
@@ -225,67 +223,10 @@ export class CallPeerCoordinator {
         // 2. Packet Pacing & Traffic Shaping
         await this.packetPacer.applyForTierObject(evaluation.currentTier, pc);
       }
-
-      // 3. Dynamic 14 kbps Acoustic Quality Crossover Evaluation
-      const preferred = this.callbacks.getPreferredCodec();
-      const currentActive = this.callbacks.getActiveCodec();
-
-      if (preferred === 'auto') {
-        const crossover = evaluateCodecCrossover({
-          snapshot,
-          currentCodec: currentActive,
-          consecutiveHealthyTicks: this.crossoverHealthyTicks,
-          simdSupported: lyraWasmLoader.checkCompatibility().simd
-        });
-        this.crossoverHealthyTicks = crossover.consecutiveHealthyTicks;
-        if (crossover.codecChanged) {
-          lyraManager.setActiveCodec(crossover.targetCodec);
-          this.callbacks.onCodecChange?.(crossover.targetCodec);
-          this.callbacks.onLog?.(crossover.reason, 'info');
-        }
-
-        // Asymmetry-Aware Lyra Bitrate Scaling (3.2 -> 6.0 -> 9.2 kbps)
-        const activeOrTarget = !crossover.codecChanged ? currentActive : crossover.targetCodec;
-        if (activeOrTarget === 'lyra' && snapshot) {
-          const bps = snapshot.availableOutgoingBitrate || 0;
-          const outboundLoss = snapshot.outboundLossRate || 0;
-          const inboundLoss = snapshot.inboundLossRate || 0;
-          const effectiveLoss = Math.max(outboundLoss, inboundLoss);
-
-          let targetLyraBitrate: LyraBitrate = 3200;
-          if (bps >= 10000 && effectiveLoss < 0.04) {
-            targetLyraBitrate = 9200;
-          } else if (bps >= 6500 && effectiveLoss < 0.08) {
-            targetLyraBitrate = 6000;
-          } else {
-            targetLyraBitrate = 3200;
-          }
-
-          const currentStats = lyraManager.getStats();
-          if (currentStats && currentStats.bitrateBps !== targetLyraBitrate) {
-            lyraManager.setBitrate(targetLyraBitrate);
-            this.callbacks.onLog?.(`Lyra v2 scaled to ${(targetLyraBitrate / 1000).toFixed(1)} kbps (Uplink: ${bps > 0 ? Math.round(bps / 1000) + 'k' : 'N/A'}, Loss: ${(effectiveLoss * 100).toFixed(1)}%)`, 'info');
-          }
-        }
-      }
     }, { intervalMs: TIMINGS.STATS_POLL_INTERVAL_MS || 1000 });
 
     monitor.start();
     this.telemetryMonitor = monitor;
-
-    // Attach Lyra neural transform streams to audio senders and receivers
-    try {
-      const audioSenders = pc.getSenders?.()?.filter((s: any) => s.track && s.track.kind === 'audio');
-      if (audioSenders && audioSenders.length > 0) {
-        audioSenders.forEach((s: any) => lyraTransformController.attachSender(s));
-      }
-      const audioReceivers = pc.getReceivers?.()?.filter((r: any) => r.track && r.track.kind === 'audio');
-      if (audioReceivers && audioReceivers.length > 0) {
-        audioReceivers.forEach((r: any) => lyraTransformController.attachReceiver(r));
-      }
-    } catch (e: any) {
-      console.warn('Lyra transform attachment notice:', e);
-    }
 
     // Enforce initial jitter buffer target and pacing
     const initialTier = this.bitrateController.getCurrentTier();
@@ -340,7 +281,6 @@ export class CallPeerCoordinator {
     }
 
     this.bitrateController.reset();
-    this.crossoverHealthyTicks = 0;
     this.safetyChannel = null;
     this.attachedPc = null;
     this.isInitialized = false;

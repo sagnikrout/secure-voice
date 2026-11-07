@@ -54,36 +54,6 @@ export const OPUS_CONFIG = {
   ENABLE_RED: true              // RFC 2198 RED redundancy enabled by default
 };
 
-// Google Lyra v2 Neural Speech Codec Configuration (SoundStream / LyraGAN Architecture)
-export const LYRA_CONFIG = {
-  DEFAULT_BITRATE: 3200 as const,      // 3.2 kbps default (8 bytes per 20ms frame -> ~0.84 kB/s total network rate)
-  SAMPLE_RATE: 16000,                  // 16 kHz speech domain
-  FRAME_SIZE_SAMPLES: 320,             // 20ms at 16 kHz (320 samples per frame)
-  FRAME_DURATION_MS: 20,               // 20ms frame duration
-  MODEL_PATH: '/models/lyra/',         // Path to quantized weights & WASM assets
-  HEADER_BYTE_MAGIC: 0x4C,             // ASCII 'L' identifier for Lyra frames in RTP payloads
-  SUPPORTED_BITRATES: [3200, 6000, 9200] as const,
-  BYTES_PER_FRAME: {
-    3200: 8,                           // 8 bytes per 20ms = 3.2 kbps
-    6000: 15,                          // 15 bytes per 20ms = 6.0 kbps
-    9200: 23                           // 23 bytes per 20ms = 9.2 kbps
-  } as const
-};
-
-// Codec crossover — tuned for throttled mobile (Jio post-cap, 64 kbps ceiling).
-// Lyra v2 is the primary codec. Opus only activates on consistently clean links.
-// The 14 kbps threshold keeps Lyra engaged across the full throttled range.
-export const CODEC_CROSSOVER_CONFIG = {
-  CROSSOVER_BITRATE_BPS: 14000,           // 14 kbps boundary — Lyra below, Opus above
-  DOWNGRADE_TO_LYRA_LOSS_THRESHOLD: 0.05, // > 5% packet loss → stay/return to Lyra
-  DOWNGRADE_TO_LYRA_RTT_MS: 380,          // > 380ms RTT → stay/return to Lyra
-  DOWNGRADE_TO_LYRA_JITTER_MS: 65,        // > 65ms jitter → stay/return to Lyra
-  UPGRADE_TO_OPUS_CONSECUTIVE_TICKS: 8,   // 8 consecutive healthy ticks (8s) before Opus
-  UPGRADE_TO_OPUS_MAX_LOSS: 0.01,         // < 1% loss sustained before Opus elevation
-  UPGRADE_TO_OPUS_MAX_RTT_MS: 180,        // < 180ms RTT sustained before Opus elevation
-  UPGRADE_TO_OPUS_MAX_JITTER_MS: 30       // < 30ms jitter sustained before Opus elevation
-};
-
 // 6-Tier 2G/Satellite Survival Ladder Configuration (Constant Latency Profile)
 export const LADDER_TIERS = [
   {

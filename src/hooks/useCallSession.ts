@@ -15,12 +15,11 @@ import {
   abandonAudioFocus,
   addAudioFocusListener
 } from '../utils/audioRouting';
-import { TIMINGS, LADDER_TIERS, STORAGE_KEYS, LYRA_CONFIG, CODEC_CROSSOVER_CONFIG } from '../constants/config';
+import { TIMINGS, LADDER_TIERS, STORAGE_KEYS } from '../constants/config';
 import { audioResourceManager } from '../utils/resourceManager';
 import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
-import { lyraManager, lyraTransformController, lyraWasmLoader } from '../utils/lyra';
-import { CodecType, CodecPreference, LyraBitrate, AcousticProfileId } from '../types';
+import { CodecType, CodecPreference, AcousticProfileId } from '../types';
 import { platform } from '../platform';
 
 /**
@@ -100,22 +99,18 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
   const [activeTier, setActiveTier] = useState(LADDER_TIERS[0]);
   const [liveTelemetry, setLiveTelemetry] = useState(null);
 
-  // Neural Codec & Dynamic Crossover State
-  // Default to Lyra v2 when SIMD is available — the primary use case is throttled/jittery
-  // mobile connections where Lyra v2 outperforms Opus. Only fall back to Opus when the
-  // link is consistently excellent.
+  // Codec State: Production Opus Fullband HD with Dynamic DTX
   const [preferredCodec, setPreferredCodecState] = useState<CodecPreference>(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.PREFERRED_CODEC);
-        if (saved === 'auto' || saved === 'opus' || saved === 'lyra') return saved as CodecPreference;
+        if (saved === 'auto' || saved === 'opus') return saved as CodecPreference;
       } catch (e: any) {}
     }
-    // Default: Opus for natural voice. Lyra is an ultra-low bandwidth fallback.
+    // Default: Opus Fullband HD
     return 'opus';
   });
   const [activeCodec, setActiveCodec] = useState<CodecType>('opus');
-  const crossoverHealthyTicksRef = useRef(0);
   const activeCodecRef = useRef<CodecType>(activeCodec);
   const preferredCodecRef = useRef<CodecPreference>(preferredCodec);
 
@@ -127,8 +122,8 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       } catch (e: any) {}
     }
     const label = codec === 'auto'
-      ? 'Smart Auto Crossover (Lyra v2 <14k, Opus ≥14k)'
-      : (codec === 'lyra' ? 'Google Lyra v2 Neural (3.2 kbps)' : 'Standard Opus');
+      ? 'Adaptive Opus Fullband HD (Dynamic DTX)'
+      : 'Standard Opus Fullband HD';
     callbacksRef.current.addLog?.(`Preferred voice codec set to: ${label}`, 'info');
   }, []);
 
@@ -229,9 +224,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       stopRingtoneRef.current = null;
     }
 
-    // 8. Clean Lyra neural codec state
-    lyraManager.reset();
-    lyraTransformController.reset();
+    // 8. Clean active codec state
     setActiveCodec('opus');
 
     // 9. Reset states
@@ -331,29 +324,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
         callbacksRef.current.addLog?.('Web Audio 6-stage filter & noise gate active', 'ok');
       }
 
-      // Initialize Google Lyra v2 Neural Codec if 'lyra' is explicitly preferred
-      // If 'auto', we start with 'opus' and dynamically switch to Lyra only if the network degrades.
-      if (preferredCodec === 'lyra' && lyraWasmLoader.checkCompatibility().simd) {
-        try {
-          const lyraReady = await lyraManager.init({ audioCtx: audioCtx || undefined });
-          if (lyraReady) {
-            setActiveCodec('lyra');
-            callbacksRef.current.addLog?.('Google Lyra v2 Neural Codec active (3.2 kbps wideband speech)', 'ok');
-          } else {
-            setActiveCodec('opus');
-            callbacksRef.current.addLog?.('Opus SILK codec active (fallback)', 'info');
-          }
-        } catch (e: any) {
-          setActiveCodec('opus');
-        }
-      } else {
-        if (preferredCodec === 'auto' && lyraWasmLoader.checkCompatibility().simd) {
-          // Pre-warm Lyra in the background for instant crossover if needed later
-          lyraManager.init({ audioCtx: audioCtx || undefined }).catch(() => {});
-        }
-        setActiveCodec('opus');
-        callbacksRef.current.addLog?.('Opus codec active (natural human voice)', 'ok');
-      }
+      // Production Fullband Opus Codec active
+      setActiveCodec('opus');
+      callbacksRef.current.addLog?.('Opus Fullband HD active with in-stream neural noise extraction', 'ok');
 
       acquiringMicRef.current = false;
       return processedStream;
@@ -728,7 +701,6 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
     activeCodec,
     preferredCodec,
     setPreferredCodec,
-    lyraStats: lyraManager.getStats(),
     startCall,
     cancelCall,
     answerCall,
