@@ -40,6 +40,7 @@ export interface LadderTier {
   rttThresholdMs: number;
   jitterThresholdMs: number;
   concealmentThreshold: number;
+  dtx?: boolean;
 }
 
 export interface TelemetrySnapshot {

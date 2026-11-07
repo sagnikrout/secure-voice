@@ -496,6 +496,23 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       const result = await applySenderBitrate(mockSender, 6000);
       expect(result).toBe(false);
     });
+
+    it('applies dynamic dtx mode (enabled / disabled) when supplied', async () => {
+      const mockSender = {
+        getParameters: vi.fn().mockReturnValue({
+          encodings: [{ maxBitrate: 20000 }]
+        }),
+        setParameters: vi.fn().mockResolvedValue(undefined)
+      };
+
+      await applySenderBitrate(mockSender, 8000, 'high', 'disabled');
+      let passedParams = mockSender.setParameters.mock.calls[0][0];
+      expect(passedParams.encodings[0].dtx).toBe('disabled');
+
+      await applySenderBitrate(mockSender, 4500, 'high', 'enabled');
+      passedParams = mockSender.setParameters.mock.calls[1][0];
+      expect(passedParams.encodings[0].dtx).toBe('enabled');
+    });
   });
 
   describe('getQualityRating', () => {

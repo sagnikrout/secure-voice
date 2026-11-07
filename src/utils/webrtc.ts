@@ -281,9 +281,10 @@ export function transformOpusSdp(sdp: string, options: any = {}): string {
  * @param {RTCRtpSender} sender - The audio RTCRtpSender
  * @param {number|string} bitrateBps - Target bitrate in bps (e.g. 6000 to 32000)
  * @param {string} [priority='high'] - Encoding priority ('high', 'medium', 'low')
+ * @param {'enabled'|'disabled'} [dtx] - Optional dynamic DTX mode
  * @returns {Promise<boolean>} True if parameters were successfully applied
  */
-export async function applySenderBitrate(sender: any, bitrateBps: any, priority = 'high') {
+export async function applySenderBitrate(sender: any, bitrateBps: any, priority = 'high', dtx?: 'enabled' | 'disabled') {
   if (!sender?.getParameters || !sender?.setParameters) return false;
 
   let bitrate = Number(bitrateBps);
@@ -297,6 +298,9 @@ export async function applySenderBitrate(sender: any, bitrateBps: any, priority 
     params.encodings[0].maxBitrate = bitrate;
     params.encodings[0].priority = priority;
     params.encodings[0].networkPriority = priority;
+    if (dtx !== undefined) {
+      params.encodings[0].dtx = dtx;
+    }
 
     await sender.setParameters(params);
     return true;

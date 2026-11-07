@@ -476,7 +476,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
 
       const stream = await acquireMicrophone();
       const call = peerInstance.call(targetPeerId, stream, {
-        sdpTransform: transformOpusSdp
+        sdpTransform: (sdp: string) => transformOpusSdp(sdp, { dtx: false })
       });
 
       if (!call) {
@@ -549,7 +549,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       const stream = await acquireMicrophone();
       call.options = { ...call.options, _isCaller: false };
       call.answer(stream, {
-        sdpTransform: transformOpusSdp
+        sdpTransform: (sdp: string) => transformOpusSdp(sdp, { dtx: false })
       });
       setIsInCall(true);
       setIsCalling(false);

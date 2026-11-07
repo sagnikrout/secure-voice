@@ -147,7 +147,8 @@ export class CallPeerCoordinator {
           ptime: currentTier.ptimeMs,
           maxptime: currentTier.maxPtimeMs,
           packetLossPerc: currentTier.fecPacketLossPerc,
-          maxPlaybackRate: currentTier.maxPlaybackRate
+          maxPlaybackRate: currentTier.maxPlaybackRate,
+          dtx: currentTier.dtx !== undefined ? currentTier.dtx : false
         });
       }
     });
@@ -213,8 +214,9 @@ export class CallPeerCoordinator {
         this.callbacks.onTierChange?.(evaluation.currentTier, evaluation.targetBitrateBps);
         const audioSender = pc.getSenders?.()?.find((s: any) => s.track && s.track.kind === 'audio');
         if (audioSender) {
-          await applySenderBitrate(audioSender, evaluation.targetBitrateBps);
-          this.callbacks.onLog?.(evaluation.reason, 'info');
+          const dtxMode: 'enabled' | 'disabled' = evaluation.currentTier.dtx ? 'enabled' : 'disabled';
+          await applySenderBitrate(audioSender, evaluation.targetBitrateBps, 'high', dtxMode);
+          this.callbacks.onLog?.(`${evaluation.reason} (DTX ${dtxMode})`, 'info');
         }
 
         // 1. Dynamic Jitter Buffer Target Adjustment

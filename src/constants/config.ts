@@ -99,7 +99,8 @@ export const LADDER_TIERS = [
     lossThreshold: 0.03,          // < 3% loss
     rttThresholdMs: 250,          // < 250ms RTT
     jitterThresholdMs: 40,        // < 40ms jitter
-    concealmentThreshold: 0.02    // < 2% concealment
+    concealmentThreshold: 0.02,   // < 2% concealment
+    dtx: false                    // Clean link -> continuous natural voice, zero clipping
   },
   {
     id: 1,
@@ -114,7 +115,8 @@ export const LADDER_TIERS = [
     lossThreshold: 0.08,          // 3% - 8% loss
     rttThresholdMs: 400,          // 250ms - 400ms RTT
     jitterThresholdMs: 70,        // 40ms - 70ms jitter
-    concealmentThreshold: 0.05    // 2% - 5% concealment
+    concealmentThreshold: 0.05,   // 2% - 5% concealment
+    dtx: false                    // Normal voice -> continuous presence
   },
   {
     id: 2,
@@ -129,7 +131,8 @@ export const LADDER_TIERS = [
     lossThreshold: 0.15,          // 8% - 15% loss
     rttThresholdMs: 600,          // 400ms - 600ms RTT
     jitterThresholdMs: 120,       // 70ms - 120ms jitter
-    concealmentThreshold: 0.08    // 5% - 8% concealment
+    concealmentThreshold: 0.08,   // 5% - 8% concealment
+    dtx: true                     // Congested link -> engage DTX silence suppression
   },
   {
     id: 3,
@@ -144,7 +147,8 @@ export const LADDER_TIERS = [
     lossThreshold: 0.25,          // 15% - 25% loss
     rttThresholdMs: 850,          // 600ms - 850ms RTT
     jitterThresholdMs: 200,       // 120ms - 200ms jitter
-    concealmentThreshold: 0.15    // 8% - 15% concealment
+    concealmentThreshold: 0.15,   // 8% - 15% concealment
+    dtx: true                     // High loss cell edge -> engage DTX
   },
   {
     id: 4,
@@ -159,7 +163,8 @@ export const LADDER_TIERS = [
     lossThreshold: 0.35,          // 25% - 35% loss
     rttThresholdMs: 1100,         // 850ms - 1100ms RTT
     jitterThresholdMs: 250,       // 200ms - 250ms jitter
-    concealmentThreshold: 0.20    // 15% - 20% concealment
+    concealmentThreshold: 0.20,   // 15% - 20% concealment
+    dtx: true                     // Survival tier -> engage DTX
   },
   {
     id: 5,
@@ -174,7 +179,8 @@ export const LADDER_TIERS = [
     lossThreshold: 1.0,           // > 35% loss
     rttThresholdMs: 99999,        // > 1100ms RTT
     jitterThresholdMs: 99999,     // > 250ms jitter
-    concealmentThreshold: 1.0     // > 20% concealment
+    concealmentThreshold: 1.0,    // > 20% concealment
+    dtx: true                     // 2G emergency floor -> engage DTX
   }
 ];
 
