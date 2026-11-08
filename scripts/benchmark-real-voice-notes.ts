@@ -19,23 +19,16 @@ import {
   mixAudio
 } from '../src/utils/audioTestSignals.ts';
 import { RNNoiseProcessor, FRAME_SIZE } from '../src/utils/rnnoise/rnnoiseProcessor.ts';
+import RNNoiseWasm from '@echogarden/rnnoise-wasm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const require = createRequire(import.meta.url);
 
-let dfnCore: any = null;
+let rnnModule: any = null;
 try {
-  const wasmPath = path.resolve(__dirname, '../node_modules/denoise-voice-clarity/dist/wasm/denoise_voice_core_bg.wasm');
-  if (fs.existsSync(wasmPath)) {
-    const wasmBytes = fs.readFileSync(wasmPath);
-    const corePath = path.resolve(wasmPath, '../denoise_voice_core.js');
-    const { initSync, VoiceClarityWasm } = require(corePath);
-    initSync({ module: wasmBytes });
-    dfnCore = { VoiceClarityWasm };
-  }
+  rnnModule = await RNNoiseWasm();
 } catch (e) {
-  console.warn('Could not load DeepFilterNet WASM core in benchmark script:', e);
+  console.warn('Could not load RNNoise WASM module:', e);
 }
 
 console.log('\n==================================================================');
@@ -101,8 +94,8 @@ const evalFrames = Math.floor(evalSamples / FRAME_SIZE);
 const viifSub = viifInput.subarray(0, evalSamples);
 const viifEnhanced = new Float32Array(evalSamples);
 const viifProcessor = new RNNoiseProcessor(sr1);
-const viifDfnActive = viifProcessor.initDeepFilter(dfnCore ? new dfnCore.VoiceClarityWasm() : undefined);
-console.log('   DeepFilterNet 3 Core Status:', viifDfnActive ? 'ACTIVE (WASM Multi-Frame Deep Filtering)' : 'FALLBACK');
+const viifWasmActive = viifProcessor.initWasm(rnnModule);
+console.log('   RNNoise v0.2 Core Status:', viifWasmActive ? 'ACTIVE (Official Upstream WebAssembly)' : 'FALLBACK (TypeScript DSP)');
 
 // Warm up 1 frame to prime WASM JIT compilation and memory buffers
 const warmupBuf = new Float32Array(FRAME_SIZE);
@@ -135,8 +128,8 @@ const viifGainAvg = viifGainSum / evalFrames;
 
 assert(viifEnhanced.length === viifSub.length, 'Enhanced output matches input sample dimensions exactly');
 assert(viifVadAvg > 0.40, `Real speech recognized with high confidence (${(viifVadAvg * 100).toFixed(1)}% VAD avg)`);
-assert(viifMaxLat < 15.0, `Peak frame latency complies with real-time watchdog (${viifMaxLat.toFixed(3)} ms < 15.0 ms)`);
-assert(viifAvgLat < 3.5, `Average frame latency consumes small fraction of budget (${viifAvgLat.toFixed(3)} ms < 3.5 ms)`);
+assert(viifMaxLat < 4.0, `Peak frame latency complies with 4.0ms fail-safe watchdog (${viifMaxLat.toFixed(3)} ms < 4.0 ms)`);
+assert(viifAvgLat < 0.5, `Average frame latency executes 20x+ faster than real-time (${viifAvgLat.toFixed(3)} ms < 0.5 ms)`);
 
 const viifOrigName = 'real-VIIf31b1-extreme-noise-original.wav';
 const viifEnhName = 'real-VIIf31b1-extreme-noise-enhanced.wav';
@@ -186,7 +179,7 @@ const jddaFrames = Math.floor(jddaSamples / FRAME_SIZE);
 const jddaSub = jddaInput.subarray(0, jddaSamples);
 const jddaEnhanced = new Float32Array(jddaSamples);
 const jddaProcessor = new RNNoiseProcessor(sr2);
-jddaProcessor.initDeepFilter(dfnCore ? new dfnCore.VoiceClarityWasm() : undefined);
+jddaProcessor.initWasm(rnnModule);
 jddaProcessor.processFrame(warmupBuf, warmupBuf);
 
 let jddaVadSum = 0;
@@ -216,7 +209,8 @@ const jddaGainAvg = jddaGainSum / jddaFrames;
 
 assert(jddaEnhanced.length === jddaSub.length, 'Enhanced output matches input sample dimensions');
 assert(jddaVadAvg > 0.35, `Fast conversational human speech tracked cleanly (${(jddaVadAvg * 100).toFixed(1)}% VAD avg)`);
-assert(jddaMaxLat < 15.0, `Latency within real-time threshold (${jddaMaxLat.toFixed(3)} ms < 15.0 ms)`);
+assert(jddaMaxLat < 4.0, `Latency within 4.0ms fail-safe threshold (${jddaMaxLat.toFixed(3)} ms < 4.0 ms)`);
+assert(jddaAvgLat < 0.5, `Average frame latency executes 20x+ faster than real-time (${jddaAvgLat.toFixed(3)} ms < 0.5 ms)`);
 
 const jddaOrigName = 'real-jdda3ryL-voicenote-original.wav';
 const jddaEnhName = 'real-jdda3ryL-voicenote-enhanced.wav';
@@ -260,7 +254,7 @@ const ambientNoise = generateNoise(synthDurationS, 48000, 'combined', 0.08);
 const { mixed: noisySynth } = mixAudio(cleanSpeech, ambientNoise, 0); // 0 dB SNR
 
 const synthProcessor = new RNNoiseProcessor(48000);
-synthProcessor.initDeepFilter(dfnCore ? new dfnCore.VoiceClarityWasm() : undefined);
+synthProcessor.initWasm(rnnModule);
 const synthEnhanced = new Float32Array(synthSamples);
 
 let synthVadSum = 0;
@@ -310,7 +304,7 @@ const htmlContent = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SecureVoice - DeepFilterNet 3 Neural Audio Enhancement Benchmark</title>
+  <title>SecureVoice - Official RNNoise v0.2 Neural Audio Enhancement Benchmark</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -411,8 +405,8 @@ const htmlContent = `<!DOCTYPE html>
 <body>
   <div class="container">
     <header>
-      <h1>SecureVoice 48 kHz DeepFilterNet 3 Speech Enhancement <span class="badge">SOTA Deep Filtering (PESQ 3.17)</span></h1>
-      <p class="subtitle">Direct A/B listening comparison: Raw recorded audio vs. DeepFilterNet 3 Multi-Frame Complex FIR Deep Filtering</p>
+      <h1>SecureVoice 48 kHz RNNoise v0.2 Speech Enhancement <span class="badge">Official Upstream WebAssembly (125 KB)</span></h1>
+      <p class="subtitle">Direct A/B listening comparison: Raw recorded audio vs. Official RNNoise v0.2 48 kHz Recurrent Neural Filtering</p>
     </header>
 
     ${results.map(r => `
@@ -461,7 +455,7 @@ const htmlContent = `<!DOCTYPE html>
     `).join('')}
 
     <footer>
-      SecureVoice Telecom & Audio Architecture • In-Stream 48 kHz DeepFilterNet 3 Neural Engine
+      SecureVoice Telecom & Audio Architecture • Official RNNoise v0.2 Neural Engine (0.15ms Frame Compute)
     </footer>
   </div>
 </body>

@@ -136,29 +136,9 @@ export class AudioEngine {
       let isCleanedUp = false;
       let gateWorkletNode: any = null;
       let rnnoiseWorkletNode: any = null;
-      let dfnHandle: any = null;
 
       // Register AudioWorklets for real-time audio thread offload
       if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === 'function') {
-        // DeepFilterNet 3 SOTA In-Stream Worklet
-        if (typeof window !== 'undefined' && typeof WebAssembly !== 'undefined') {
-          import('denoise-voice-clarity').then(dvc => {
-            if (!isCleanedUp && dvc && typeof dvc.createDenoisedStream === 'function') {
-              dvc.createDenoisedStream(stream, {
-                enabled: initialProfile === 'neural-enhanced' || initialProfile === 'studio-clean' || initialProfile === 'balanced',
-                attenuationLimitDb: 30,
-                presenceGainDb: currentProfile.presenceGain
-              }, ctx).then(handle => {
-                if (isCleanedUp) {
-                  handle.destroy().catch(() => {});
-                } else {
-                  dfnHandle = handle;
-                }
-              }).catch(() => {});
-            }
-          }).catch(() => {});
-        }
-
         registerNoiseGateWorklet(ctx).then(ok => {
           if (ok && !isCleanedUp && typeof AudioWorkletNode !== 'undefined') {
             try {
@@ -213,10 +193,6 @@ export class AudioEngine {
           try { rnnoiseWorkletNode.disconnect(); } catch (e) {}
           rnnoiseWorkletNode = null;
         }
-        if (dfnHandle) {
-          try { dfnHandle.destroy().catch(() => {}); } catch (e) {}
-          dfnHandle = null;
-        }
         audioResourceManager.cleanupContext(ctx);
         Object.values(nodes).forEach(n => {
           if (n && typeof (n as any).disconnect === 'function') {
@@ -256,12 +232,6 @@ export class AudioEngine {
                 enabled: profileId === 'neural-enhanced',
                 bypassed: false
               });
-            }
-            if (dfnHandle) {
-              try {
-                dfnHandle.setEnabled(profileId === 'neural-enhanced' || profileId === 'studio-clean' || profileId === 'balanced');
-                dfnHandle.setPresenceGainDb(currentProfile.presenceGain);
-              } catch (e) {}
             }
           } catch (e) {}
         },

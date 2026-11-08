@@ -44,9 +44,13 @@ export class RNNoiseProcessor {
   private framesProcessed: number = 0;
   private previousAverageGain: number = 1.0;
 
-  // DeepFilterNet 3 WASM instance (when loaded)
-  private dfnWasm: any = null;
-  private dfnBuffer: Float32Array = new Float32Array(FRAME_SIZE);
+  // Official upstream RNNoise v0.2 WebAssembly engine state
+  private wasmModule: any = null;
+  private denoiseState: number = 0;
+  private inPtr: number = 0;
+  private outPtr: number = 0;
+  private inHeap: Float32Array | null = null;
+  private outHeap: Float32Array | null = null;
 
   constructor(sampleRate: number = 48000) {
     this.sampleRate = sampleRate;
@@ -76,53 +80,53 @@ export class RNNoiseProcessor {
   }
 
   /**
-   * Initialize DeepFilterNet 3 WASM engine for high-fidelity speech enhancement
+   * Initialize official upstream RNNoise v0.2 WebAssembly engine
+   *
+   * @param {any} moduleInstance - Instantiated Emscripten RNNoise module with _rnnoise_create
+   * @returns {boolean} True if WebAssembly denoise state was created successfully
    */
-  public initDeepFilter(wasmBytesOrModule?: any): boolean {
+  public initWasm(moduleInstance?: any): boolean {
     try {
-      if (wasmBytesOrModule && typeof wasmBytesOrModule.process === 'function') {
-        this.dfnWasm = wasmBytesOrModule;
+      if (moduleInstance && typeof moduleInstance._rnnoise_create === 'function') {
+        this.wasmModule = moduleInstance;
+        this.denoiseState = moduleInstance._rnnoise_create(0);
+        this.inPtr = moduleInstance._malloc(FRAME_SIZE * 4);
+        this.outPtr = moduleInstance._malloc(FRAME_SIZE * 4);
+        this.inHeap = new Float32Array(moduleInstance.HEAPF32.buffer, this.inPtr, FRAME_SIZE);
+        this.outHeap = new Float32Array(moduleInstance.HEAPF32.buffer, this.outPtr, FRAME_SIZE);
         return true;
-      }
-      if (wasmBytesOrModule && typeof wasmBytesOrModule.VoiceClarityWasm === 'function') {
-        const clar = new wasmBytesOrModule.VoiceClarityWasm();
-        clar.set_enabled(true);
-        clar.set_attenuation_limit_db(30);
-        clar.set_presence_gain_db(4);
-        this.dfnWasm = clar;
-        return true;
-      }
-      if (typeof window === 'undefined') {
-        // Node.js / Vitest test environment (CJS or ESM with polyfilled require)
-        const req = typeof require !== 'undefined' ? require : (globalThis as any).require;
-        if (req) {
-          const fs = req('fs');
-          const path = req('path');
-          const wasmPath = path.resolve(process.cwd(), 'node_modules/denoise-voice-clarity/dist/wasm/denoise_voice_core_bg.wasm');
-          if (fs.existsSync(wasmPath)) {
-            const wasmBytes = wasmBytesOrModule || fs.readFileSync(wasmPath);
-            const corePath = path.resolve(wasmPath, '../denoise_voice_core.js');
-            const { initSync, VoiceClarityWasm } = req(corePath);
-            initSync({ module: wasmBytes });
-            const clar = new VoiceClarityWasm();
-            clar.set_enabled(true);
-            clar.set_attenuation_limit_db(30);
-            clar.set_presence_gain_db(4);
-            this.dfnWasm = clar;
-            return true;
-          }
-        }
       }
     } catch (e) {
-      console.error('initDeepFilter error:', e);
-      this.dfnWasm = null;
+      console.error('initWasm error:', e);
+      this.destroyWasm();
     }
     return false;
   }
 
-  public isDeepFilterActive(): boolean {
-    return this.dfnWasm !== null;
+  public isWasmActive(): boolean {
+    return this.denoiseState !== 0;
   }
+
+  public destroyWasm(): void {
+    if (this.wasmModule && this.denoiseState !== 0) {
+      try {
+        this.wasmModule._rnnoise_destroy(this.denoiseState);
+        if (this.inPtr) this.wasmModule._free(this.inPtr);
+        if (this.outPtr) this.wasmModule._free(this.outPtr);
+      } catch (e) {}
+    }
+    this.denoiseState = 0;
+    this.inPtr = 0;
+    this.outPtr = 0;
+    this.inHeap = null;
+    this.outHeap = null;
+  }
+
+  // Backwards compatibility aliases
+  public initRNNoise = (m?: any) => this.initWasm(m);
+  public isRNNoiseActive = () => this.isWasmActive();
+  public initDeepFilter = (m?: any) => this.initWasm(m);
+  public isDeepFilterActive = () => this.isWasmActive();
 
   /**
    * Process a single 480-sample frame in-place.
@@ -138,37 +142,42 @@ export class RNNoiseProcessor {
       return { vadProbability: 1.0, noiseLevelDb: -90, averageGain: 1.0 };
     }
 
-    // High-performance DeepFilterNet 3 WASM path (when initialized)
-    if (this.dfnWasm) {
+    // High-performance official RNNoise v0.2 WASM path (when initialized)
+    if (this.denoiseState !== 0 && this.wasmModule) {
+      // Re-bind heap views if WASM memory was resized
+      if (this.inHeap!.buffer !== this.wasmModule.HEAPF32.buffer) {
+        this.inHeap = new Float32Array(this.wasmModule.HEAPF32.buffer, this.inPtr, FRAME_SIZE);
+        this.outHeap = new Float32Array(this.wasmModule.HEAPF32.buffer, this.outPtr, FRAME_SIZE);
+      }
+
       let inSum = 0;
       for (let i = 0; i < FRAME_SIZE; i++) {
         const s = inputFrame[i];
         inSum += s * s;
-        this.dfnBuffer[i] = s;
+        this.inHeap![i] = s * 32767.0;
       }
       const inRms = Math.sqrt(inSum / FRAME_SIZE);
 
-      this.dfnWasm.process(this.dfnBuffer);
-      outputFrame.set(this.dfnBuffer);
+      // Execute native C _rnnoise_process_frame in WebAssembly
+      const vad = this.wasmModule._rnnoise_process_frame(this.denoiseState, this.outPtr, this.inPtr);
 
       let outSum = 0;
       for (let i = 0; i < FRAME_SIZE; i++) {
-        const s = outputFrame[i];
+        const s = Math.max(-1.0, Math.min(1.0, this.outHeap![i] / 32767.0));
+        outputFrame[i] = s;
         outSum += s * s;
       }
       const outRms = Math.sqrt(outSum / FRAME_SIZE);
 
-      const ratio = inRms > 1e-5 ? Math.min(1.0, outRms / inRms) : 1.0;
-      const vad = inRms > 0.005 ? (ratio > 0.35 ? 0.95 : Math.max(0.01, ratio * 2.0)) : 0.05;
-      this.speechProbability = 0.6 * this.speechProbability + 0.4 * vad;
-
-      const noiseFloorDb = 20 * Math.log10(Math.max(outRms, 1e-5));
+      const gain = inRms > 1e-4 ? Math.min(1.0, outRms / inRms) : 1.0;
+      const noiseLevelDb = 20 * Math.log10(Math.max(outRms, 1e-5));
+      this.speechProbability = 0.7 * this.speechProbability + 0.3 * vad;
       this.framesProcessed++;
 
       return {
-        vadProbability: this.speechProbability,
-        noiseLevelDb: noiseFloorDb,
-        averageGain: ratio
+        vadProbability: vad,
+        noiseLevelDb,
+        averageGain: gain
       };
     }
 
@@ -306,8 +315,8 @@ export class RNNoiseProcessor {
   }
 
   public reset(): void {
-    if (this.dfnWasm) {
-      try { this.dfnWasm.reset(); } catch (e) {}
+    if (this.denoiseState !== 0 && this.wasmModule) {
+      try { this.wasmModule._rnnoise_init(this.denoiseState, 0); } catch (e) {}
     }
     for (let b = 0; b < BARK_BANDS; b++) {
       this.noiseFloor[b] = 1e-4;
