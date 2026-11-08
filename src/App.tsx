@@ -16,13 +16,14 @@ import {
   QrCode,
   Volume2,
   Speaker,
-  Lock
+  Lock,
+  Share2
 } from 'lucide-react';
 
 import { useTheme, useLogs, usePeer, useCallSession, useAudioDevices } from './hooks';
 import { sanitizePeerId, formatTimer } from './utils/formatters';
 import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION, STORAGE_KEYS } from './constants/config';
-import { parseCallTargetFromUrl } from './utils/qrCode';
+import { parseCallTargetFromUrl, buildCallInviteUrl } from './utils/qrCode';
 import { AcousticProfileId } from './types';
 
 import AudioVisualizer from './components/AudioVisualizer';
@@ -41,6 +42,7 @@ export default function App() {
 
   const [calleeInput, setCalleeInput] = useState('');
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -59,6 +61,7 @@ export default function App() {
     return 'balanced';
   });
   const copyTimeoutRef = useRef(null);
+  const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const missedCallTimeoutRef = useRef(null);
 
   // Parse deep-link invite on launch
@@ -159,6 +162,40 @@ export default function App() {
     addLog('Peer ID copied to clipboard', 'info');
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
     copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+  }, [myId, addLog]);
+
+  // Share direct invite link with friends (Web Share API with clipboard fallback)
+  const shareInviteLink = useCallback(async () => {
+    if (!myId) return;
+    const inviteUrl = buildCallInviteUrl(myId);
+    if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+      try {
+        await (navigator as any).share({
+          title: 'SecureVoice – Encrypted Call',
+          text: 'Call me on SecureVoice. Direct peer-to-peer audio with zero accounts or tracking.',
+          url: inviteUrl
+        });
+        addLog('Invite link shared via system share sheet', 'info');
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return; // User closed share sheet
+      }
+    }
+    // Desktop / fallback: copy invite link to clipboard
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = inviteUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setShared(true);
+    addLog('Call invite link copied to clipboard', 'info');
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    shareTimeoutRef.current = setTimeout(() => setShared(false), 2000);
   }, [myId, addLog]);
 
   // Initiate outgoing encrypted call
@@ -356,11 +393,11 @@ export default function App() {
             <header className="card header">
               <div className="brand">
                 <div className="brand-icon" aria-hidden="true">
-                  <img src="./logo.svg" alt="" />
+                  <img src="./logo.svg" alt="SecureVoice" />
                 </div>
                 <div className="brand-text">
                   <h1>SecureVoice</h1>
-                  <span className="v2-badge">{APP_VERSION}</span>
+                  <p className="brand-tagline">Encrypted P2P Voice</p>
                 </div>
               </div>
 
@@ -400,20 +437,32 @@ export default function App() {
                 <span className={`id-text ${myId ? '' : 'dim'}`} aria-label="Your assigned peer ID">
                   {myId || 'Generating...'}
                 </span>
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div className="id-actions">
                   <button
                     type="button"
                     className={`copy-btn ${copied ? 'copied' : ''}`}
                     onClick={copyMyId}
                     disabled={!myId}
                     aria-label="Copy ID to clipboard"
+                    title="Copy Peer ID"
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     <span>{copied ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     type="button"
-                    className="copy-btn"
+                    className={`copy-btn share-btn ${shared ? 'copied' : ''}`}
+                    onClick={shareInviteLink}
+                    disabled={!myId}
+                    aria-label="Share invite link with a friend"
+                    title="Share invite link"
+                  >
+                    {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                    <span>{shared ? 'Shared' : 'Share'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="copy-btn qr-btn"
                     onClick={() => setShowQrModal(true)}
                     disabled={!myId}
                     aria-label="Share QR Code"
@@ -457,7 +506,7 @@ export default function App() {
               <div className="privacy-banner">
                 <Shield className="w-4 h-4 text-green" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>
-                  <strong>Privacy note:</strong> Microphone remains disabled until a call is explicitly answered. Audio routes direct peer-to-peer with end-to-end encryption.
+                  <strong>Private & Direct:</strong> Zero accounts required. Audio is end-to-end encrypted and routed direct peer-to-peer with neural noise suppression.
                 </span>
               </div>
             </section>
@@ -470,6 +519,15 @@ export default function App() {
               }}
               currentPeerId={myId}
             />
+
+            {/* App Footer */}
+            <footer className="app-footer">
+              <span>SecureVoice {APP_VERSION}</span>
+              <span className="footer-dot">•</span>
+              <span>Direct Peer-to-Peer</span>
+              <span className="footer-dot">•</span>
+              <span>Open Source</span>
+            </footer>
           </>
         )}
 

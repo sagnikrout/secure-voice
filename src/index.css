@@ -61,52 +61,57 @@
 }
 
 :root {
-  --bg: #f2f2f7;
+  --bg: #f6f8fa;
   --card: #ffffff;
-  --card-2: #f9f9fb;
-  --border: #e4e4eb;
-  --border-2: #d1d1d8;
-  --blue: #007aff;
-  --blue-hover: #0066d6;
-  --blue-light: #e8f2ff;
-  --blue-mid: #cce0ff;
-  --green: #34c759;
-  --green-light: #e6f9ec;
-  --red: #ff3b30;
-  --red-light: #ffebe9;
-  --amber: #ff9500;
-  --amber-light: #fff4e5;
-  --purple: #5856d6;
-  --text: #1c1c1e;
-  --text-2: #3c3c43;
-  --muted: #8e8e93;
-  --muted-2: #c7c7cc;
-  --radius-sm: 12px;
-  --radius: 18px;
-  --radius-lg: 24px;
+  --card-2: #f1f5f9;
+  --border: #e2e8f0;
+  --border-2: #cbd5e1;
+  --blue: #0284c7;
+  --blue-hover: #0369a1;
+  --blue-light: #e0f2fe;
+  --blue-mid: #bae6fd;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --purple: #7c3aed;
+  --text: #0f172a;
+  --text-2: #334155;
+  --muted: #64748b;
+  --muted-2: #94a3b8;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 20px;
   --font: "Inter", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", monospace;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.1);
+  --transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :root[data-theme="dark"] {
-  --bg: #090a0f;
-  --card: #161822;
-  --card-2: #1f2232;
-  --border: #2a2d40;
-  --border-2: #383c54;
-  --blue-light: rgba(0, 122, 255, 0.18);
-  --blue-mid: rgba(0, 122, 255, 0.35);
-  --green-light: rgba(52, 199, 89, 0.18);
-  --red-light: rgba(255, 59, 48, 0.18);
-  --amber-light: rgba(255, 149, 0, 0.18);
-  --text: #f5f5f7;
-  --text-2: #e1e1e6;
-  --muted: #9898a0;
-  --muted-2: #54545d;
+  --bg: #0d1117;
+  --card: #161b24;
+  --card-2: #1c2230;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.14);
+  --blue: #0ea5e9;
+  --blue-hover: #0284c7;
+  --blue-light: rgba(14, 165, 233, 0.14);
+  --blue-mid: rgba(14, 165, 233, 0.28);
+  --green: #22c55e;
+  --green-light: rgba(34, 197, 94, 0.14);
+  --red: #ef4444;
+  --red-light: rgba(239, 68, 68, 0.14);
+  --amber: #f59e0b;
+  --amber-light: rgba(245, 158, 11, 0.14);
+  --text: #f0f6fc;
+  --text-2: #c9d1d9;
+  --muted: #8b949e;
+  --muted-2: #484f58;
 }
 
 /* Utility Classes used by Lucide Icons */
@@ -174,9 +179,9 @@ body {
 .shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
 }
 
 .card {
@@ -202,15 +207,15 @@ body {
 }
 
 .brand-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
+  border: 1px solid var(--border);
 }
 
 .brand-icon img {
@@ -227,11 +232,18 @@ body {
 }
 
 .brand h1 {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
   color: var(--text);
-  line-height: 1;
+  line-height: 1.1;
+}
+
+.brand-tagline {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.1px;
 }
 
 .v2-badge {
@@ -392,6 +404,18 @@ body {
   font-style: italic;
 }
 
+.id-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.id-actions .copy-btn {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
 .copy-btn {
   background: var(--blue);
   color: #fff;
@@ -415,11 +439,46 @@ body {
 .copy-btn.copied {
   background: var(--green);
   border-color: var(--green);
+  color: #fff;
+}
+
+.copy-btn.share-btn,
+.copy-btn.qr-btn {
+  background: var(--card-2);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+}
+
+.copy-btn.share-btn:hover:not(:disabled),
+.copy-btn.qr-btn:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text);
+}
+
+.copy-btn.share-btn.copied {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
 }
 
 .copy-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 12px 0 20px 0;
+}
+
+.footer-dot {
+  opacity: 0.35;
 }
 
 /* Input Row & Call Form */
@@ -1386,7 +1445,8 @@ body {
   .v2-badge { font-size: 9px; padding: 1px 5px; }
   
   .id-box { flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
-  .copy-btn { justify-content: center; }
+  .id-actions { width: 100%; display: flex; gap: 6px; }
+  .id-actions .copy-btn { flex: 1; justify-content: center; }
   
   .input-row { flex-direction: column; }
   .btn { width: 100%; justify-content: center; }

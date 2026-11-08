@@ -1,24 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%">
   <defs>
-    <!-- Horizontal gradient from red to blue -->
-    <linearGradient id="voice-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#E0115F" />
-      <stop offset="100%" stop-color="#0066FF" />
+    <linearGradient id="fav-shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
     </linearGradient>
   </defs>
-  
-  <!-- Pure black background -->
-  <rect width="256" height="256" fill="#000000" />
-  
-  <!-- Voice waveform lines -->
-  <g fill="none" stroke="url(#voice-grad)" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Primary wave -->
-    <path d="M 32 128 C 50 128, 60 60, 80 60 C 100 60, 110 196, 128 196 C 146 196, 156 40, 176 40 C 196 40, 206 128, 224 128" stroke-width="8" opacity="1.0" />
-    
-    <!-- Secondary wave -->
-    <path d="M 32 128 C 50 128, 65 96, 80 96 C 95 96, 110 160, 128 160 C 146 160, 160 76, 176 76 C 192 76, 206 128, 224 128" stroke-width="6" opacity="0.7" />
-    
-    <!-- Tertiary wave -->
-    <path d="M 32 128 C 55 128, 70 150, 88 150 C 106 150, 115 90, 136 90 C 157 90, 166 140, 184 140 C 202 140, 210 128, 224 128" stroke-width="4" opacity="0.4" />
-  </g>
+
+  <!-- Background squircle -->
+  <rect width="64" height="64" rx="14" fill="#0D1117" />
+
+  <!-- Shield boundary -->
+  <path
+    d="M 32 9 C 43 9, 51 13.5, 51 13.5 C 51 33.5, 42.5 49.5, 32 56 C 21.5 49.5, 13 33.5, 13 13.5 C 13 13.5, 21 9, 32 9 Z"
+    fill="rgba(14, 165, 233, 0.12)"
+    stroke="url(#fav-shield)"
+    stroke-width="2.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- High-contrast acoustic frequency bars -->
+  <rect x="20" y="27" width="2.6" height="10" rx="1.3" fill="#BAE6FD" opacity="0.7" />
+  <rect x="25" y="22" width="2.6" height="20" rx="1.3" fill="#BAE6FD" />
+  <rect x="30.7" y="18" width="2.6" height="28" rx="1.3" fill="#38BDF8" />
+  <rect x="36.4" y="22" width="2.6" height="20" rx="1.3" fill="#BAE6FD" />
+  <rect x="41.4" y="27" width="2.6" height="10" rx="1.3" fill="#BAE6FD" opacity="0.7" />
 </svg>

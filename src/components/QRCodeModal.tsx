@@ -193,7 +193,7 @@ export function QRCodeModal({ isOpen, onClose, peerId }: QRCodeModalProps) {
               justifyContent: 'center',
               gap: '6px',
               fontSize: '11px',
-              color: 'var(--text-muted)',
+              color: 'var(--muted)',
               marginTop: '4px'
             }}
           >
