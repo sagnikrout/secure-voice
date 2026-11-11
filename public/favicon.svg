@@ -1,28 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%">
-  <defs>
-    <linearGradient id="fav-shield" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38BDF8" />
-      <stop offset="100%" stop-color="#0284C7" />
-    </linearGradient>
-  </defs>
-
-  <!-- Background squircle -->
-  <rect width="64" height="64" rx="14" fill="#0D1117" />
-
-  <!-- Shield boundary -->
-  <path
-    d="M 32 9 C 43 9, 51 13.5, 51 13.5 C 51 33.5, 42.5 49.5, 32 56 C 21.5 49.5, 13 33.5, 13 13.5 C 13 13.5, 21 9, 32 9 Z"
-    fill="rgba(14, 165, 233, 0.12)"
-    stroke="url(#fav-shield)"
-    stroke-width="2.8"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-
-  <!-- High-contrast acoustic frequency bars -->
-  <rect x="20" y="27" width="2.6" height="10" rx="1.3" fill="#BAE6FD" opacity="0.7" />
-  <rect x="25" y="22" width="2.6" height="20" rx="1.3" fill="#BAE6FD" />
-  <rect x="30.7" y="18" width="2.6" height="28" rx="1.3" fill="#38BDF8" />
-  <rect x="36.4" y="22" width="2.6" height="20" rx="1.3" fill="#BAE6FD" />
-  <rect x="41.4" y="27" width="2.6" height="10" rx="1.3" fill="#BAE6FD" opacity="0.7" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0D1117" />
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" />
+  <text
+    x="16"
+    y="22.5"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    font-size="16"
+    font-weight="800"
+    letter-spacing="-0.8"
+    fill="#F0F6FC"
+  >SV</text>
 </svg>

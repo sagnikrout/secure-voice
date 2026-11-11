@@ -4,42 +4,13 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Cryptographic Shield Fill -->
+    <!-- Typographic Monogram 'S' -->
     <path
-        android:pathData="M 54,25 C 67,25 77,31 77,31 C 77,56 67,76 54,83 C 41,76 31,56 31,31 C 31,31 41,25 54,25 Z"
-        android:fillColor="#152B3C" />
+        android:pathData="M 49,44.5 C 49,42.5 47,41 43.5,41 C 39.5,41 37.5,43 37.5,45.5 C 37.5,48 39.5,49.5 43,50.5 L 44.5,51 C 48.5,52.2 50.5,54.5 50.5,58 C 50.5,62.5 47,65 42.5,65 C 37.5,65 35,62.5 35,59.5 L 39.5,59.5 C 39.5,61.2 40.8,62.2 42.5,62.2 C 44.5,62.2 46,61 46,58 C 46,55.5 44.5,54.2 41,53.2 L 39.5,52.8 C 36,51.5 33,49.2 33,45.5 C 33,41.2 36.8,38 43.5,38 C 49.5,38 53.5,41 53.5,44.5 Z"
+        android:fillColor="#F0F6FC" />
 
-    <!-- Cryptographic Shield Stroke -->
+    <!-- Typographic Monogram 'V' -->
     <path
-        android:pathData="M 54,25 C 67,25 77,31 77,31 C 77,56 67,76 54,83 C 41,76 31,56 31,31 C 31,31 41,25 54,25 Z"
-        android:strokeColor="#38BDF8"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-
-    <!-- Center Resonant Voice Bar -->
-    <path
-        android:pathData="M 52.5,40.5 L 52.5,67.5 C 52.5,68.3 53.2,69 54,69 C 54.8,69 55.5,68.3 55.5,67.5 L 55.5,40.5 C 55.5,39.7 54.8,39 54,39 C 53.2,39 52.5,39.7 52.5,40.5 Z"
-        android:fillColor="#38BDF8" />
-
-    <!-- Mid Voice Bars (Left & Right) -->
-    <path
-        android:pathData="M 47.5,45 L 47.5,63 C 47.5,63.8 48.2,64.5 49,64.5 C 49.8,64.5 50.5,63.8 50.5,63 L 50.5,45 C 50.5,44.2 49.8,43.5 49,43.5 C 48.2,43.5 47.5,44.2 47.5,45 Z"
-        android:fillColor="#BAE6FD" />
-    <path
-        android:pathData="M 57.5,45 L 57.5,63 C 57.5,63.8 58.2,64.5 59,64.5 C 59.8,64.5 60.5,63.8 60.5,63 L 60.5,45 C 60.5,44.2 59.8,43.5 59,43.5 C 58.2,43.5 57.5,44.2 57.5,45 Z"
-        android:fillColor="#BAE6FD" />
-
-    <!-- Outer Voice Bars (Left & Right) -->
-    <path
-        android:pathData="M 42.5,49 L 42.5,59 C 42.5,59.8 43.2,60.5 44,60.5 C 44.8,60.5 45.5,59.8 45.5,59 L 45.5,49 C 45.5,48.2 44.8,47.5 44,47.5 C 43.2,47.5 42.5,48.2 42.5,49 Z"
-        android:fillColor="#7DD3FC" />
-    <path
-        android:pathData="M 62.5,49 L 62.5,59 C 62.5,59.8 63.2,60.5 64,60.5 C 64.8,60.5 65.5,59.8 65.5,59 L 65.5,49 C 65.5,48.2 64.8,47.5 64,47.5 C 63.2,47.5 62.5,48.2 62.5,49 Z"
-        android:fillColor="#7DD3FC" />
-
-    <!-- Apex Security Node -->
-    <path
-        android:pathData="M 54,32.5 C 55.1,32.5 56,33.4 56,34.5 C 56,35.6 55.1,36.5 54,36.5 C 52.9,36.5 52,35.6 52,34.5 C 52,33.4 52.9,32.5 54,32.5 Z"
-        android:fillColor="#38BDF8" />
+        android:pathData="M 55,38.5 L 60.5,38.5 L 65,58 L 69.5,38.5 L 75,38.5 L 68,64.5 L 62,64.5 Z"
+        android:fillColor="#F0F6FC" />
 </vector>

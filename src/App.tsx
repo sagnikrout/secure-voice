@@ -171,8 +171,8 @@ export default function App() {
     if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
       try {
         await (navigator as any).share({
-          title: 'SecureVoice – Encrypted Call',
-          text: 'Call me on SecureVoice. Direct peer-to-peer audio with zero accounts or tracking.',
+          title: 'Secure Voice – Encrypted Call',
+          text: 'Call me on Secure Voice. Direct peer-to-peer audio with zero accounts or tracking.',
           url: inviteUrl
         });
         addLog('Invite link shared via system share sheet', 'info');
@@ -392,11 +392,11 @@ export default function App() {
             {/* Header Bar */}
             <header className="card header">
               <div className="brand">
-                <div className="brand-icon" aria-hidden="true">
-                  <img src="./logo.svg" alt="SecureVoice" />
+                <div className="brand-monogram" aria-hidden="true">
+                  SV
                 </div>
                 <div className="brand-text">
-                  <h1>SecureVoice</h1>
+                  <h1>Secure Voice</h1>
                   <p className="brand-tagline">Encrypted P2P Voice</p>
                 </div>
               </div>
@@ -522,7 +522,7 @@ export default function App() {
 
             {/* App Footer */}
             <footer className="app-footer">
-              <span>SecureVoice {APP_VERSION}</span>
+              <span>Secure Voice {APP_VERSION}</span>
               <span className="footer-dot">•</span>
               <span>Direct Peer-to-Peer</span>
               <span className="footer-dot">•</span>
