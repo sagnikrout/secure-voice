@@ -25,7 +25,7 @@ describe('App Integration', () => {
       render(<App />);
     });
     expect(screen.getByText('SecureVoice')).toBeInTheDocument();
-    expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(APP_VERSION))).toBeInTheDocument();
     expect(screen.getByText('Your Peer ID')).toBeInTheDocument();
     expect(screen.getByText('New Call')).toBeInTheDocument();
     expect(screen.getByTitle('Network Health')).toBeInTheDocument();
