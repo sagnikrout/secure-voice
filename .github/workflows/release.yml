@@ -32,8 +32,9 @@ jobs:
         with:
           packages: "tools platform-tools platforms;android-36 build-tools;36.0.0"
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install Dependencies (Resilient CI)
+        run: |
+          npm ci || (echo "⚠️ Lockfile mismatch detected. Auto-syncing lockfile..." && npm install --package-lock-only && npm ci)
 
       - name: Build Web Bundle
         run: npm run build

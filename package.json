@@ -12,6 +12,8 @@
     "test:sim": "tsx scripts/webrtc-simulation-runner.ts",
     "test:network": "tsx scripts/simulate-network-impairments.ts",
     "benchmark": "tsx scripts/benchmark-network-resilience.ts",
+    "check:deps": "tsx scripts/validate-dependencies.ts",
+    "sync:deps": "tsx scripts/validate-dependencies.ts --fix",
     "predeploy": "corepack npm run build",
     "deploy": "gh-pages -d dist"
   },
