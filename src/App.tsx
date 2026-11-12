@@ -54,7 +54,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.ACOUSTIC_PROFILE);
-        if (saved === 'balanced' || saved === 'voice-boost' || saved === 'studio-clean') {
+        if (saved === 'neural-enhanced' || saved === 'balanced') {
           return saved as AcousticProfileId;
         }
       } catch {}

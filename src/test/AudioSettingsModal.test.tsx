@@ -113,6 +113,50 @@ describe('AudioSettingsModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
 
+  it('renders Voice Clarity Mode with Standard and Voice Isolation options and handles selection', () => {
+    const handleSelectProfile = vi.fn();
+    render(
+      <AudioSettingsModal
+        isOpen={true}
+        onClose={() => {}}
+        outputOptions={mockOutputs}
+        activeOutputId="speaker"
+        micDevices={mockMics}
+        activeMicId="mic-1"
+        activeAcousticProfile="balanced"
+        onSelectAcousticProfile={handleSelectProfile}
+      />
+    );
+
+    expect(screen.getByText('Voice Clarity Mode')).toBeInTheDocument();
+    expect(screen.getByText('Standard (Natural Voice)')).toBeInTheDocument();
+    expect(screen.getByText('Voice Isolation (AI Denoise)')).toBeInTheDocument();
+    expect(screen.getByText('AI Edge')).toBeInTheDocument();
+
+    // Redundant legacy options should NOT be in the modal
+    expect(screen.queryByText('Studio Clean (Quiet Room)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Voice Boost (Noisy Environment)')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Voice Isolation (AI Denoise)'));
+    expect(handleSelectProfile).toHaveBeenCalledWith('neural-enhanced');
+  });
+
+  it('renders Test Speaker and Test Mic buttons', () => {
+    render(
+      <AudioSettingsModal
+        isOpen={true}
+        onClose={() => {}}
+        outputOptions={mockOutputs}
+        activeOutputId="speaker"
+        micDevices={mockMics}
+        activeMicId="mic-1"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /test speaker playback/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /test microphone level/i })).toBeInTheDocument();
+  });
+
   describe('CallAudioDeviceSwitcher Component', () => {
     it('renders the trigger button and toggles the settings modal on click', () => {
       const handleToggleSpeaker = vi.fn();

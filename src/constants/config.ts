@@ -370,13 +370,13 @@ export const QUALITY_BADGES = {
   poor: 'Poor'       // RTT ≥ 400ms
 };
 
-// Acoustic DSP Profiles (Advanced Multi-Stage Voice Pre-Processing Engine)
+// Acoustic DSP Profiles (Option 1: Two-Mode Paradigm - Standard vs. Voice Isolation)
 export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
   balanced: {
     id: 'balanced',
-    name: 'Balanced Clarity',
-    label: 'Balanced (Default)',
-    description: 'Natural vocal warmth with smooth background noise suppression and Fullband range.',
+    name: 'Standard Voice',
+    label: 'Standard (Natural Voice)',
+    description: 'Natural vocal clarity with full-range frequency response for normal environments.',
     highpassFreq: 85,
     presenceGain: 2.5,
     presenceFreq: 3000,
@@ -419,9 +419,9 @@ export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
   },
   'neural-enhanced': {
     id: 'neural-enhanced',
-    name: 'Neural Enhanced (AI Denoise)',
-    label: 'Neural Denoise (Deep Voice Extraction)',
-    description: 'Real-time neural noise suppression targeting traffic, sirens, dogs, and background babble while preserving vocal warmth.',
+    name: 'Voice Isolation (AI Denoise)',
+    label: 'Voice Isolation (AI Denoise)',
+    description: 'Real-time neural edge noise cancellation targeting sirens, dogs, traffic, and background chatter.',
     highpassFreq: 85,
     presenceGain: 3.0,
     presenceFreq: 3000,

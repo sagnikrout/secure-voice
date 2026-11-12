@@ -4,6 +4,20 @@ import { CodecPreference, AcousticProfileId } from '../types';
 import { ACOUSTIC_PROFILES, STORAGE_KEYS } from '../constants/config';
 import './DeviceSelectors.css';
 
+// Option 1: FaceTime / Discord 2-Mode Clarity Model
+const ACTIVE_MODAL_PROFILES = [
+  {
+    id: 'balanced' as const,
+    label: 'Standard (Natural Voice)',
+    icon: Volume2
+  },
+  {
+    id: 'neural-enhanced' as const,
+    label: 'Voice Isolation (AI Denoise)',
+    icon: SlidersHorizontal
+  }
+];
+
 /**
  * Audio Settings & Device Routing Modal Component.
  * Ergonomic, streamlined modal allowing users to choose output devices,
@@ -368,18 +382,20 @@ export function AudioSettingsModal({
           </div>
         </div>
 
-        {/* Acoustic Clarity Profile Section */}
+        {/* Voice Clarity Mode Section (Option 1: 2-Mode Model) */}
         <div className="audio-settings-section" style={{ marginTop: '14px' }}>
           <div className="audio-settings-section-title">
             <div className="audio-settings-section-title-left">
-              <Sliders className="w-3.5 h-3.5 text-blue" />
-              <span>Acoustic Clarity Profile</span>
+              <SlidersHorizontal className="w-3.5 h-3.5 text-blue" />
+              <span>Voice Clarity Mode</span>
             </div>
           </div>
 
           <div className="audio-settings-options">
-            {Object.values(ACOUSTIC_PROFILES).map((profile) => {
-              const isSelected = activeAcousticProfile === profile.id;
+            {ACTIVE_MODAL_PROFILES.map((profile) => {
+              const isSelected = activeAcousticProfile === profile.id ||
+                (profile.id === 'balanced' && activeAcousticProfile !== 'neural-enhanced');
+              const IconComp = profile.icon;
               return (
                 <button
                   key={profile.id}
@@ -389,13 +405,13 @@ export function AudioSettingsModal({
                     try {
                       localStorage.setItem(STORAGE_KEYS.ACOUSTIC_PROFILE, profile.id);
                     } catch {}
-                    onSelectAcousticProfile?.(profile.id);
+                    onSelectAcousticProfile?.(profile.id as AcousticProfileId);
                   }}
                   aria-pressed={isSelected}
                 >
                   <div className="audio-settings-option-left">
                     <div className="audio-settings-option-icon">
-                      <Sliders className="w-4 h-4" />
+                      <IconComp className="w-4 h-4" />
                     </div>
                     <div className="audio-settings-option-text">
                       <div className="audio-settings-option-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

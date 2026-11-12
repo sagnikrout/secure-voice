@@ -22,12 +22,12 @@ async function captureModal() {
   await settingsBtn.click();
   await page.waitForTimeout(600);
 
-  // Click the Test Speaker button to verify it responds
+  // Click the Test Speaker button to verify it responds and completes chime
   const testSpeakerBtn = page.locator('button:has-text("Test Speaker")');
   if (await testSpeakerBtn.isVisible()) {
     console.log('Found Test Speaker button!');
     await testSpeakerBtn.click();
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(800);
   }
 
   const modalScreenshot = await page.screenshot({ fullPage: false });
