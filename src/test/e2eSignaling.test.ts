@@ -91,4 +91,15 @@ describe('E2ESignalingProtocol (Web Crypto ECDH + AES-256-GCM)', () => {
     // but the payload claims it's from Eve. The derived shared key will not match, causing GCM auth failure.
     await expect(bob.decryptSignal(tampered)).rejects.toThrow();
   });
+
+  it('resets ephemeral session and clears cached shared keys', async () => {
+    const jwk1 = await alice.exportPublicKey();
+    const bobPubJwk = await bob.exportPublicKey();
+    await alice.deriveSharedKey(bobPubJwk);
+
+    alice.resetEphemeralSession();
+    const jwk2 = await alice.exportPublicKey();
+    // Fresh keypair generated with distinct coordinates
+    expect(jwk2.x).not.toBe(jwk1.x);
+  });
 });

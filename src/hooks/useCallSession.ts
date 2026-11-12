@@ -19,6 +19,7 @@ import { TIMINGS, LADDER_TIERS, STORAGE_KEYS } from '../constants/config';
 import { audioResourceManager } from '../utils/resourceManager';
 import { structuredLogger } from '../utils/structuredLogger';
 import { auditoryFeedback } from '../utils/auditoryFeedback';
+import { e2eSignaling } from '../utils/signaling';
 import { CodecType, CodecPreference, AcousticProfileId } from '../types';
 import { platform } from '../platform';
 
@@ -248,6 +249,11 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
     currentBitrateRef.current = LADDER_TIERS[0].maxBitrateBps;
     callbacksRef.current.onStatusChange?.('ready');
     callbacksRef.current.addLog?.('Call terminated and audio pipeline cleanly released', 'info');
+
+    // 10. Flush ephemeral ECDH session keys for forward secrecy
+    try {
+      e2eSignaling.resetEphemeralSession();
+    } catch (e) {}
   }, [stopTimer]);
 
   useEffect(() => {

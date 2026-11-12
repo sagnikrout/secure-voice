@@ -18,7 +18,7 @@ All notable changes to SecureVoice are documented in this file.
 - Injected Subresource Integrity (SRI) hashes into production web builds.
 
 ### Audio Pipeline
-- Corrected Web Audio routing to splice real-time AudioWorklet noise gating and spectral shaping directly into the active audio graph.
+- Corrected Web Audio routing to splice real-time AudioWorklet noise gating with RMS-based attenuation directly into the active audio graph, alongside parametric EQ and dynamics compression.
 - Calibrated adversarial test documentation to reflect that Chrome DevTools Protocol network conditions impair HTTP/WebSocket signaling rather than direct UDP WebRTC media paths.
 
 ### CI/CD & Compatibility

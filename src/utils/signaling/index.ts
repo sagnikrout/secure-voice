@@ -385,9 +385,14 @@ export class SignalingManager {
   }
 
   async disconnect(): Promise<void> {
+    e2eSignaling.resetEphemeralSession();
     for (const transport of this.transports.values()) {
       await transport.disconnect();
     }
+  }
+
+  resetSession(): void {
+    e2eSignaling.resetEphemeralSession();
   }
 }
 
