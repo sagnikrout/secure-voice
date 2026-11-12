@@ -426,7 +426,7 @@ export default function App() {
                   aria-label="Audio & Codec Settings"
                   title="Audio & Codec Settings"
                 >
-                  <SlidersHorizontal className="w-4 h-4" />
+                  <SlidersHorizontal className="w-5 h-5" />
                 </button>
 
                 <button
@@ -436,7 +436,7 @@ export default function App() {
                   aria-label="Network Health"
                   title="Network Health"
                 >
-                  <Activity className="w-4 h-4" />
+                  <Activity className="w-5 h-5" />
                 </button>
               </div>
             </header>
@@ -463,7 +463,7 @@ export default function App() {
                     aria-label="Copy Peer ID"
                     title={copied ? "Copied" : "Copy Peer ID"}
                   >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                   </button>
                   <button
                     type="button"
@@ -473,7 +473,7 @@ export default function App() {
                     aria-label="Share invite link"
                     title={shared ? "Shared" : "Share invite link"}
                   >
-                    {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                    {shared ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
                   </button>
                   <button
                     type="button"
@@ -483,7 +483,7 @@ export default function App() {
                     aria-label="Share QR Code"
                     title="Share QR Code"
                   >
-                    <QrCode className="w-4 h-4" />
+                    <QrCode className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -514,7 +514,7 @@ export default function App() {
                   aria-label="Initiate encrypted call"
                   title="Call"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-5 h-5" />
                 </button>
               </div>
               <div className="privacy-banner">

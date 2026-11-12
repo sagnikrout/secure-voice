@@ -434,8 +434,8 @@ body {
 }
 
 .info-btn {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   background: var(--card-2);
   border: 1px solid var(--border-2);
@@ -444,13 +444,21 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  padding: 0;
   transition: var(--transition);
+  flex-shrink: 0;
 }
 
 .info-btn:hover {
   background: rgba(56, 189, 248, 0.1);
   border-color: rgba(56, 189, 248, 0.3);
   color: #38bdf8;
+}
+
+.info-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
 }
 
 /* Label & ID Box */
@@ -515,9 +523,9 @@ body {
 
 /* Icon-Only Action Buttons */
 .icon-action-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   background: var(--card-2);
   border: 1px solid var(--border-2);
   color: var(--text-2);
@@ -558,15 +566,27 @@ body {
   cursor: not-allowed;
 }
 
+.icon-action-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+}
+
 .call-btn-icon {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   flex-shrink: 0;
+}
+
+.call-btn-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
 }
 
 .id-actions .copy-btn {
@@ -1271,16 +1291,23 @@ body {
 }
 
 .icon-call-btn, .icon-delete-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   border: 1px solid var(--border-2);
-  background: var(--card);
+  background: var(--card-2);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  padding: 0;
   transition: var(--transition);
+}
+
+.icon-call-btn svg, .icon-delete-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
 }
 
 .icon-call-btn {
