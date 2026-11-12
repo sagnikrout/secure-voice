@@ -2,6 +2,30 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.8.2] - 2026-11-12
+
+### Added (branding, audio routing, and signaling)
+- Transitioned brand identity to typographic "Secure Voice" wordmark with transparent hardware rotary dial emblem.
+- Consolidated in-call audio controls into a unified "Audio Settings" dialog managing input/output devices and microphone testing.
+- Added immediate user feedback and audio busy tone when calling offline or invalid Peer IDs.
+- Added QR code call invite modal and air-gapped signaling foundation.
+
+### Security & Hardening
+- Disabled Android WebView debugging (`webContentsDebuggingEnabled: false`) in release configuration to prevent USB DevTools inspection.
+- Enforced strict cryptographic boundary on incoming signaling messages, dropping unencrypted call signals (`offer`, `answer`, `candidate`) to prevent downgrade attacks.
+- Added ephemeral ECDH forward secrecy support with session key cache flushing upon call teardown.
+- Silenced internal diagnostic logging in production builds while maintaining automated test coverage.
+- Injected Subresource Integrity (SRI) hashes into production web builds.
+
+### Audio Pipeline
+- Corrected Web Audio routing to splice real-time AudioWorklet noise gating and spectral shaping directly into the active audio graph.
+- Calibrated adversarial test documentation to reflect that Chrome DevTools Protocol network conditions impair HTTP/WebSocket signaling rather than direct UDP WebRTC media paths.
+
+### CI/CD & Compatibility
+- Upgraded GitHub Actions workflow actions to Node 24 majors (`actions/checkout@v7`, `actions/setup-node@v7`, `actions/upload-pages-artifact@v5`, `actions/deploy-pages@v5`, `actions/setup-java@v6`, `android-actions/setup-android@v4`, `softprops/action-gh-release@v3`).
+- Pinned runner operating system to canonical LTS `ubuntu-24.04`.
+- **Compatibility:** Android minimum SDK is now 28 (Android 9.0) for modern foreground service microphone execution policies and low-latency audio routing.
+
 ## [v3.8.1] - 2026-09-11
 
 ### Added (system theme adaptation and automated E2E testing)

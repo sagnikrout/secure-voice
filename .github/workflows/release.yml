@@ -83,7 +83,7 @@ jobs:
             ### SecureVoice ${{ github.ref_name }}
 
             - **End-to-End Encrypted Calling**: High-definition peer-to-peer WebRTC voice calls with zero account or login requirement.
-            - **RNNoise Neural Speech Enhancement**: Real-time neural noise extraction via official WebAssembly in the Web Audio render graph.
+            - **Real-Time AudioWorklet Noise Suppression**: Hardware-accelerated spectral shaping, presence EQ, and audio-thread noise gating directly in the Web Audio render graph.
             - **Hardened Security**: Client-side Subresource Integrity (SRI), disabled WebView debugging in release APKs, and signaling downgrade protection.
             - **Compatibility**: Android 9.0+ (API level 28+) required for background audio execution and foreground service microphone policies.
 
