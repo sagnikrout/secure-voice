@@ -1,14 +1,13 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
-import { Volume2, Mic, Check, X, Sliders, Bluetooth, Speaker, Headphones, Activity } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Volume2, Mic, MicOff, Check, X, SlidersHorizontal, Sliders, Bluetooth, Speaker, Headphones, Activity } from 'lucide-react';
 import { CodecPreference, AcousticProfileId } from '../types';
 import { ACOUSTIC_PROFILES, STORAGE_KEYS } from '../constants/config';
-import { getAvailableOutputs } from '../utils/audioRouting';
 import './DeviceSelectors.css';
 
 /**
  * Audio Settings & Device Routing Modal Component.
- * Allows users to choose between hardware outputs, inputs,
- * acoustic clarity profiles, live mic test, and codecs.
+ * Ergonomic, streamlined modal allowing users to choose output devices,
+ * input microphones, test speaker playback, test mic levels, and select acoustic clarity profiles.
  */
 export function AudioSettingsModal({
   isOpen,
@@ -37,11 +36,12 @@ export function AudioSettingsModal({
   activeAcousticProfile?: AcousticProfileId;
   onSelectAcousticProfile?: (profile: AcousticProfileId) => void;
 }) {
-  const modalRef = useRef(null);
-  const closeBtnRef = useRef(null);
-  const [blockedList, setBlockedList] = React.useState([]);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [blockedList, setBlockedList] = useState<string[]>([]);
   const [micTesting, setMicTesting] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
+  const [speakerTesting, setSpeakerTesting] = useState(false);
   const testStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -49,12 +49,14 @@ export function AudioSettingsModal({
     if (isOpen) {
       try {
         setBlockedList(JSON.parse(localStorage.getItem('securevoice_blocked') || '[]'));
-      } catch(e){}
+      } catch {}
     } else {
       stopMicTest();
+      setSpeakerTesting(false);
     }
   }, [isOpen]);
 
+  // Clean up mic test
   const stopMicTest = () => {
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
@@ -68,6 +70,7 @@ export function AudioSettingsModal({
     setMicLevel(0);
   };
 
+  // Start real-time mic visualizer test
   const startMicTest = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -103,12 +106,73 @@ export function AudioSettingsModal({
     }
   };
 
+  // Play two-tone acoustic speaker test chime
+  const playSpeakerTest = async () => {
+    if (speakerTesting) return;
+    setSpeakerTesting(true);
+
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) {
+        setTimeout(() => setSpeakerTesting(false), 600);
+        return;
+      }
+
+      const ctx = new AudioCtx();
+      if (activeOutputId && typeof (ctx as any).setSinkId === 'function') {
+        try {
+          await (ctx as any).setSinkId(activeOutputId);
+        } catch {
+          // Fall back to default audio sink
+        }
+      }
+
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      const now = ctx.currentTime;
+      // High-fidelity pleasant two-tone chime (523.25Hz [C5] -> 659.25Hz [E5])
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, now);
+      osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.18);
+
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(1046.5, now);
+      osc2.frequency.exponentialRampToValueAtTime(1318.5, now + 0.18);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.6);
+      osc2.stop(now + 0.6);
+
+      setTimeout(() => {
+        ctx.close().catch(() => {});
+        setSpeakerTesting(false);
+      }, 650);
+    } catch (err) {
+      console.warn('Speaker test failed:', err);
+      setSpeakerTesting(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
-
     closeBtnRef.current?.focus();
 
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         onClose();
       }
@@ -132,12 +196,12 @@ export function AudioSettingsModal({
         ref={modalRef}
         className="overlay-card modal-card"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '440px' }}
+        style={{ maxWidth: '440px', maxHeight: '88vh', overflowY: 'auto' }}
       >
         {/* Modal Header */}
         <div className="modal-header">
           <div className="modal-title-box">
-            <Sliders className="w-5 h-5 text-blue" />
+            <SlidersHorizontal className="w-5 h-5 text-blue" />
             <span id="audio-settings-title" className="modal-title">Audio Settings</span>
           </div>
           <button
@@ -154,52 +218,109 @@ export function AudioSettingsModal({
         {/* Audio Output Section */}
         <div className="audio-settings-section">
           <div className="audio-settings-section-title">
-            <Volume2 className="w-4 h-4 text-muted" />
-            <span>Audio Output Options ({outputOptions.length})</span>
+            <div className="audio-settings-section-title-left">
+              <Volume2 className="w-3.5 h-3.5 text-blue" />
+              <span>Audio Output ({outputOptions.length})</span>
+            </div>
+            <button
+              type="button"
+              className={`test-btn ${speakerTesting ? 'active' : ''}`}
+              onClick={playSpeakerTest}
+              aria-label="Test speaker playback"
+              title="Play test chime"
+            >
+              <Volume2 className={`w-3.5 h-3.5 ${speakerTesting ? 'animate-pulse' : ''}`} />
+              <span>{speakerTesting ? 'Testing...' : 'Test Speaker'}</span>
+            </button>
           </div>
 
-          <div className="audio-settings-options" style={{ maxHeight: '180px', overflowY: 'auto' }}>
-            {outputOptions.map((opt) => {
-              const IconComp = opt.icon || Volume2;
-              const isActive = activeOutputId === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`audio-settings-option ${isActive ? 'selected' : ''}`}
-                  onClick={() => onSelectOutput(opt.id)}
-                  aria-pressed={isActive}
-                >
-                  <div className="audio-settings-option-left">
-                    <div className="audio-settings-option-icon">
-                      <IconComp className="w-4 h-4" />
+          <div className="audio-settings-options" style={{ maxHeight: '160px', overflowY: 'auto' }}>
+            {outputOptions.length > 0 ? (
+              outputOptions.map((opt) => {
+                const IconComp = opt.icon || Volume2;
+                const isActive = activeOutputId === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`audio-settings-option ${isActive ? 'selected' : ''}`}
+                    onClick={() => onSelectOutput?.(opt.id)}
+                    aria-pressed={isActive}
+                  >
+                    <div className="audio-settings-option-left">
+                      <div className="audio-settings-option-icon">
+                        <IconComp className="w-4 h-4" />
+                      </div>
+                      <div className="audio-settings-option-text">
+                        <div className="audio-settings-option-name">{opt.label}</div>
+                      </div>
                     </div>
-                    <div className="audio-settings-option-text">
-                      <div className="audio-settings-option-name">{opt.label}</div>
-                      {opt.description && (
-                        <div className="audio-settings-option-desc">{opt.description}</div>
-                      )}
-                    </div>
+                    {isActive && (
+                      <div className="audio-settings-check">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="audio-settings-option selected" style={{ cursor: 'default' }}>
+                <div className="audio-settings-option-left">
+                  <div className="audio-settings-option-icon">
+                    <Volume2 className="w-4 h-4" />
                   </div>
-                  {isActive && (
-                    <div className="audio-settings-check">
-                      <Check className="w-4 h-4" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                  <div className="audio-settings-option-text">
+                    <div className="audio-settings-option-name">Default System Speaker Active</div>
+                  </div>
+                </div>
+                <div className="audio-settings-check">
+                  <Check className="w-4 h-4" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Microphone Input Section */}
-        <div className="audio-settings-section" style={{ marginTop: '16px' }}>
+        <div className="audio-settings-section" style={{ marginTop: '14px' }}>
           <div className="audio-settings-section-title">
-            <Mic className="w-4 h-4 text-muted" />
-            <span>Microphone Input Options ({micDevices.length || 1})</span>
+            <div className="audio-settings-section-title-left">
+              <Mic className="w-3.5 h-3.5 text-blue" />
+              <span>Microphone Input ({micDevices.length || 1})</span>
+            </div>
+            <button
+              type="button"
+              className={`test-btn ${micTesting ? 'active' : ''}`}
+              onClick={micTesting ? stopMicTest : startMicTest}
+              aria-label="Test microphone level"
+              title="Test microphone input"
+            >
+              {micTesting ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              <span>{micTesting ? 'Stop Test' : 'Test Mic'}</span>
+            </button>
           </div>
 
-          <div className="audio-settings-options" style={{ maxHeight: '180px', overflowY: 'auto' }}>
+          {/* Real-time Mic Level Visualizer (Active during mic test) */}
+          {micTesting && (
+            <div style={{ marginBottom: '4px', padding: '8px 12px', background: 'var(--card-2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Input Level</span>
+                <span style={{ fontSize: '11px', fontFamily: 'var(--mono)', color: micLevel > 75 ? 'var(--red)' : 'var(--blue)' }}>{micLevel}%</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${micLevel}%`,
+                    height: '100%',
+                    background: micLevel > 75 ? 'var(--red)' : micLevel > 40 ? 'var(--green)' : 'var(--blue)',
+                    transition: 'width 60ms ease'
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="audio-settings-options" style={{ maxHeight: '160px', overflowY: 'auto' }}>
             {micDevices.length > 0 ? (
               micDevices.map((device, idx) => {
                 const isSelected = activeMicId === device.deviceId;
@@ -208,7 +329,7 @@ export function AudioSettingsModal({
                     key={device.deviceId || idx}
                     type="button"
                     className={`audio-settings-option ${isSelected ? 'selected' : ''}`}
-                    onClick={() => onSelectMic(device.deviceId)}
+                    onClick={() => onSelectMic?.(device.deviceId)}
                     aria-pressed={isSelected}
                   >
                     <div className="audio-settings-option-left">
@@ -218,9 +339,6 @@ export function AudioSettingsModal({
                       <div className="audio-settings-option-text">
                         <div className="audio-settings-option-name">
                           {device.label || `Microphone ${idx + 1}`}
-                        </div>
-                        <div className="audio-settings-option-desc">
-                          {isSelected ? 'Active Microphone' : 'Detected Microphone'}
                         </div>
                       </div>
                     </div>
@@ -233,53 +351,33 @@ export function AudioSettingsModal({
                 );
               })
             ) : (
-              <div className="audio-settings-empty">
-                <span>Default System Microphone Active</span>
+              <div className="audio-settings-option selected" style={{ cursor: 'default' }}>
+                <div className="audio-settings-option-left">
+                  <div className="audio-settings-option-icon">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                  <div className="audio-settings-option-text">
+                    <div className="audio-settings-option-name">Default System Microphone Active</div>
+                  </div>
+                </div>
+                <div className="audio-settings-check">
+                  <Check className="w-4 h-4" />
+                </div>
               </div>
             )}
-            {/* Live Mic Test Meter */}
-            <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--card-2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>Microphone Input Test</span>
-                <button
-                  type="button"
-                  onClick={micTesting ? stopMicTest : startMicTest}
-                  style={{
-                    background: micTesting ? 'var(--red-light)' : 'var(--blue-light)',
-                    color: micTesting ? 'var(--red)' : 'var(--blue)',
-                    border: '1px solid var(--border)',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  {micTesting ? 'Stop Test' : 'Test Mic'}
-                </button>
-              </div>
-              <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${micTesting ? micLevel : 0}%`,
-                    height: '100%',
-                    background: micLevel > 75 ? 'var(--red)' : micLevel > 40 ? 'var(--green)' : 'var(--blue)',
-                    transition: 'width 80ms ease'
-                  }}
-                />
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Acoustic Clarity Profile Section */}
-        <div className="audio-settings-section" style={{ marginTop: '16px' }}>
+        <div className="audio-settings-section" style={{ marginTop: '14px' }}>
           <div className="audio-settings-section-title">
-            <Sliders className="w-4 h-4 text-muted" />
-            <span>Acoustic clarity & noise profile</span>
+            <div className="audio-settings-section-title-left">
+              <Sliders className="w-3.5 h-3.5 text-blue" />
+              <span>Acoustic Clarity Profile</span>
+            </div>
           </div>
 
-          <div className="audio-settings-options" style={{ marginTop: '8px' }}>
+          <div className="audio-settings-options">
             {Object.values(ACOUSTIC_PROFILES).map((profile) => {
               const isSelected = activeAcousticProfile === profile.id;
               return (
@@ -300,15 +398,14 @@ export function AudioSettingsModal({
                       <Sliders className="w-4 h-4" />
                     </div>
                     <div className="audio-settings-option-text">
-                      <div className="audio-settings-option-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="audio-settings-option-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>{profile.label}</span>
                         {profile.id === 'neural-enhanced' && (
-                          <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '4px', background: 'var(--border-subtle, rgba(255,255,255,0.08))', color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(2, 132, 199, 0.2)', color: '#38bdf8', fontWeight: 700 }}>
                             AI Edge
                           </span>
                         )}
                       </div>
-                      <div className="audio-settings-option-desc">{profile.description}</div>
                     </div>
                   </div>
                   {isSelected && (
@@ -323,28 +420,29 @@ export function AudioSettingsModal({
         </div>
 
         {/* Blocked Contacts */}
-        <div className="audio-settings-section" style={{ marginTop: '16px' }}>
-          <div className="audio-settings-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Blocked Contacts</span>
+        <div className="audio-settings-section" style={{ marginTop: '14px' }}>
+          <div className="audio-settings-section-title">
+            <div className="audio-settings-section-title-left">
+              <span>Blocked Contacts ({blockedList.length})</span>
             </div>
           </div>
-          <div className="audio-settings-options" style={{ marginTop: '8px' }}>
+          <div className="audio-settings-options">
             {blockedList.length === 0 ? (
               <div className="audio-settings-empty">
                 <span>No blocked contacts</span>
               </div>
             ) : (
               blockedList.map(id => (
-                <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '8px' }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: '14px', fontWeight: 600 }}>{id}</span>
+                <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-2)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: '13px', fontWeight: 600 }}>{id}</span>
                   <button 
+                    type="button"
                     onClick={() => {
                       const newBlocked = blockedList.filter(b => b !== id);
                       localStorage.setItem('securevoice_blocked', JSON.stringify(newBlocked));
                       setBlockedList(newBlocked);
                     }}
-                    style={{ background: 'var(--bg-hover)', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', color: 'var(--text)' }}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', cursor: 'pointer', color: 'var(--text)' }}
                   >
                     Unblock
                   </button>
@@ -355,12 +453,12 @@ export function AudioSettingsModal({
         </div>
 
         {/* Close Done Button */}
-        <div style={{ marginTop: '20px' }}>
+        <div style={{ marginTop: '18px' }}>
           <button
             type="button"
             className="btn btn-blue"
             onClick={onClose}
-            style={{ width: '100%' }}
+            style={{ width: '100%', height: '44px', fontSize: '14px', borderRadius: '10px' }}
           >
             Done
           </button>
@@ -401,113 +499,43 @@ export function CallAudioDeviceSwitcher({
   onSelectAcousticProfile?: (profile: AcousticProfileId) => void;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [nativeOutputs, setNativeOutputs] = useState(['speaker', 'earpiece']);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  // Check for native Bluetooth availability on mount
-  useEffect(() => {
-    getAvailableOutputs().then(outputs => {
-      if (outputs && Array.isArray(outputs)) {
-        setNativeOutputs(outputs);
-      }
-    });
-  }, []);
-
-  // Assemble full list of output options (combining hardware devices & native modes)
-  const combinedOutputOptions = useMemo(() => {
-    const list: any[] = [];
-
-    // 1. If discrete hardware outputs are detected, list them
-    if (outputDevices.length > 0) {
-      outputDevices.forEach((dev, idx) => {
-        const isDefault = dev.deviceId === 'default' || dev.deviceId === '';
-        const isHeadphones = dev.label.toLowerCase().includes('headphone') || dev.label.toLowerCase().includes('headset');
-        const isBluetooth = dev.label.toLowerCase().includes('bluetooth') || dev.label.toLowerCase().includes('hands-free');
-
-        list.push({
-          id: dev.deviceId || `output-${idx}`,
-          label: dev.label || `Output Device ${idx + 1}`,
-          description: isDefault ? 'System Default Audio Output' : 'Hardware Audio Output Device',
-          icon: isHeadphones ? Headphones : (isBluetooth ? Bluetooth : Speaker),
-          rawDeviceId: dev.deviceId
-        });
-      });
-    }
-
-    // 2. Standard Native Output Targets (Speaker / Earpiece / Bluetooth SCO)
-    if (list.length === 0 || nativeOutputs.includes('earpiece') || nativeOutputs.includes('bluetooth')) {
-      const standardOptions = [
-        {
-          id: 'speaker',
-          label: 'Speaker (Loudspeaker)',
-          description: 'High-volume loudspeaker playback',
-          icon: Volume2
-        },
-        {
-          id: 'earpiece',
-          label: 'Earpiece (Handset)',
-          description: 'Ear receiver with proximity screen-off',
-          icon: Headphones
-        }
+  const outputOptions = outputDevices.length > 0
+    ? outputDevices.map(d => ({
+        id: d.deviceId,
+        label: d.label || 'Audio Output',
+        icon: d.label?.toLowerCase().includes('bluetooth')
+          ? Bluetooth
+          : d.label?.toLowerCase().includes('head')
+          ? Headphones
+          : Volume2
+      }))
+    : [
+        { id: 'speaker', label: 'Speaker (Loudspeaker)', icon: Volume2 },
+        { id: 'earpiece', label: 'Earpiece (Handset)', icon: Speaker }
       ];
-
-      if (nativeOutputs.includes('bluetooth')) {
-        standardOptions.push({
-          id: 'bluetooth',
-          label: 'Bluetooth SCO Headset',
-          description: 'Wireless Bluetooth connected peripheral',
-          icon: Bluetooth
-        });
-      }
-
-      standardOptions.forEach(std => {
-        if (!list.some(item => item.id === std.id)) {
-          list.push(std);
-        }
-      });
-    }
-
-    return list;
-  }, [outputDevices, nativeOutputs]);
-
-  const currentOutputId = activeOutputId || (isSpeakerOn ? 'speaker' : 'earpiece');
-
-  // Select appropriate icon for current active output target
-  const ActiveIcon = useMemo(() => {
-    const activeOption = combinedOutputOptions.find(o => o.id === currentOutputId);
-    if (activeOption?.icon) return activeOption.icon;
-    if (currentOutputId === 'earpiece') return Headphones;
-    if (currentOutputId === 'bluetooth') return Bluetooth;
-    return Volume2;
-  }, [combinedOutputOptions, currentOutputId]);
 
   return (
     <div className="audio-settings-wrapper">
-      <button 
-        ref={triggerRef}
+      <button
         type="button"
         className={`dock-btn icon-btn ${modalOpen ? 'active' : ''} ${isSpeakerOn ? 'active-speaker' : ''}`}
-        onClick={() => setModalOpen(prev => !prev)}
+        onClick={() => setModalOpen(true)}
         aria-label="Audio Settings & Device Switcher"
-        title="Audio Settings"
-        aria-expanded={modalOpen}
-        aria-haspopup="dialog"
+        title="Audio Routing & Settings"
       >
-        <ActiveIcon className="w-6 h-6" />
+        <SlidersHorizontal className="w-6 h-6" />
       </button>
 
       <AudioSettingsModal
         isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          triggerRef.current?.focus();
-        }}
-        outputOptions={combinedOutputOptions}
-        activeOutputId={currentOutputId}
-        onSelectOutput={(outputId) => onToggleSpeaker(outputId)}
+        onClose={() => setModalOpen(false)}
+        outputOptions={outputOptions}
+        activeOutputId={activeOutputId}
+        onSelectOutput={onToggleSpeaker}
         micDevices={micDevices}
         activeMicId={activeMicId}
-        onSelectMic={(deviceId) => onSwitchMic(deviceId)}
+        onSelectMic={onSwitchMic}
         preferredCodec={preferredCodec}
         onSelectCodec={onSelectCodec}
         activeAcousticProfile={activeAcousticProfile}

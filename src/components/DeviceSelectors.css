@@ -10,17 +10,51 @@
 .audio-settings-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2, 8px);
+  gap: 6px;
 }
 
 .audio-settings-section-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--text-muted);
   margin-bottom: 2px;
+}
+
+.audio-settings-section-title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1px solid rgba(2, 132, 199, 0.3);
+  transition: var(--transition);
+}
+
+.test-btn:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+.test-btn.active {
+  background: var(--red-light);
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .audio-settings-options {
@@ -36,26 +70,30 @@
   padding: 10px 14px;
   background: var(--card-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   cursor: pointer;
   transition: var(--transition);
   text-align: left;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .audio-settings-option:hover {
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .audio-settings-option.selected {
-  background: color-mix(in srgb, var(--blue) 12%, transparent);
-  border-color: var(--blue-mid);
+  background: rgba(2, 132, 199, 0.12);
+  border-color: #0284c7;
 }
 
 .audio-settings-option-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 
 .audio-settings-option-icon {
@@ -67,7 +105,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text);
+  color: var(--text-2);
   flex-shrink: 0;
 }
 
@@ -81,12 +119,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .audio-settings-option-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .audio-settings-option-desc {
@@ -99,6 +142,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 .audio-settings-empty {
@@ -107,7 +152,7 @@
   font-size: 12px;
   color: var(--muted);
   background: var(--card-2);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   border: 1px dashed var(--border);
 }
 
