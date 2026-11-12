@@ -25,11 +25,15 @@ export function useTheme() {
   return { darkMode };
 }
 
+const isVitest = typeof process !== 'undefined' && (process.env?.VITEST === 'true' || process.env?.NODE_ENV === 'test');
+const isProd = !isVitest && typeof import.meta !== 'undefined' && Boolean(import.meta.env?.PROD);
+
 /**
  * Diagnostic logging hook integrating with structured logger.
  */
 export function useLogs() {
   const addLog = useCallback((msg: string, level = 'info') => {
+    if (isProd) return;
     structuredLogger.log(level as any, 'system-log', { message: msg }, msg);
   }, []);
 

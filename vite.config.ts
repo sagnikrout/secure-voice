@@ -2,9 +2,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: "./",
   plugins: [react()],
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : []
+  },
   server: {
     port: 3000,
     host: true
@@ -15,4 +18,4 @@ export default defineConfig({
     setupFiles: "./src/test/setup.ts",
     css: false
   }
-});
+}));

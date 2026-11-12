@@ -90,4 +90,26 @@ describe('StructuredLogger (Diagnostics & Zero-Server Logging)', () => {
     logger.clearLogs();
     expect(logger.getLogs()).toHaveLength(0);
   });
+
+  it('suppresses logging and buffer allocation when enabled is false', () => {
+    const disabledLogger = new StructuredLogger({ enabled: false });
+    expect(disabledLogger.isEnabled()).toBe(false);
+
+    const entry = disabledLogger.info('test-event', { detail: 'data' }, 'Test message');
+    expect(entry.id).toBe('');
+    expect(disabledLogger.getLogs()).toHaveLength(0);
+    expect(disabledLogger.exportLogs()).toBe('[]');
+  });
+
+  it('supports dynamic enabling and disabling via setEnabled', () => {
+    const dynamicLogger = new StructuredLogger({ enabled: false });
+    dynamicLogger.info('ignored-event');
+    expect(dynamicLogger.getLogs()).toHaveLength(0);
+
+    dynamicLogger.setEnabled(true);
+    expect(dynamicLogger.isEnabled()).toBe(true);
+    dynamicLogger.info('captured-event');
+    expect(dynamicLogger.getLogs()).toHaveLength(1);
+    expect(dynamicLogger.getLogs()[0].event).toBe('captured-event');
+  });
 });

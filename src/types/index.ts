@@ -153,6 +153,7 @@ export interface StructuredLoggerOptions {
   maxEntries?: number;
   persistKey?: string;
   enableSessionStorage?: boolean;
+  enabled?: boolean;
   onLog?: (entry: StructuredLogEntry) => void;
 }
 

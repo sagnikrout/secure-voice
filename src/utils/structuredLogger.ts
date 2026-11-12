@@ -8,11 +8,15 @@
 
 import { StructuredLogEntry, StructuredLoggerOptions } from '../types';
 
+const isVitest = typeof process !== 'undefined' && (process.env?.VITEST === 'true' || process.env?.NODE_ENV === 'test');
+const isProd = !isVitest && typeof import.meta !== 'undefined' && Boolean(import.meta.env?.PROD);
+
 export class StructuredLogger {
   private entries: StructuredLogEntry[] = [];
   private maxEntries: number;
   private persistKey: string;
   private enableSessionStorage: boolean;
+  private enabled: boolean;
   private sessionId: string;
   private peerId: string;
   private onLog?: (entry: StructuredLogEntry) => void;
@@ -21,11 +25,12 @@ export class StructuredLogger {
     this.maxEntries = options.maxEntries || 500;
     this.persistKey = options.persistKey || 'securevoice_diagnostics_logs';
     this.enableSessionStorage = options.enableSessionStorage ?? false;
+    this.enabled = options.enabled ?? !isProd;
     this.sessionId = `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     this.peerId = '';
     this.onLog = options.onLog;
 
-    if (this.enableSessionStorage) {
+    if (this.enabled && this.enableSessionStorage) {
       this.loadFromStorage();
     }
   }
@@ -39,6 +44,17 @@ export class StructuredLogger {
   }
 
   /**
+   * Set or query logging state
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /**
    * Primary structured log ingestion
    */
   log(
@@ -47,6 +63,15 @@ export class StructuredLogger {
     data: Record<string, any> = {},
     msg?: string
   ): StructuredLogEntry {
+    if (!this.enabled) {
+      return {
+        id: '',
+        timestamp: '',
+        level,
+        event
+      };
+    }
+
     const entry: StructuredLogEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
