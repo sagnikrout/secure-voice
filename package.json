@@ -14,8 +14,7 @@
     "benchmark": "tsx scripts/benchmark-network-resilience.ts",
     "check:deps": "tsx scripts/validate-dependencies.ts",
     "sync:deps": "tsx scripts/validate-dependencies.ts --fix",
-    "predeploy": "corepack npm run build",
-    "deploy": "gh-pages -d dist"
+    "predeploy": "corepack npm run build"
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",
@@ -41,7 +40,6 @@
     "@types/react-dom": "18.2.22",
     "@vitejs/plugin-react": "6.0.5",
     "fast-check": "4.9.0",
-    "gh-pages": "6.3.0",
     "jsdom": "24.0.0",
     "playwright": "1.62.1",
     "rollup-plugin-sri": "1.3.4",
