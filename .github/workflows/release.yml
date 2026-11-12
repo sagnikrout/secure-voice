@@ -82,9 +82,11 @@ jobs:
           body: |
             ### SecureVoice ${{ github.ref_name }}
 
-            - **End-to-End Encrypted Calling**: High-definition peer-to-peer WebRTC voice calls with zero account or login requirement.
-            - **Audio Pipeline**: AudioWorklet noise gating with RMS-based attenuation, alongside Web Audio EQ and dynamics compression.
-            - **Hardened Security**: Client-side Subresource Integrity (SRI), disabled WebView debugging in release APKs, and signaling downgrade protection.
+            - **85% Smaller Download**: Purged unused assets, shrinking release APK from 15.05 MB to 2.3 MB.
+            - **RNNoise v0.2 AI Noise Removal**: Real-time neural background noise reduction running in dedicated AudioWorklet threads.
+            - **Acoustic Presets & 6-Stage Filter Bank**: Standard, Voice Boost, Studio Clean, and Voice Isolation profiles with parametric EQ and dynamics compression.
+            - **Hardened Security**: Ephemeral ECDH (P-256) forward secrecy with session key wipe upon disconnect, anti-downgrade signal protection, Subresource Integrity (SRI), and disabled WebView debugging.
+            - **Telecom & Codec**: Dynamic 6-tier Opus bitrate adaptation down to 2.4 kbps floor with RFC 2198 RED packet loss protection.
             - **Compatibility**: Android 9.0+ (API level 28+) required for background audio execution and foreground service microphone policies.
 
             #### Verification
