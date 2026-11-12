@@ -572,21 +572,47 @@ body {
   stroke-width: 2.2;
 }
 
+.call-btn-action,
 .call-btn-icon {
-  width: 48px;
-  height: 48px;
+  width: 56px !important;
+  height: 48px !important;
+  min-width: 56px !important;
   border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: var(--transition);
 }
 
+.call-btn-action:hover:not(:disabled),
+.call-btn-icon:hover:not(:disabled) {
+  background: var(--blue-hover);
+}
+
+.call-btn-action:active:not(:disabled),
+.call-btn-icon:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.call-btn-action:disabled,
+.call-btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.call-btn-action svg,
 .call-btn-icon svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 2.2;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  stroke-width: 2.2 !important;
 }
 
 .id-actions .copy-btn {

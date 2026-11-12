@@ -360,9 +360,11 @@
     .call-input:focus {
       border-color: #0284c7;
     }
+    .call-btn-action,
     .call-btn-icon {
-      width: 48px;
-      height: 44px;
+      width: 56px;
+      height: 48px;
+      min-width: 56px;
       border-radius: 10px;
       background: #0284c7;
       color: #fff;
@@ -373,18 +375,23 @@
       cursor: pointer;
       flex-shrink: 0;
       padding: 0;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
     }
+    .call-btn-action:hover,
     .call-btn-icon:hover {
       background: #0369a1;
     }
-    .call-btn-icon svg {
-      width: 22px;
-      height: 22px;
-      stroke-width: 2.2;
+    .call-btn-action:active,
+    .call-btn-icon:active {
+      transform: scale(0.96);
     }
-      height: 18px;
-      stroke-width: 2;
+    .call-btn-action svg,
+    .call-btn-icon svg {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
+      stroke-width: 2.2;
     }
 
     .privacy-banner {

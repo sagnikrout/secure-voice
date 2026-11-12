@@ -508,13 +508,13 @@ export default function App() {
                 />
                 <button
                   type="button"
-                  className="btn btn-blue call-btn-icon"
+                  className="call-btn-action"
                   onClick={() => handleStartCall(calleeInput)}
                   disabled={peerStatus !== 'ready' || !calleeInput.trim()}
                   aria-label="Initiate encrypted call"
                   title="Call"
                 >
-                  <Phone className="w-5 h-5" />
+                  <Phone className="w-6 h-6" />
                 </button>
               </div>
               <div className="privacy-banner">
