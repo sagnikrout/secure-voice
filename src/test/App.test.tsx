@@ -6,11 +6,23 @@ import { APP_VERSION } from '../constants/config';
 
 vi.mock('peerjs', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      on: vi.fn(),
-      call: vi.fn(),
-      destroy: vi.fn()
-    }))
+    default: vi.fn().mockImplementation(() => {
+      const listeners: Record<string, Function[]> = {};
+      return {
+        on: vi.fn((event, cb) => {
+          if (!listeners[event]) listeners[event] = [];
+          listeners[event].push(cb);
+          if (event === 'open') {
+            queueMicrotask(() => cb('MY1-PEE-RID'));
+          }
+        }),
+        call: vi.fn(),
+        destroy: vi.fn(),
+        _emit: (event: string, ...args: any[]) => {
+          listeners[event]?.forEach(cb => cb(...args));
+        }
+      };
+    })
   };
 });
 
@@ -65,5 +77,27 @@ describe('App Integration', () => {
       fireEvent.click(closeBtn);
     });
     expect(screen.queryByText('Audio Settings')).not.toBeInTheDocument();
+  });
+
+  it('displays user-facing notice when dialing with empty or invalid peer ID', async () => {
+    await act(async () => {
+      render(<App />);
+      await new Promise(r => setTimeout(r, 20));
+    });
+
+    const callBtn = screen.getByLabelText('Initiate encrypted call');
+    await act(async () => {
+      fireEvent.click(callBtn);
+    });
+
+    expect(screen.getByText('Please enter a Peer ID to call.')).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText("Enter Friend's Peer ID...") as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'AB' } });
+      fireEvent.click(callBtn);
+    });
+
+    expect(screen.getByText('Invalid Peer ID format. Enter a valid ID (e.g. ABC-DEF-GHI).')).toBeInTheDocument();
   });
 });

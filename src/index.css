@@ -1641,6 +1641,52 @@ body {
   color: #8be0a3;
 }
 
+/* --- Floating Toast Notifications --- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  z-index: 1000;
+  max-width: 90vw;
+  animation: toastFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.toast-warning {
+  background: var(--amber-light, rgba(245, 158, 11, 0.12));
+  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--amber, #f59e0b);
+}
+
+.toast-error {
+  background: var(--red-light);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--red);
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 @container (max-width: 440px) {
   .id-text { font-size: 18px; }
   .timer { font-size: 32px; }

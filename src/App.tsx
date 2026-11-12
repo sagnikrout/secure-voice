@@ -18,13 +18,15 @@ import {
   Volume2,
   Speaker,
   Lock,
-  Share2
+  Share2,
+  AlertCircle
 } from 'lucide-react';
 
 import { useTheme, useLogs, usePeer, useCallSession, useAudioDevices } from './hooks';
 import { sanitizePeerId, formatTimer } from './utils/formatters';
 import { STATUS_LABELS, QUALITY_BADGES, APP_VERSION, STORAGE_KEYS } from './constants/config';
 import { parseCallTargetFromUrl, buildCallInviteUrl } from './utils/qrCode';
+import { auditoryFeedback } from './utils/auditoryFeedback';
 import { AcousticProfileId } from './types';
 
 import AudioVisualizer from './components/AudioVisualizer';
@@ -49,6 +51,7 @@ export default function App() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const [missedCallNotice, setMissedCallNotice] = useState(null);
+  const [callNotice, setCallNotice] = useState<{ message: string; type: 'error' | 'warning' | 'info' } | null>(null);
   const [verificationDismissed, setVerificationDismissed] = useState(false);
   const [acousticProfile, setAcousticProfile] = useState<AcousticProfileId>(() => {
     if (typeof window !== 'undefined') {
@@ -64,6 +67,13 @@ export default function App() {
   const copyTimeoutRef = useRef(null);
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const missedCallTimeoutRef = useRef(null);
+  const callNoticeTimeoutRef = useRef<any>(null);
+
+  const showCallNotice = useCallback((message: string, type: 'error' | 'warning' | 'info' = 'error') => {
+    setCallNotice({ message, type });
+    if (callNoticeTimeoutRef.current) clearTimeout(callNoticeTimeoutRef.current);
+    callNoticeTimeoutRef.current = setTimeout(() => setCallNotice(null), 5000);
+  }, []);
 
   // Parse deep-link invite on launch
   useEffect(() => {
@@ -104,6 +114,11 @@ export default function App() {
       setMissedCallNotice(callerPeer);
       if (missedCallTimeoutRef.current) clearTimeout(missedCallTimeoutRef.current);
       missedCallTimeoutRef.current = setTimeout(() => setMissedCallNotice(null), 5000);
+    },
+    onPeerUnavailable: () => {
+      callSession.cancelCall();
+      auditoryFeedback.notifyBusy();
+      showCallNotice('Peer ID could not be found or is offline. Please check the ID.', 'error');
     }
   });
 
@@ -201,10 +216,27 @@ export default function App() {
 
   // Initiate outgoing encrypted call
   const handleStartCall = useCallback((targetId) => {
-    const target = sanitizePeerId(targetId || calleeInput);
-    if (!target || !peer) return;
+    const rawInput = (targetId || calleeInput || '').trim();
+    if (!rawInput) {
+      showCallNotice('Please enter a Peer ID to call.', 'warning');
+      return;
+    }
+    const target = sanitizePeerId(rawInput);
+    const unhyphenated = target.replace(/[^A-Za-z0-9]/g, '');
+    if (unhyphenated.length < 3) {
+      showCallNotice('Invalid Peer ID format. Enter a valid ID (e.g. ABC-DEF-GHI).', 'warning');
+      return;
+    }
+    if (target === myId) {
+      showCallNotice('Cannot call your own Peer ID.', 'warning');
+      return;
+    }
+    if (!peer) {
+      showCallNotice('Signaling mesh not ready. Connecting...', 'warning');
+      return;
+    }
     callSession.startCall(target, peer, myId);
-  }, [calleeInput, peer, myId, callSession]);
+  }, [calleeInput, peer, myId, callSession, showCallNotice]);
 
   return (
     <div className="app"><div aria-live="polite" style={{ position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>Call status: {STATUS_LABELS[currentStatus] || currentStatus}</div>
@@ -306,7 +338,7 @@ export default function App() {
                 <span className="dock-label">{callSession.isMuted ? 'Unmute' : 'Mute'}</span>
               </div>
 
-              {/* 2. Speaker / Audio Route */}
+              {/* 2. Audio Settings */}
               <div className="dock-btn-wrapper">
                 <CallAudioDeviceSwitcher
                   isSpeakerOn={callSession.isSpeakerOn}
@@ -324,24 +356,10 @@ export default function App() {
                   activeAcousticProfile={acousticProfile}
                   onSelectAcousticProfile={setAcousticProfile}
                 />
-                <span className="dock-label">{callSession.isSpeakerOn ? 'Speaker' : 'Audio'}</span>
+                <span className="dock-label">Audio Settings</span>
               </div>
 
-              {/* 3. Acoustic Clarity */}
-              <div className="dock-btn-wrapper">
-                <button
-                  type="button"
-                  className="dock-btn icon-btn"
-                  onClick={() => setShowAudioSettings(true)}
-                  aria-label="Audio & Codec Settings"
-                  title="Audio & Codec Settings"
-                >
-                  <Sliders className="w-6 h-6" />
-                </button>
-                <span className="dock-label">Clarity</span>
-              </div>
-
-              {/* 4. End Call */}
+              {/* 3. End Call */}
               <div className="dock-btn-wrapper">
                 <button
                   type="button"
@@ -510,7 +528,7 @@ export default function App() {
                   type="button"
                   className="call-btn-action"
                   onClick={() => handleStartCall(calleeInput)}
-                  disabled={peerStatus !== 'ready' || !calleeInput.trim()}
+                  disabled={peerStatus !== 'ready'}
                   aria-label="Initiate encrypted call"
                   title="Call"
                 >
@@ -543,6 +561,18 @@ export default function App() {
               <span>Open Source</span>
             </footer>
           </>
+        )}
+
+        {/* User-facing Call Notice / Error Toast */}
+        {callNotice && (
+          <div
+            className={`toast toast-${callNotice.type}`}
+            role="alert"
+            style={callNotice.type === 'error' ? { background: 'var(--red-light)', borderColor: 'var(--red)', color: 'var(--red)' } : undefined}
+          >
+            <AlertCircle className="w-4 h-4 text-red" />
+            <span>{callNotice.message}</span>
+          </div>
         )}
 
         {/* Global Rate Limit Toast */}

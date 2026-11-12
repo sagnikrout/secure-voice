@@ -12,9 +12,17 @@ import { saveCallHistory } from '../components/RecentCalls';
  * @param {Function} options.isInActiveCall - Check if currently in a call
  * @param {Function} options.onRateLimitHit - Rate limit handler
  * @param {Function} options.onMissedCall - Missed call handler
+ * @param {Function} [options.onPeerUnavailable] - Callback when dialed peer is offline or ID not found
  * @returns {Object} Peer instance and control methods
  */
-export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall }) {
+export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall, onPeerUnavailable }: {
+  addLog?: (msg: string, level?: string) => void;
+  onIncomingCall?: (call: any) => void;
+  isInActiveCall?: () => boolean;
+  onRateLimitHit?: () => void;
+  onMissedCall?: (caller: string) => void;
+  onPeerUnavailable?: (err: any) => void;
+}) {
   const [myId, setMyId] = useState(() => {
     try {
       return localStorage.getItem('securevoice_my_id') || '';
@@ -39,10 +47,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
   const heartbeatIntervalRef = useRef<any>(null);
 
   // Store callbacks in a ref to avoid infinite re-initialization loops
-  const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall });
+  const callbacksRef = useRef({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall, onPeerUnavailable });
   useEffect(() => {
-    callbacksRef.current = { addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall };
-  }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall]);
+    callbacksRef.current = { addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall, onPeerUnavailable };
+  }, [addLog, onIncomingCall, isInActiveCall, onRateLimitHit, onMissedCall, onPeerUnavailable]);
 
   /**
    * Safely dismantle an existing peer instance without triggering false state events
@@ -189,9 +197,13 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         return;
       }
 
-      if (err.type === 'peer-unavailable') {
-        callbacksRef.current.addLog?.('Peer unavailable or not found. Check the ID.', 'error');
-        setStatus('error');
+      if (err.type === 'peer-unavailable' || err.type === 'invalid-id') {
+        const msg = err.type === 'invalid-id'
+          ? 'Invalid Peer ID. Check the format.'
+          : 'Peer unavailable or not found. Check the ID.';
+        callbacksRef.current.addLog?.(msg, 'error');
+        callbacksRef.current.onPeerUnavailable?.(err);
+        setStatus('ready');
         return;
       }
 
