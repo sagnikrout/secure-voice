@@ -143,5 +143,37 @@ describe('Pluggable Signaling Transports & SignalingManager', () => {
       expect(sentMsg.payload.ciphertext).toBeDefined(); // Ciphertext payload
       expect(sentMsg.payload.ephemeralPublicKey).toBeDefined();
     });
+
+    it('drops unencrypted call signaling messages to prevent downgrade attacks', async () => {
+      const received: any[] = [];
+      manager.onEncryptedMessage((decrypted, orig) => {
+        received.push({ decrypted, orig });
+      });
+
+      // Attacker tries to inject an unencrypted call-offer
+      mock1.simulateIncoming({
+        id: 'fake-offer',
+        type: 'offer',
+        senderId: 'ATTACKER',
+        recipientId: 'ALICE_PEER',
+        payload: { sdp: 'fake-sdp' },
+        timestamp: Date.now()
+      });
+
+      expect(received).toHaveLength(0); // Successfully dropped
+
+      // Non-call messages like ping are allowed
+      mock1.simulateIncoming({
+        id: 'ping-1',
+        type: 'ping',
+        senderId: 'PEER_2',
+        recipientId: 'ALICE_PEER',
+        payload: { time: 123 },
+        timestamp: Date.now()
+      });
+
+      expect(received).toHaveLength(1);
+      expect(received[0].orig.type).toBe('ping');
+    });
   });
 });

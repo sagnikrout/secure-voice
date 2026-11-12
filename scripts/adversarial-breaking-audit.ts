@@ -330,7 +330,8 @@ async function main() {
     const stageName = `loss_${lossPct}pct`;
     console.log(`\n-> Testing Packet Loss: ${lossPct}%...`);
 
-    // Emulate via CDP with packet loss
+    // Emulate via CDP (Note: CDP Network emulation primarily impacts TCP/WebSocket signaling transport;
+    // kernel-level UDP media packet loss requires OS tc netem or WebRTC Insertable Streams)
     await cdp.send('Network.emulateNetworkConditions', {
       offline: false,
       latency: 40,

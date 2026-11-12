@@ -299,6 +299,13 @@ export function createDenoisePipeline(stream: any, options: any = {}) {
                 enabled: initialProfileId === 'neural-enhanced'
               }
             });
+            try {
+              hissCut.disconnect(noiseGateGain);
+              hissCut.connect(rnnoiseNode);
+              rnnoiseNode.connect(noiseGateGain);
+            } catch (connectErr) {
+              hissCut.connect(noiseGateGain);
+            }
           } catch (rnnoiseErr) {
             // Retain fallback parametric DSP
           }

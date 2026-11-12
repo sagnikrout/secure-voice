@@ -161,6 +161,13 @@ export class AudioEngine {
                   enabled: initialProfile === 'neural-enhanced'
                 }
               });
+              try {
+                hissCut.disconnect(noiseGateGain);
+                hissCut.connect(rnnoiseWorkletNode);
+                rnnoiseWorkletNode.connect(noiseGateGain);
+              } catch (connectErr) {
+                hissCut.connect(noiseGateGain);
+              }
             } catch (e) {}
           }
         }).catch(() => {});

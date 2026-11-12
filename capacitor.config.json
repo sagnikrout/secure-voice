@@ -7,7 +7,7 @@
   },
   "android": {
     "allowMixedContent": false,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": false
   },
   "plugins": {
     "LocalNotifications": {

@@ -147,6 +147,11 @@ export class E2ESignalingProtocol {
   clearKeyCache(): void {
     this.sharedKeyCache.clear();
   }
+
+  resetEphemeralSession(): void {
+    this.keyPair = null;
+    this.sharedKeyCache.clear();
+  }
 }
 
 export const e2eSignaling = new E2ESignalingProtocol();
@@ -365,6 +370,11 @@ export class SignalingManager {
             const decrypted = await e2eSignaling.decryptSignal(msg.payload);
             handler(decrypted, msg);
           } else {
+            // Cryptographic Boundary Guard: Reject unencrypted call signaling to prevent downgrade attacks
+            if (msg.type === 'offer' || msg.type === 'answer' || msg.type === 'candidate' || msg.type === 'encrypted-signal') {
+              console.warn(`[SignalingSecurity] Dropped unencrypted ${msg.type} signal from ${msg.senderId}: ciphertext required`);
+              return;
+            }
             handler(msg.payload, msg);
           }
         } catch (e) {

@@ -78,6 +78,17 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           make_latest: "true"
+          generate_release_notes: true
+          body: |
+            ### SecureVoice ${{ github.ref_name }}
+
+            - **End-to-End Encrypted Calling**: High-definition peer-to-peer WebRTC voice calls with zero account or login requirement.
+            - **RNNoise Neural Speech Enhancement**: Real-time neural noise extraction via official WebAssembly in the Web Audio render graph.
+            - **Hardened Security**: Client-side Subresource Integrity (SRI), disabled WebView debugging in release APKs, and signaling downgrade protection.
+            - **Compatibility**: Android 9.0+ (API level 28+) required for background audio execution and foreground service microphone policies.
+
+            #### Verification
+            - SHA-256 checksums are listed in `SHA256SUMS.txt`.
           files: |
             android/app/build/outputs/apk/release/SecureVoice-${{ github.ref_name }}.apk
             android/app/build/outputs/apk/release/SHA256SUMS.txt
