@@ -165,10 +165,10 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
     });
 
     peer.on('error', (err: any) => {
-      console.error('[PeerJS-Error]', err?.type || err?.message || err);
       if (destroyedRef.current || peerRef.current !== peer) return;
 
       if (err.type === 'unavailable-id') {
+        console.info(`[Signaling-Notice] ID is temporarily reserved on broker (ghost socket). Re-claiming ${peerIdRef.current}...`);
         // Handle ghost connections on reload/restart
         const delays = [2000, 3000, 4000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000];
         const maxRetries = delays.length;
@@ -201,13 +201,22 @@ export function usePeer({ addLog, onIncomingCall, isInActiveCall, onRateLimitHit
         const msg = err.type === 'invalid-id'
           ? 'Invalid Peer ID. Check the format.'
           : 'Peer unavailable or not found. Check the ID.';
-        callbacksRef.current.addLog?.(msg, 'error');
+        console.warn(`[Signaling-Notice] ${msg} (${err.type})`);
+        callbacksRef.current.addLog?.(msg, 'warn');
         callbacksRef.current.onPeerUnavailable?.(err);
         setStatus('ready');
         return;
       }
 
+      if (err.type === 'network') {
+        console.warn('[Signaling-Notice] Signaling broker transport dropped. Reconnecting...');
+        callbacksRef.current.addLog?.('Signaling server network blip. Reconnecting...', 'warn');
+        setStatus('reconnecting');
+        return;
+      }
+
       const errorMsg = err.type || err.message || 'Unknown PeerJS error';
+      console.error('[Signaling-Error]', errorMsg);
       callbacksRef.current.addLog?.(`PeerJS signaling error: ${errorMsg}`, 'error');
       setStatus('error');
     });
