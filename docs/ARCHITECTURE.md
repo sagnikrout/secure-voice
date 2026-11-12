@@ -1,65 +1,47 @@
-# Architecture
+# System Architecture
 
-SecureVoice is a peer-to-peer VoIP client built with WebRTC. It prioritizes connection stability and voice clarity over weak networks (2G, EDGE, and high-loss wireless links).
+SecureVoice is an end-to-end encrypted, peer-to-peer VoIP client built with WebRTC. It delivers low-latency voice communication with hardware-accelerated noise suppression and survivability across high-loss networks.
 
-## System diagram
+## Architecture & Media Flow
 
-```
-┌────────────────────────────────────────────────────────┐
-│            Signaling Relay / Transports                │
-│    (PeerJS / Custom WebSocket / Air-Gapped QR Code)    │
-└───────────────▲────────────────────────▲───────────────┘
-                │                        │
-  1. Ephemeral  │                        │ 2. E2E Encrypted SDP
-  ECDH PubKey   │                        │    (AES-256-GCM)
-  & Ciphertext  │                        │    & ICE Candidates
-                │                        │
-    ┌───────────▼──────────┐ ┌───────────▼──────────┐
-    │    Local client      │ │    Remote client     │
-    │   (SecureVoice)      │ │   (SecureVoice)      │
-    └───────────┬──────────┘ └───────────┬──────────┘
-                │                        │
-                │ 3. P2P DTLS-SRTP media │
-                │    (direct UDP)        │
-                ▼                        ▼
-    ┌───────────────────────────────────────────────┐
-    │          Encrypted voice transport            │
-    │     (RFC 2198 RED + Opus Wideband / Lyra)     │
-    └───────────────────────────────────────────────┘
-```
+### 1. Signaling Phase
+- **Discovery**: Callers exchange 9-character human-readable peer IDs (`PEER_ID_ALPHABET`).
+- **Encrypted Envelopes**: All signaling payloads (SDP offers, answers, and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM.
+- **Relay Transport**: Signaled over WebSocket broker relays or air-gapped QR codes with zero plain-text SDP exposure.
+- **Anti-Downgrade Security**: Unencrypted signaling messages are dropped to prevent man-in-the-middle protocol downgrade.
 
-## Subsystems
+### 2. Media Transport Phase
+- **Direct P2P UDP**: Media streams travel directly between peers using WebRTC DTLS-SRTP encryption without intermediate media servers.
+- **NAT Traversal**: Host and Server-Reflexive candidate gathering via STUN with automatic TURN relay fallback.
+- **Bandwidth Control**: SDP session bandwidth ceilings (`b=AS:42`) and adaptive bitrate ladders prevent bufferbloat.
 
-### 1. Web Audio pre-processing (`src/utils/audio.ts`)
-Filters microphone audio before passing it to the WebRTC encoder:
-1. 80 Hz highpass filter: Cuts handling noise and desk vibration.
-2. 2.8 kHz peaking filter (+2.0 dB, Q=1.0): Boosts human vocal formant presence.
-3. 8.5 kHz lowpass filter: Removes high-frequency electrical hiss while preserving speech consonants.
-4. Downward RMS noise gate (-48 dBFS): Silences background room noise between words with a 10ms attack, 80ms hold, and 150ms release.
-5. Dynamics compressor: Balances volume between loud and quiet speech (-20 dB threshold, 15 dB knee, 3:1 ratio).
-6. Makeup gain (1.15x / +1.21 dB): Restores output signal level after compression.
+---
 
-### 2. Transport and loss recovery (`src/utils/webrtc.ts`)
-- Wideband encoding (`maxplaybackrate=16000`): Preserves full speech harmonics up to 8 kHz.
-- Variable bit rate (`cbr=0`): Eliminates metallic quantization artifacts during active phonemes.
-- Lock-step packetization (`ptime=40`, `maxptime=60`): Transmits 25 packets per second, cutting IP/UDP/RTP packet header overhead by 50%.
-- RFC 2198 redundancy (`audio/red`): Transmits redundant audio frames to recover lost packets without retransmissions.
+## Subsystem Details
 
-### 3. NetEQ jitter buffer floor (`src/utils/jitterBufferController.ts`)
-Locks the WebRTC receiver jitter buffer target and playout delay hint to prevent NetEQ pitch-shifting and time-stretching on unstable links:
-- HQ: 120 ms
-- STD: 160 ms
-- LB: 200 ms
-- HL: 250 ms
-- EXT: 300 ms
-- ULTRA: 400 ms
+### 1. Web Audio & Neural Speech Enhancement (`src/core/audioEngine.ts`, `src/utils/audio.ts`)
+Microphone audio routes through a real-time Web Audio graph:
 
-### 4. Telemetry and adaptive bitrate ladder (`src/utils/networkAdaptation.ts`)
-- Samples WebRTC statistics every second for RTT, packet loss, jitter, and concealment ratios.
-- Uses exponential moving average (EMA) smoothing to prevent rapid bitrate switching.
-- Uses asymmetric stepping: steps down immediately on packet loss spikes, but requires 4 stable samples before stepping up.
+| Processing Node | Type / Filter | Function |
+| :--- | :--- | :--- |
+| **Highpass Filter** | Biquad (`frequency: 80Hz`) | Cuts mechanical desk rumblings and handling thumps. |
+| **Peaking Filter** | Biquad (`frequency: 2.8kHz, Q: 1.0, gain: +2dB`) | Accentuates human voice presence and intelligibility. |
+| **Hiss Cut Filter** | Biquad (`frequency: 8.5kHz`) | Eliminates high-frequency electrical hiss. |
+| **RNNoise Neural Engine**| AudioWorklet (`@echogarden/rnnoise-wasm`) | Spectral suppression of non-stationary acoustic noise. |
+| **RMS Noise Gate** | Dynamic gain control | Attenuates background room acoustics between spoken words. |
+| **Dynamics Compressor** | DynamicsCompressorNode | Balances amplitude disparities (-20dB threshold, 3:1 ratio). |
+| **Makeup Gain** | GainNode (`+1.21dB`) | Restores post-compression signal level. |
 
-### 5. ICE reconnect and TURN fallback (`src/utils/turnManager.ts`, `src/utils/iceRestartManager.ts`)
-- 1500ms grace period on disconnect before triggering renegotiation.
-- Exponential backoff ICE restarts preserving active media streams and UI state.
-- Ephemeral TURN ping tests that rank relays by latency and force relay mode after 3 failed direct P2P attempts.
+### 2. Telecom & Network Adaptation Engine (`src/core/telecomEngine.ts`, `src/utils/networkAdaptation.ts`)
+- **Adaptive Opus Ladder**: 6 tiers from 8 kbps down to 2.4 kbps survival floor for weak links, scaling up to 40 kbps Fullband HD on broadband.
+- **Packet Aggregation**: Ptime scaling from 20ms to 100ms reduces packet header overhead by up to 50%.
+- **RFC 2198 Redundancy**: Injects redundant audio packets to recover from up to 50% packet loss without audible frame drops.
+- **Traffic Shaping**: Marks audio RTP packets with DSCP Expedited Forwarding (DiffServ 46).
+
+### 3. NetEQ Playout Stabilization (`src/utils/jitterBufferController.ts`)
+- Dual-clamped jitter buffer targets (`jitterBufferTarget` and `playoutDelayHint`) lock receiver buffering to fixed floors, preventing NetEQ pitch-shifting artifacts on high-jitter links.
+
+### 4. Connection Circuit Breaker & Reconnection (`src/utils/iceRestartManager.ts`)
+- **Grace Period**: 1500 ms grace period on network disruption before declaring connection interruption.
+- **Exponential Backoff**: Up to 5 non-destructive ICE restarts with backoff pacing.
+- **Circuit Breaker**: Halts reconnection loops when network recovery is mathematically impossible.

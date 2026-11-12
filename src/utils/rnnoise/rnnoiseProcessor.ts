@@ -125,8 +125,6 @@ export class RNNoiseProcessor {
   // Backwards compatibility aliases
   public initRNNoise = (m?: any) => this.initWasm(m);
   public isRNNoiseActive = () => this.isWasmActive();
-  public initDeepFilter = (m?: any) => this.initWasm(m);
-  public isDeepFilterActive = () => this.isWasmActive();
 
   /**
    * Process a single 480-sample frame in-place.

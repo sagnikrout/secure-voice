@@ -1,138 +1,138 @@
 # SecureVoice (v3.8.2)
 
-Peer-to-peer encrypted voice calling app engineered for weak networks (2G, EDGE, high latency, and high packet loss) and privacy-focused communication. Voice media streams connect directly between devices via WebRTC DTLS-SRTP with zero media relays by default.
+SecureVoice is an open-source, peer-to-peer encrypted voice calling application engineered for resilience on weak networks (2G, EDGE, high latency, and severe packet loss) and zero-trust private communication. Voice streams connect directly between devices via WebRTC DTLS-SRTP encryption with zero intermediate media relays by default.
 
-[Web app](https://sagnikrout.github.io/secure-voice) | [Android Releases](https://github.com/sagnikrout/secure-voice/releases/latest) | [Changelog](CHANGELOG.md) | [Architecture](docs/ARCHITECTURE.md) | [Testing](docs/TESTING.md)
+[Web Application](https://sagnikrout.github.io/secure-voice) • [Latest Android Release](https://github.com/sagnikrout/secure-voice/releases/latest) • [Changelog](CHANGELOG.md) • [Architecture Guide](docs/ARCHITECTURE.md) • [Codebase Index](docs/INDEX.md) • [Testing](docs/TESTING.md)
 
-## Overview
+---
 
-SecureVoice connects callers directly using WebRTC DTLS-SRTP encryption. It features the Google Lyra v2 neural speech codec (SoundStream/LyraGAN architecture) for pristine wideband voice at 3.2 kbps (< 1 kB/s total network bandwidth), alongside an adaptive Opus ladder (1.2 to 24.0 kbps) and generative packet loss concealment.
+## Architectural Principles
 
-Key design principles:
-- **Direct P2P Media**: Voice streams travel directly between peers using DTLS-SRTP; zero central media servers handle audio.
-- **Google Lyra v2 Neural Speech Codec**: Sub-1 kB/s wideband voice transmission using WebAssembly SIMD and WebRTC Insertable Streams.
-- **Client-Side Encrypted Signaling**: Signaling payloads (SDP and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM before passing through any signaling relay.
-- **Pluggable & Air-Gapped Transports**: Supports serverless Air-Gapped QR Code / Clipboard discovery as well as ephemeral WebSocket relays.
-- **Zero Server Logs**: Call history and diagnostic logs remain exclusively on the user's local device sandbox (localStorage) and are never transmitted to any telemetry endpoint.
-- **Connection Verification**: Deterministic 8-digit Short Authentication String (SAS) verbal safety code combined with direct DTLS certificate fingerprint inspection.
+1. **Direct Peer-to-Peer Media**: Voice streams travel directly between callers using WebRTC DTLS-SRTP; zero central servers process or inspect audio.
+2. **Official RNNoise v0.2 WebAssembly Engine**: Sub-millisecond neural noise suppression (125 KB WASM binary, 10ms algorithmic lookahead, ~1.5% single-core CPU load) executing on a dedicated AudioWorklet thread with a zero-allocation static heap.
+3. **Adaptive Opus Survival Ladder**: 6-tier network adaptation engine dynamically scaling Opus Fullband / Wideband VBR from 40 kbps down to a 2.4 kbps survival floor on congested 2G and satellite connections.
+4. **Client-Side Encrypted Signaling**: Signaling payloads (SDP offers, answers, and ICE candidates) are encrypted end-to-end on the client using Web Crypto ECDH (P-256) and AES-256-GCM before reaching any transport relay.
+5. **Anti-Downgrade Protocol Enforcement**: The signaling subsystem immediately drops unencrypted call messages, preventing man-in-the-middle protocol downgrade attacks.
+6. **Air-Gapped & Pluggable Transports**: Supports 100% serverless call establishment via optical QR codes and clipboard exchanges alongside ephemeral WebSocket broker relays.
+7. **Zero Remote Telemetry**: Call logs and diagnostic records reside exclusively in the local browser sandbox (`localStorage`) and are never transmitted to external telemetry endpoints.
+8. **Short Authentication String (SAS)**: Deterministic 8-digit verification code derived symmetrically from DTLS certificate fingerprints to detect active MITM attacks.
 
-## Features
+---
 
-- **Google Lyra v2 Neural Codec**: 3.2 kbps SoundStream AI compression (~0.84 kB/s total data rate) with generative autoregressive packet loss concealment.
-- **End-to-End Media Encryption**: Direct peer-to-peer WebRTC DTLS-SRTP voice encryption.
-- **Encrypted Signaling**: Ephemeral ECDH (P-256) key exchange prevents signaling intermediaries from reading SDP fingerprints.
-- **Air-Gapped QR Signaling**: 100% serverless call establishment via optical QR code or text clipboard exchange.
-- **Verbal Safety Code (SAS)**: 8-digit verification code derived symmetrically from DTLS certificate fingerprints to detect MITM attacks.
-- **Low-Bandwidth Codec Ladder**: 9 adaptive tiers from 1.2 kbps (`ULTRA_LOW`) up to 24.0 kbps (`HQ_PLUS`).
-- Packet aggregation: 40ms lock-step packetization (`ptime=40`), cutting IP/UDP header overhead by 50% (25 pkts/sec).
-- Packet loss recovery: In-band FEC (`useinbandfec=1`) combined with RFC 2198 redundancy (`audio/red`) to handle up to 50% packet drops.
-- Constant latency engine: Dual-clamped jitter buffer (`jitterBufferTarget` + `playoutDelayHint`) preventing NetEQ time-stretching.
-- Packet pacing: Audio streams marked with DSCP Expedited Forwarding (DiffServ 46) and paced with dynamic headroom.
-- Fast reconnection: 1.5s grace period on network drop with exponential backoff ICE restarts and automatic TURN relay fallback.
-- 6-stage audio cleanup: 80Hz highpass filter, 2.8kHz presence boost, 8.5kHz lowpass filter, noise gate (-48 dBFS), compressor, and makeup gain.
-- Diagnostics overlay: In-call metrics for RTT, packet loss percentage, jitter delay, concealment ratio, and active bitrate tier.
-- Android support: Standalone APK with background foreground service and wake lock support.
-- Audio routing: Switch between loudspeaker, earpiece, wired headsets, and Bluetooth devices during calls.
+## Core Features
 
-## Audio and WebRTC pipeline
+- **End-to-End Media Encryption**: Direct peer-to-peer DTLS-SRTP voice encryption.
+- **Ephemeral Forward Secrecy**: Generates fresh ECDH keypairs per session; symmetric keys are flushed immediately upon call hangup or abnormal disconnection.
+- **Hardware-Accelerated DSP**: 80Hz highpass filter, 2.8kHz vocal presence peaking EQ, 8.5kHz hiss cut, downward RMS noise gate (-48 dBFS), and dynamics compression.
+- **Packet Loss Resilience**: In-band Forward Error Correction (`useinbandfec=1`) combined with RFC 2198 Redundancy (`audio/red`) to withstand up to 50% packet drops without audio clipping.
+- **NetEQ Jitter Buffer Clamping**: Fixed playout delay hints prevent audio pitch-shifting and time-stretching on jittery links.
+- **Non-Destructive Reconnection**: 1500ms grace period on network disruption with exponential backoff ICE restarts and automatic TURN relay fallback.
+- **Audio Output Routing**: Switch seamlessly between loudspeaker, earpiece, wired headsets, and Bluetooth devices.
+- **Native Android APK**: Lean ~2.3 MB signed APK built with Capacitor 8.5, Foreground Service persistence, and disabled WebView debugging.
 
-```text
-[ Hardware microphone (48kHz) ]
-          │
-          ▼
-[ Web Audio DSP pipeline ]
-  ├─ 80Hz highpass filter (cuts mic and desk rumble)
-  ├─ 2.8kHz peaking EQ (+2dB voice presence)
-  ├─ 8.5kHz lowpass filter (cuts hiss while retaining consonants)
-  ├─ Downward RMS noise gate (-48 dBFS)
-  ├─ Dynamics compressor (-20dB threshold, 3:1 ratio)
-  └─ Makeup gain (+1.21 dB)
-          │
-          ▼
-[ Opus Wideband VBR encoder ]
-  ├─ maxaveragebitrate=14000 (14 kbps Pareto optimal)
-  ├─ cbr=0 (variable bitrate, zero metallic artifacts)
-  ├─ usedtx=1 (silence suppression)
-  ├─ useinbandfec=1 (Opus forward error correction)
-  ├─ ptime=40 / maxptime=60 (25 pkts/sec)
-  ├─ maxplaybackrate=16000 (16kHz Wideband speech band)
-  └─ b=AS:18 (session bandwidth ceiling)
-          │
-          ▼
-[ DTLS-SRTP encrypted stream ] ──► [ Remote peer ]
-                                           │
-                                           ▼
-                                [ Dual-clamped jitter buffer ]
-                                (Fixed NetEQ target floor)
-```
+---
 
-## Technical specifications
+## Audio DSP & Transmission Pipeline
+
+Microphone audio passes through the following sequential processing stages:
+
+| Stage | Component | Configuration / Parameters | Function |
+| :--- | :--- | :--- | :--- |
+| **1. Capture** | Web Audio Input | 48 kHz / Mono, 128-sample buffer | Captures hardware microphone stream. |
+| **2. Low-Cut Filter** | Biquad Highpass | 80 Hz | Eliminates desk rumble and mechanical handling noise. |
+| **3. Presence EQ** | Biquad Peaking | 2.8 kHz, Q = 1.0, Gain = +2.0 dB | Accentuates human vocal formant clarity. |
+| **4. Hiss Cut** | Biquad Lowpass | 8.5 kHz | Strips high-frequency electrical hiss. |
+| **5. Neural Suppression**| AudioWorklet WASM | RNNoise v0.2, 480 samples (10ms) | Suppresses non-stationary environmental noise. |
+| **6. Gating & Dynamic** | AudioWorklet Gain | Threshold: -48 dBFS, 10ms attack | Silences ambient room acoustic bleed. |
+| **7. Compression** | Dynamics Compressor | Threshold: -20 dB, Ratio: 3:1 | Normalizes volume between soft and loud speech. |
+| **8. Encoding** | Opus VBR Encoder | 6.0 to 40.0 kbps, 20ms–100ms `ptime` | Fullband/wideband encoding with in-band FEC and DTX. |
+| **9. Encrypted Transport**| WebRTC DTLS-SRTP | Direct peer-to-peer UDP | Delivers encrypted RTP voice packets to peer. |
+
+---
+
+## Technical Specifications
 
 | Parameter | Specification | Details |
 | :--- | :--- | :--- |
-| Media transport | WebRTC DTLS-SRTP | Direct peer-to-peer encrypted UDP |
-| Audio codec | Opus Wideband VBR | 16 kHz wideband, 14.0 kbps Pareto optimal |
-| Bandwidth ceiling | 18.0 kbps max | Set through SDP `b=AS:18` |
-| Packet aggregation | `ptime: 40ms` | 25 pkts/sec (50% header reduction) |
-| Loss recovery | In-band FEC + RFC 2198 RED | Survives up to 50% packet loss |
-| Jitter buffer | Dual-clamped target | Fixed NetEQ playout floor |
-| Traffic shaping | Packet pacer | DSCP Expedited Forwarding (DiffServ 46) |
-| Reconnection | IceRestartManager | 1500ms grace period with 5 backoff retries |
-| TURN fallback | TurnRelayManager | Probes relay latency and auto-forces TURN after retries |
-| Verification | DTLS fingerprints | 8-digit safety code |
-| Language | TypeScript | Strict types for WebRTC, audio nodes, and telemetry |
-| Platforms | Web, PWA, Android APK | Android app built with Capacitor |
+| **Media Transport** | WebRTC DTLS-SRTP | Direct peer-to-peer encrypted UDP |
+| **Audio Codec** | Opus Fullband / Wideband | 48 kHz / 16 kHz VBR, adaptive 2.4 to 40 kbps |
+| **Noise Suppression**| RNNoise v0.2 WASM | 125 KB binary, 10ms lookahead, AudioWorklet thread |
+| **Loss Recovery** | In-band FEC + RFC 2198 RED | Survives up to 50% packet loss |
+| **Signaling Security**| Client-Side ECDH + AES-256-GCM | Ephemeral keys flushed on session teardown |
+| **Jitter Stabilization**| Dual-Clamped Targets | Locks NetEQ playout buffer to fixed floors |
+| **Traffic Shaping** | Packet Pacer | DSCP Expedited Forwarding (DiffServ 46) |
+| **Reconnection** | IceRestartManager | 1500ms grace period with 5 exponential backoff retries |
+| **Identity Verification**| DTLS Certificate Fingerprint | 8-digit Short Authentication String (SAS) |
+| **App Bundle Size** | ~828 KB (Web) / ~2.3 MB (APK) | Minified, tree-shaken, and R8 ProGuard optimized |
+| **Supported Platforms**| Android (API 28+), Web, PWA | Responsive layout matching desktop and mobile viewports |
 
-## Directory structure
+---
+
+## Repository Structure
+
+Refer to the complete [Codebase Index & Architecture Sitemap](docs/INDEX.md) for full directory listings:
 
 ```text
 secure-voice/
-├── android/                         # Android Studio project (Capacitor)
-├── docs/
-│   ├── ARCHITECTURE.md              # Subsystem design and audio pipeline
-│   └── TESTING.md                   # Test matrix and benchmark specs
-├── public/                          # Static web assets
-├── scripts/                         # Benchmark and network simulation runners
-│   ├── benchmark-network-resilience.js
-│   ├── simulate-network-impairments.js
-│   └── webrtc-simulation-runner.js
-├── src/
-│   ├── components/                  # React UI components (.tsx)
-│   ├── constants/                   # Ladder tiers, timing, and codec configs
-│   ├── hooks/                       # Call session, peer, and device hooks
-│   ├── types/                       # TypeScript interfaces
-│   ├── utils/                       # WebRTC, audio DSP, and network adapters
-│   ├── App.tsx
-│   └── main.tsx
-├── CHANGELOG.md                     # Version history
-├── package.json
-└── tsconfig.json
+├── android/                         # Android Studio native project (Capacitor 8.5)
+├── docs/                            # Architectural guides, baselines, and file index
+│   ├── ARCHITECTURE.md              # System design and audio render graph
+│   ├── CODEC_ENGINE.md              # Adaptive Opus ladder specifications
+│   ├── INDEX.md                     # Complete repository file index and sitemap
+│   ├── PERFORMANCE_BASELINE.md      # ITU-T G.114 latency accounting and benchmarks
+│   └── TESTING.md                   # Automated test matrix specifications
+├── public/                          # Production static assets (logo.png, favicon.png)
+├── scripts/                         # Build automation, SRI generation, and benchmarks
+│   ├── build-release-apk.sh         # One-command release APK builder
+│   ├── generate-sri.ts              # Subresource Integrity injector
+│   └── validate-dependencies.ts     # CI dependency parity validator
+├── src/                             # Application source code
+│   ├── components/                  # React UI components (AudioSettings, QRCode, etc.)
+│   ├── constants/                   # Ladder tiers, acoustic presets, and ICE servers
+│   ├── core/                        # TelecomEngine and AudioEngine coordinators
+│   ├── hooks/                       # CallSession, Peer, and device lifecycle hooks
+│   ├── test/                        # Vitest suite (30 test files, 443 tests)
+│   ├── types/                       # TypeScript schemas and state interfaces
+│   └── utils/                       # WebRTC, Audio DSP, RNNoise WASM, and signaling
+├── CHANGELOG.md                     # Documented release history
+├── package.json                     # Dependency manifests and npm scripts
+├── tsconfig.json                    # Strict TypeScript compiler options
+└── vite.config.ts                   # Production build and testing configuration
 ```
 
-## Testing
+---
+
+## Development & Testing
 
 ```bash
-# Run unit and integration tests (387 tests across 25 test files)
+# Verify 100% dependency parity
+npm run check:deps
+
+# Run full Vitest suite (30 test files, 443 tests)
 npm test
 
-# Run resilience and low-bandwidth benchmarks
+# Run resilience and packet loss benchmarks
 npm run benchmark
 
-# Compile TypeScript and build web bundle
+# Compile TypeScript and build production web bundle with SRI
 npm run build
 ```
 
-## Building the Android APK
+---
+
+## Building the Android Release APK
+
+To assemble the optimized, R8-minified production APK (~2.3 MB):
 
 ```bash
-npm run build
-npx cap sync android
-cd android
-./gradlew assembleRelease
+# Build web bundle, sync Capacitor, and assemble signed release APK
+bash scripts/build-release-apk.sh
 ```
 
-The signed binary is written to `android/app/build/outputs/apk/release/app-release.apk`.
+The signed binary is written to `dist/SecureVoice-v3.8.2-release.apk` alongside its SHA-256 checksum in `dist/SHA256SUMS.txt`.
+
+---
 
 ## License
 
-MIT
+MIT License. See [LICENSE](LICENSE) for terms.

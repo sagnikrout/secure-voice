@@ -69,4 +69,4 @@ WebRTC provides perfect forward secrecy for all media and data channels. The bro
 ### 5.2 Graceful degradation and network failover
 SecureVoice implements multi-tier fallback mechanisms:
 - ICE network traversal: Attempts direct Host and Server-Reflexive UDP hole punching via STUN. If strict symmetric NAT is detected, falls back to relayed TURN. Media encryption remains end-to-end even via TURN.
-- Codec escalation: Employs Google Lyra v2 Neural Codec (3.2 kbps) under heavily congested environments and escalates to Opus Wideband HD when stable broadband is restored.
+- Codec escalation: Employs an adaptive 6-tier Opus survival ladder (stepping dynamically down to 3.2 kbps under congested 2G/satellite links) and escalates to Opus Fullband HD (32–40 kbps) when stable broadband is restored.

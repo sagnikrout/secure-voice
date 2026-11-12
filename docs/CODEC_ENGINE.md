@@ -1,26 +1,37 @@
-# Adaptive codec engine
+# Adaptive Codec & Network Engine
 
-This document specifies the internal behavior of the SecureVoice network adaptation and codec switching engine.
+This document specifies the internal behavior of the SecureVoice network adaptation and adaptive Opus codec ladder.
 
-## Codec crossover logic
-SecureVoice operates a dual-codec architecture, dynamically switching between Google Lyra V2 and Opus Wideband HD based on real-time network telemetry.
+## Codec Architecture
+SecureVoice uses Opus Fullband / Wideband VBR paired with real-time hardware-accelerated RNNoise v0.2 WebAssembly neural noise suppression. It dynamically scales transmission parameters based on real-time network telemetry.
 
-### Telemetry thresholds
-The engine monitors the RTCPeerConnection statistics every 1000 milliseconds.
+### Telemetry Sampling
+The engine polls `RTCPeerConnection` statistics every 1000 milliseconds to calculate:
+- Round Trip Time (RTT) in milliseconds
+- Packet loss fraction and total packets lost
+- Playout jitter in milliseconds
+- Sample concealment ratio
 
-1. **Lyra fallback triggers (Low bandwidth mode)**
-   The connection drops to Lyra V2 (3.2 kbps) if any of the following conditions are met:
-   - Available outbound bitrate headroom falls below 14 kbps.
-   - Packet loss exceeds 5 percent.
-   - Round trip time (RTT) exceeds 380 milliseconds.
+### 6-Tier 2G/Satellite Survival Ladder
 
-2. **Opus escalation triggers (High definition mode)**
-   The connection elevates to Opus Wideband HD only when a stable broadband link is sustained for 8 consecutive seconds, defined as:
-   - Available outbound bitrate headroom is greater than or equal to 14 kbps.
-   - Packet loss remains below 1 percent.
-   - RTT remains below 180 milliseconds.
+| Tier | Name | Target Bitrate | Bandwidth Cap | Packetization (`ptime`) | FEC Loss Ratio | DTX State |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **0** | `HQ` (2G Stable) | 8.0 kbps | 10.0 kbps | 40 ms | 15% | Disabled (continuous voice) |
+| **1** | `STD` (2G Normal) | 6.5 kbps | 8.0 kbps | 40 ms | 20% | Disabled |
+| **2** | `LB` (2G Congested) | 5.2 kbps | 7.0 kbps | 60 ms | 30% | Enabled (silence suppression) |
+| **3** | `HL` (2G High Loss) | 4.5 kbps | 6.0 kbps | 80 ms | 45% | Enabled |
+| **4** | `EXT` (2G Extreme) | 3.2 kbps | 5.0 kbps | 100 ms | 55% | Enabled |
+| **5** | `MIN` (Emergency Floor) | 2.4 kbps | 4.0 kbps | 100 ms | 65% | Enabled |
 
-## Fallback and graceful degradation matrices
-1. **WebAssembly failure**: If the environment lacks WebAssembly SIMD hardware support required by Lyra V2, the engine permanently locks to Opus regardless of network constraints to prevent runtime execution faults.
-2. **STUN/TURN failover**: If host-level UDP hole punching fails, the connection falls back to symmetric TURN relays. TURN relay utilization does not alter the codec crossover logic directly, but typically introduces higher RTT which forces Lyra mode.
-3. **Hardware constraints**: If device CPU utilization triggers thermal throttling, the neural transcoding pipeline may introduce latency. Currently, SecureVoice does not automatically degrade to Opus in response to local CPU stress; it relies strictly on network telemetry.
+Broadband profiles (Wi-Fi, 4G, 5G) operate at Tier 10 (`BROADBAND_HQ`, 40 kbps, 48 kHz Fullband HD) and Tier 11 (`BROADBAND_STD`, 24 kbps, 48 kHz HD).
+
+### Adaptation Dynamics & Hysteresis
+To prevent rapid flapping on unstable wireless links:
+1. **Downgrade Response**: 1 tick (1000 ms). If packet loss or RTT exceeds tier thresholds, the engine immediately drops to a lower tier to preserve connection stability.
+2. **Upgrade Hysteresis**: 8 ticks (8000 ms). Upgrades require 8 consecutive seconds of stable metrics below the target tier threshold.
+3. **EMA Metric Smoothing**: RTT, packet loss, and jitter are filtered using Exponential Moving Averages (`alpha = 0.25`) to resist transient packet spikes.
+
+## Packet Loss Concealment & Playout Resilience
+1. **RFC 2198 Redundancy (RED)**: Active by default with dynamic payload type 63. Bundles redundant payload fragments of preceding packets to survive up to 50% random packet loss without audible clipping.
+2. **Opus In-band FEC**: Configured via SDP munging (`useinbandfec=1`) with dynamically scaled packet loss percentages up to 65%.
+3. **Dual-Clamped Jitter Buffer**: Clamps `jitterBufferTarget` and `playoutDelayHint` to prevent NetEQ pitch-shifting artifacts on high-jitter networks.
