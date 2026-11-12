@@ -1,6 +1,11 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
 
 const SIZES = {
   'mipmap-mdpi': 48,
@@ -11,30 +16,51 @@ const SIZES = {
 };
 
 async function generateIcons() {
-  console.log('🎨 Generating Valid PNG Icons for Android Mipmaps...');
+  console.log('🎨 Generating Valid PNG Icons for Android Mipmaps and Web Branding...');
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  // Read logo.svg (or logo.png fallback) as base64
-  const svgPath = path.resolve('public/logo.svg');
-  let base64Data;
-  if (fs.existsSync(svgPath)) {
-    const svgData = fs.readFileSync(svgPath);
-    base64Data = `data:image/svg+xml;base64,${svgData.toString('base64')}`;
-  } else {
-    const logoData = fs.readFileSync(path.resolve('public/logo.png'));
-    base64Data = `data:image/png;base64,${logoData.toString('base64')}`;
+  // Read Candidate 4A Knurled Receiver Core as source
+  const sourcePath = path.join(rootDir, 'public/candidates/round4_candidate_4a_knurled_receiver_core.jpg');
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Candidate 4A source not found at ${sourcePath}`);
+  }
+  const sourceData = fs.readFileSync(sourcePath);
+  const base64Data = `data:image/jpeg;base64,${sourceData.toString('base64')}`;
+
+  // 1. Generate Web Assets: public/logo.png (512x512) and public/favicon.png (192x192)
+  for (const [filename, targetSize] of [['logo.png', 512], ['favicon.png', 192]]) {
+    const pngBase64 = await page.evaluate(async ({ src, size }) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.src = src;
+      });
+    }, { src: base64Data, size: targetSize });
+
+    const targetPath = path.join(rootDir, 'public', filename);
+    const buf = Buffer.from(pngBase64.replace(/^data:image\/png;base64,/, ''), 'base64');
+    fs.writeFileSync(targetPath, buf);
+    console.log(`   ✅ Generated public/${filename} (${targetSize}x${targetSize} PNG)`);
   }
 
+  // 2. Generate Android Mipmap Sets
   for (const [dir, size] of Object.entries(SIZES)) {
-    const targetDir = path.resolve(`android/app/src/main/res/${dir}`);
+    const targetDir = path.join(rootDir, 'android/app/src/main/res', dir);
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
 
     // Square icon
-    const pngBase64 = await page.evaluate(async ({ src, size, isRound }) => {
+    const squarePngBase64 = await page.evaluate(async ({ src, size }) => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
@@ -42,23 +68,15 @@ async function generateIcons() {
           canvas.width = size;
           canvas.height = size;
           const ctx = canvas.getContext('2d');
-
-          if (isRound) {
-            ctx.beginPath();
-            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.clip();
-          }
-
           ctx.drawImage(img, 0, 0, size, size);
           resolve(canvas.toDataURL('image/png'));
         };
         img.src = src;
       });
-    }, { src: base64Data, size, isRound: false });
+    }, { src: base64Data, size });
 
     // Round icon
-    const roundPngBase64 = await page.evaluate(async ({ src, size, isRound }) => {
+    const roundPngBase64 = await page.evaluate(async ({ src, size }) => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
@@ -66,21 +84,19 @@ async function generateIcons() {
           canvas.width = size;
           canvas.height = size;
           const ctx = canvas.getContext('2d');
-
           ctx.beginPath();
           ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
           ctx.closePath();
           ctx.clip();
-
           ctx.drawImage(img, 0, 0, size, size);
           resolve(canvas.toDataURL('image/png'));
         };
         img.src = src;
       });
-    }, { src: base64Data, size, isRound: true });
+    }, { src: base64Data, size });
 
     // Save ic_launcher.png
-    const squareBuffer = Buffer.from(pngBase64.replace(/^data:image\/png;base64,/, ''), 'base64');
+    const squareBuffer = Buffer.from(squarePngBase64.replace(/^data:image\/png;base64,/, ''), 'base64');
     fs.writeFileSync(path.join(targetDir, 'ic_launcher.png'), squareBuffer);
 
     // Save ic_launcher_round.png
@@ -93,29 +109,11 @@ async function generateIcons() {
     console.log(`   ✅ Generated ${dir} (${size}x${size} PNG)`);
   }
 
-  // Also convert public/logo.png and public/favicon.png to true PNG
-  const trueLogoBase64 = await page.evaluate(async ({ src }) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || 512;
-        canvas.height = img.naturalHeight || 512;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.src = src;
-    });
-  }, { src: base64Data });
-
-  const trueLogoBuffer = Buffer.from(trueLogoBase64.replace(/^data:image\/png;base64,/, ''), 'base64');
-  fs.writeFileSync(path.resolve('public/logo.png'), trueLogoBuffer);
-  fs.writeFileSync(path.resolve('public/favicon.png'), trueLogoBuffer);
-  console.log('   ✅ Converted public/logo.png & public/favicon.png to true PNG format');
-
   await browser.close();
-  console.log('🎉 All Android icons generated successfully with valid PNG signatures!');
+  console.log('🎉 All Web and Android production icons generated successfully with valid PNG signatures!');
 }
 
-generateIcons().catch(console.error);
+generateIcons().catch((err) => {
+  console.error('Error generating icons:', err);
+  process.exit(1);
+});

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Voice — Approved Brand Identity &amp; UI System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #000000; /* Pure AMOLED 0-nit True Black for maximum OLED efficiency */
+      color: #f8fafc; /* Crisp Chalk White */
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+    .main-container {
+      max-width: 460px;
+      min-width: 320px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    .main-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .badge-approved {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .main-header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      margin-bottom: 6px;
+      color: #ffffff;
+    }
+    .main-header p {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    /* Live State & Accessibility Controller */
+    .controls-panel {
+      background: #0d121c; /* Chalk Dark Charcoal */
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .controls-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .state-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .state-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #1c2433;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .state-btn:hover { background: #263145; color: #fff; }
+    .state-btn.active-ready { background: rgba(34, 197, 94, 0.18); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+    .state-btn.active-connecting { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+    .state-btn.active-incall { background: rgba(56, 189, 248, 0.18); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+    .state-btn.active-error { background: rgba(239, 68, 68, 0.18); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+
+    .btn-colorblind {
+      width: 100%;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #161e2e;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-colorblind:hover { background: #202b40; color: #fff; }
+    .btn-colorblind.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
+    }
+
+    /* Selected App Mock Container — Fixed minimum width boundary */
+    .app-chassis {
+      background: #090d15;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+      margin-bottom: 28px;
+      min-width: 320px;
+      box-sizing: border-box;
+    }
+
+    /* Header Bar */
+    .app-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .icon-emblem {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      flex-shrink: 0;
+    }
+    .icon-emblem img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .brand-title-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .headline {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: #ffffff;
+      line-height: 1.15;
+    }
+    .headline span {
+      color: #94a3b8;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+
+    /* Thickened 3.5px Dynamic Hardware Status Line */
+    .brand-accent-bar {
+      height: 3.5px;
+      width: 72px;
+      border-radius: 3px;
+      transition: background-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    /* Ready (Green): 100% STATIC */
+    .brand-accent-bar.state-ready {
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+      animation: none !important;
+    }
+    /* Connecting (Amber): 100% STATIC */
+    .brand-accent-bar.state-connecting {
+      background: #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+      animation: none !important;
+    }
+    /* In-Call (Cyan): 100% STATIC */
+    .brand-accent-bar.state-incall {
+      background: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+      animation: none !important;
+    }
+    /* Error / Failed (Red): STROBE ANIMATION (Only Red Moves) */
+    .brand-accent-bar.state-error {
+      background: #ef4444;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
+      animation: red-rapid-strobe 0.6s infinite steps(2, start) !important;
+    }
+    @keyframes red-rapid-strobe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.15; }
+    }
+
+    /* Utility Buttons: Studio Mixing Console Icon (SlidersHorizontal) */
+    .utility-btns {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .utility-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #1c2433;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .utility-btn:hover {
+      background: #222d40;
+      color: #f1f5f9;
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+    .utility-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+    .utility-btn.active-btn {
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    /* Cards */
+    .ui-card {
+      background: #0f141f;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .card-label {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    .peer-id-box {
+      background: #05080f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .peer-id-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Icon-Only Buttons */
+    .icon-action-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: #1c2433;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .icon-action-btn:hover {
+      background: #263145;
+      color: #fff;
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .icon-action-btn.btn-primary {
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
+    }
+    .icon-action-btn.btn-primary:hover {
+      background: #0369a1;
+    }
+    /* When copied: turns grey matching Share & QR surface */
+    .icon-action-btn.copied-grey {
+      background: #1c2433 !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      color: #cbd5e1 !important;
+    }
+    .icon-action-btn svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 2;
+    }
+
+    /* New Call Input Row */
+    .call-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .call-input {
+      flex: 1;
+      background: #0b0f19;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: #f1f5f9;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .call-input:focus {
+      border-color: #0284c7;
+    }
+    .call-btn-icon {
+      width: 44px;
+      height: 42px;
+      border-radius: 8px;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .call-btn-icon:hover {
+      background: #0369a1;
+    }
+    .call-btn-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    .privacy-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11.5px;
+      color: #8b949e;
+      margin-top: 12px;
+      line-height: 1.4;
+    }
+    .privacy-banner svg {
+      color: #22c55e;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Spec Summary Card */
+    .spec-summary {
+      background: #111724;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .spec-summary h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    .spec-table td {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .spec-table td:first-child {
+      color: #8b949e;
+      width: 35%;
+    }
+    .spec-table td:last-child {
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+
+    /* Color-blindness Deuteranopia Filter */
+    body.filter-deuteranopia .brand-accent-bar,
+    body.filter-deuteranopia .state-btn span {
+      filter: url('#deuteranopia-filter');
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="main-header">
+      <div class="badge-approved">&check; Operator Confirmed Design</div>
+      <h1>Secure Voice — Unified Design System</h1>
+      <p>Cleaned up single source of truth containing only the confirmed hardware UI specifications.</p>
+    </div>
+
+    <!-- Live State & Color-Blindness Controller -->
+    <div class="controls-panel">
+      <div class="controls-title">
+        <span>Live WebRTC State Telemetry</span>
+        <span style="font-size: 11px; color: #8b949e; text-transform: none;">Only Red Moves (Strobe)</span>
+      </div>
+      <div class="state-btn-group">
+        <button class="state-btn active-ready" onclick="setBarState('state-ready', this)">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span>
+          Ready (Static)
+        </button>
+        <button class="state-btn" onclick="setBarState('state-connecting', this)">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
+          Connecting (Static)
+        </button>
+        <button class="state-btn" onclick="setBarState('state-incall', this)">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#38bdf8;"></span>
+          In-Call (Static)
+        </button>
+        <button class="state-btn" onclick="setBarState('state-error', this)">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span>
+          Failed / Error (Strobe)
+        </button>
+      </div>
+
+      <button class="btn-colorblind" onclick="toggleColorblindFilter(this)">
+        👁️ Simulate Red-Green Color Blindness (Deuteranopia)
+      </button>
+    </div>
+
+    <!-- Selected App Interface -->
+    <div class="app-chassis">
+      <!-- Header Bar -->
+      <div class="app-header-row">
+        <div class="brand-group">
+          <!-- Candidate 4A Monochrome Titanium Grille Emblem -->
+          <div class="icon-emblem" title="Candidate 4A Monochrome Emblem">
+            <img src="./round4_candidate_4a_knurled_receiver_core.jpg" alt="Secure Voice Emblem">
+          </div>
+          <div class="brand-title-box">
+            <!-- Plus Jakarta Sans Two-Tone Display Title -->
+            <div class="headline">Secure <span>Voice</span></div>
+            <!-- Thickened 3.5px Dynamic Status Line -->
+            <div class="brand-accent-bar state-ready" id="status-bar"></div>
+          </div>
+        </div>
+        <div class="utility-btns">
+          <!-- SlidersHorizontal: Studio Console Mixing Faders -->
+          <button class="utility-btn active-btn" title="Audio & Codec Settings (Studio Console)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+          </button>
+          <!-- Activity: Network Health -->
+          <button class="utility-btn" title="Network Health">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Peer ID Card (Icon-Only Buttons with Grey Copied State) -->
+      <div class="ui-card">
+        <div class="card-label">Your Peer ID</div>
+        <div class="peer-id-box">
+          <span class="peer-id-text">U78-7ZT-C8M</span>
+          <div class="action-group">
+            <button class="icon-action-btn btn-primary" id="copy-btn" title="Copy Peer ID" onclick="testCopy(this)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+            <button class="icon-action-btn" title="Share Invite Link">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+            </button>
+            <button class="icon-action-btn" title="Show QR Code">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Call Card (Icon-Only Call Button) -->
+      <div class="ui-card">
+        <div class="card-label">New Call</div>
+        <div class="call-input-row">
+          <input type="text" class="call-input" placeholder="Enter Friend's Peer ID..." value="" spellcheck="false" autocomplete="off" maxlength="11" oninput="formatLiveInput(event)" title="Type Peer ID (Hyphens are added automatically)">
+          <button class="call-btn-icon" title="Start Call">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+        </div>
+        <div class="privacy-banner">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span><strong>Private &amp; Direct:</strong> Zero accounts required. Audio is end-to-end encrypted and routed direct peer-to-peer with neural noise suppression.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approved Specifications Summary -->
+    <div class="spec-summary">
+      <h3>Approved Technical Specifications</h3>
+      <table class="spec-table">
+        <tr>
+          <td>Brand Emblem</td>
+          <td>Candidate 4A Monochrome (Knurled Titanium + Perforated Receiver Core)</td>
+        </tr>
+        <tr>
+          <td>Title Typography</td>
+          <td>Plus Jakarta Sans 800 ExtraBold ("Secure") + 400 Regular ("Voice")</td>
+        </tr>
+        <tr>
+          <td>Hardware Status Bar</td>
+          <td>3.5px &times; 72px Line &bull; Static Green/Amber/Cyan &bull; Strobe Red (Only Red Moves)</td>
+        </tr>
+        <tr>
+          <td>Settings Icon</td>
+          <td>SlidersHorizontal (Studio Console Mixing Faders)</td>
+        </tr>
+        <tr>
+          <td>Peer ID Actions</td>
+          <td>Icon-only (Copy, Share, QR) &bull; Copy turns grey matching Share/QR upon completion</td>
+        </tr>
+        <tr>
+          <td>Call Action</td>
+          <td>Icon-only Phone button &bull; Input field preserved for 100% Base32 compatibility</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- SVG Color Blindness Filter Definition -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+    <filter id="deuteranopia-filter">
+      <feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0
+                                          0.7, 0.3, 0, 0, 0
+                                          0, 0.3, 0.7, 0, 0
+                                          0, 0, 0, 1, 0"/>
+    </filter>
+  </svg>
+
+  <script>
+    let currentState = 'state-ready';
+
+    function setBarState(stateClass, btn) {
+      currentState = stateClass;
+      document.querySelectorAll('.state-btn').forEach(b => {
+        b.className = 'state-btn';
+      });
+      if (stateClass === 'state-ready') btn.classList.add('active-ready');
+      if (stateClass === 'state-connecting') btn.classList.add('active-connecting');
+      if (stateClass === 'state-incall') btn.classList.add('active-incall');
+      if (stateClass === 'state-error') btn.classList.add('active-error');
+
+      const bar = document.getElementById('status-bar');
+      bar.className = 'brand-accent-bar ' + stateClass;
+    }
+
+    function formatLiveInput(e) {
+      let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (val.length > 9) val = val.slice(0, 9);
+      const chunks = val.match(/.{1,3}/g);
+      e.target.value = chunks ? chunks.join('-') : val;
+    }
+
+    function testCopy(btn) {
+      const originalSvg = btn.innerHTML;
+      btn.classList.remove('btn-primary');
+      btn.classList.add('copied-grey');
+      btn.title = 'Copied';
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      setTimeout(() => {
+        btn.classList.remove('copied-grey');
+        btn.classList.add('btn-primary');
+        btn.title = 'Copy Peer ID';
+        btn.innerHTML = originalSvg;
+      }, 2000);
+    }
+
+    function toggleColorblindFilter(btn) {
+      const active = document.body.classList.toggle('filter-deuteranopia');
+      if (active) {
+        btn.classList.add('active');
+        btn.innerText = '👁️ Deuteranopia Filter: ON (Simulating Red-Green Color Blindness)';
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = '👁️ Simulate Red-Green Color Blindness (Deuteranopia)';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,21 +1,21 @@
-@import "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap";
+@import "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap";
 /* Tokens */
 :root,
 :root[data-theme="dark"] {
-  --brand-primary: #2D9B6E;
-  --brand-secondary: #1A2332;
-  --color-danger: #E5484D;
-  --color-warning: #F5A623;
-  --color-success: #2D9B6E;
-  --color-info: #2B82DE;
-  --bg-app: #121822;
-  --bg-surface: #1A2332;
-  --bg-surface-raised: #222C3F;
-  --bg-surface-overlay: #2A364B;
-  --text-primary: #FFFFFF;
-  --text-secondary: #B0BBC9;
-  --text-muted: #6B7B91;
-  --text-inverse: #121822;
+  --brand-primary: #10b981;
+  --brand-secondary: #0f141f;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-info: #0284c7;
+  --bg-app: #000000;
+  --bg-surface: #0f141f;
+  --bg-surface-raised: #161e2e;
+  --bg-surface-overlay: #1c2433;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #000000;
   --touch-target-min: 44px;
   --space-1: 4px;
   --space-2: 8px;
@@ -93,25 +93,25 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0d1117;
-  --card: #161b24;
-  --card-2: #1c2230;
+  --bg: #000000;
+  --card: #0f141f;
+  --card-2: #05080f;
   --border: rgba(255, 255, 255, 0.08);
   --border-2: rgba(255, 255, 255, 0.14);
-  --blue: #0ea5e9;
-  --blue-hover: #0284c7;
-  --blue-light: rgba(14, 165, 233, 0.14);
-  --blue-mid: rgba(14, 165, 233, 0.28);
+  --blue: #0284c7;
+  --blue-hover: #0369a1;
+  --blue-light: rgba(2, 132, 199, 0.14);
+  --blue-mid: rgba(2, 132, 199, 0.28);
   --green: #22c55e;
   --green-light: rgba(34, 197, 94, 0.14);
   --red: #ef4444;
   --red-light: rgba(239, 68, 68, 0.14);
   --amber: #f59e0b;
   --amber-light: rgba(245, 158, 11, 0.14);
-  --text: #f0f6fc;
-  --text-2: #c9d1d9;
-  --muted: #8b949e;
-  --muted-2: #484f58;
+  --text: #f8fafc;
+  --text-2: #94a3b8;
+  --muted: #64748b;
+  --muted-2: #334155;
 }
 
 /* Utility Classes used by Lucide Icons */
@@ -181,7 +181,9 @@ body {
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  min-width: 320px;
   max-width: 440px;
+  box-sizing: border-box;
 }
 
 .card {
@@ -206,6 +208,27 @@ body {
   gap: 12px;
 }
 
+.brand-emblem-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-2);
+}
+
+.brand-emblem-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .brand-monogram {
   width: 36px;
   height: 36px;
@@ -227,7 +250,80 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 3px;
+}
+
+.brand-title {
+  font-family: 'Plus Jakarta Sans', var(--font);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.brand-title-two-tone {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.brand-title-secure {
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.brand-title-voice {
+  font-weight: 400;
+  color: #94a3b8;
+  letter-spacing: -0.01em;
+}
+
+/* Thickened 3.5px Dynamic Hardware Status Accent Line */
+.brand-accent-bar {
+  height: 3.5px;
+  width: 72px;
+  border-radius: 3px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  margin-top: 4px;
+}
+
+/* Ready: Emerald Green (100% Static) */
+.brand-accent-bar.state-ready {
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+  animation: none !important;
+}
+
+/* Connecting / Reconnecting: Amber (100% Static) */
+.brand-accent-bar.state-connecting,
+.brand-accent-bar.state-reconnecting {
+  background: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  animation: none !important;
+}
+
+/* In-Call / Calling: Cyan (100% Static) */
+.brand-accent-bar.state-incall,
+.brand-accent-bar.state-calling {
+  background: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+  animation: none !important;
+}
+
+/* Error / Failed / Busy / Disconnected: Crimson Red (STROBE ANIMATION - ONLY RED MOVES) */
+.brand-accent-bar.state-error,
+.brand-accent-bar.state-busy,
+.brand-accent-bar.state-disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
+  animation: red-rapid-strobe 0.6s infinite steps(2, start) !important;
+}
+
+@keyframes red-rapid-strobe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
 }
 
 .brand h1 {
@@ -338,9 +434,9 @@ body {
 }
 
 .info-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: var(--card-2);
   border: 1px solid var(--border-2);
   color: var(--muted);
@@ -352,9 +448,9 @@ body {
 }
 
 .info-btn:hover {
-  background: var(--blue-light);
-  border-color: var(--blue-mid);
-  color: var(--blue);
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
 }
 
 /* Label & ID Box */
@@ -407,6 +503,69 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Icon-Only Action Buttons */
+.icon-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.icon-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.icon-action-btn.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.icon-action-btn.btn-primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+}
+
+/* When copied: turns grey matching Share & QR surface */
+.icon-action-btn.copied-grey {
+  background: var(--card-2) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #cbd5e1 !important;
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.call-btn-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   flex-shrink: 0;
 }
 

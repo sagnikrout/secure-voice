@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   PhoneMissed,
   Sliders,
+  SlidersHorizontal,
   QrCode,
   Volume2,
   Speaker,
@@ -392,12 +393,28 @@ export default function App() {
             {/* Header Bar */}
             <header className="card header">
               <div className="brand">
-                <div className="brand-monogram" aria-hidden="true">
-                  SV
+                <div className="brand-emblem-wrap" title="Secure Voice Hardware Dial">
+                  <img
+                    src="./logo.png"
+                    alt="SV"
+                    className="brand-emblem-img"
+                  />
+                  <span className="sr-only">SV</span>
                 </div>
                 <div className="brand-text">
-                  <h1>Secure Voice</h1>
-                  <p className="brand-tagline">Encrypted P2P Voice</p>
+                  <h1 className="brand-title">
+                    <span className="sr-only">Secure Voice</span>
+                    <span aria-hidden="true" className="brand-title-two-tone">
+                      <span className="brand-title-secure">Secure</span>{' '}
+                      <span className="brand-title-voice">Voice</span>
+                    </span>
+                  </h1>
+                  {/* Thickened 3.5px Dynamic Hardware Status Accent Line */}
+                  <div
+                    className={`brand-accent-bar state-${currentStatus === 'in-call' ? 'incall' : currentStatus}`}
+                    role="status"
+                    aria-label={`Status: ${STATUS_LABELS[currentStatus] || currentStatus}`}
+                  />
                 </div>
               </div>
 
@@ -409,7 +426,7 @@ export default function App() {
                   aria-label="Audio & Codec Settings"
                   title="Audio & Codec Settings"
                 >
-                  <Sliders className="w-4 h-4" />
+                  <SlidersHorizontal className="w-4 h-4" />
                 </button>
 
                 <button
@@ -437,39 +454,36 @@ export default function App() {
                 <span className={`id-text ${myId ? '' : 'dim'}`} aria-label="Your assigned peer ID">
                   {myId || 'Generating...'}
                 </span>
-                <div className="id-actions">
+                <div className="id-actions action-group">
                   <button
                     type="button"
-                    className={`copy-btn ${copied ? 'copied' : ''}`}
+                    className={`icon-action-btn ${copied ? 'copied-grey' : 'btn-primary'}`}
                     onClick={copyMyId}
                     disabled={!myId}
-                    aria-label="Copy ID to clipboard"
-                    title="Copy Peer ID"
+                    aria-label="Copy Peer ID"
+                    title={copied ? "Copied" : "Copy Peer ID"}
                   >
                     {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
                     type="button"
-                    className={`copy-btn share-btn ${shared ? 'copied' : ''}`}
+                    className={`icon-action-btn ${shared ? 'copied-grey' : ''}`}
                     onClick={shareInviteLink}
                     disabled={!myId}
-                    aria-label="Share invite link with a friend"
-                    title="Share invite link"
+                    aria-label="Share invite link"
+                    title={shared ? "Shared" : "Share invite link"}
                   >
                     {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                    <span>{shared ? 'Shared' : 'Share'}</span>
                   </button>
                   <button
                     type="button"
-                    className="copy-btn qr-btn"
+                    className="icon-action-btn"
                     onClick={() => setShowQrModal(true)}
                     disabled={!myId}
                     aria-label="Share QR Code"
                     title="Share QR Code"
                   >
                     <QrCode className="w-4 h-4" />
-                    <span>QR</span>
                   </button>
                 </div>
               </div>
@@ -494,13 +508,13 @@ export default function App() {
                 />
                 <button
                   type="button"
-                  className="btn btn-blue"
+                  className="btn btn-blue call-btn-icon"
                   onClick={() => handleStartCall(calleeInput)}
                   disabled={peerStatus !== 'ready' || !calleeInput.trim()}
                   aria-label="Initiate encrypted call"
+                  title="Call"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Call</span>
                 </button>
               </div>
               <div className="privacy-banner">
