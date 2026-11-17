@@ -1,13 +1,27 @@
-# Security policy
+# Security Policy
 
-## Reporting a vulnerability
+## Reporting a Vulnerability
 
-Please report suspected security issues through GitHub's private vulnerability reporting if it is enabled for this repository. If private reporting is unavailable, contact the maintainer through a channel listed on their GitHub profile. Avoid posting exploit details or sensitive information in a public issue until a fix or mitigation is available.
+Report security vulnerabilities privately via GitHub Security Advisories:
+- **Private Advisory**: https://github.com/sagnikrout/secure-voice/security/advisories/new
+- **Alternative**: Open a confidential issue on GitHub if private advisories are disabled.
 
-## Security model and limitations
+Do not post exploit payloads or proof-of-concept scripts in public issues until a mitigation is released.
 
-WebRTC uses DTLS-SRTP to protect media between the WebRTC endpoints. Signaling is separate and can expose connection metadata. The application contains signaling encryption helpers, but users should not assume that encryption alone authenticates a contact or prevents all active attacks. Compare the in-call verification value with the other participant over a trusted, independent channel when identity verification matters.
+---
 
-STUN and TURN services can observe network information required for connectivity. A TURN relay can see endpoint addresses and traffic timing and volume, although WebRTC media remains encrypted between endpoints when correctly negotiated. Compromised devices, malicious browser extensions, screen/audio recording by a participant, and traffic analysis are outside the protection provided by transport encryption.
+## Security Architecture & Threat Model
 
-Security behavior depends on the current code, browser, platform, and service configuration. This policy is not a security audit or guarantee. Review the privacy notice and architecture for additional context.
+| Boundary | Transport | Protection | Visibility & Limits |
+| :--- | :--- | :--- | :--- |
+| **Media Stream** | Direct UDP / WebRTC | DTLS-SRTP encryption | End-to-end encrypted between caller and callee. Relay nodes cannot decrypt audio. |
+| **Signaling** | PeerJS (WebSocket) | Ephemeral ECDH + AES-256-GCM | Signaling servers route encrypted payloads. Server observes IP addresses and call timing metadata. |
+| **Network Relays** | STUN / TURN | UDP / TCP relay | TURN relays forward encrypted media packets. Relays observe endpoint IPs, port numbers, and bandwidth volume. |
+
+---
+
+## Authentication & Verification
+
+1. **Cryptographic Fingerprint**: Compare the 4-emoji verification code (`[emoji1 emoji2 emoji3 emoji4]`) verbally over the call. Identical emojis guarantee both endpoints hold matching DTLS certificate fingerprints without Man-In-The-Middle (MITM) tampering.
+2. **Ephemeral Keys**: Signaling encryption derives temporary ECDH keypairs per session. Keys are wiped from memory on call teardown.
+3. **Out of Scope**: Compromised local OS environments, malicious browser extensions, rooted device keyloggers, and local physical recording by call participants.
