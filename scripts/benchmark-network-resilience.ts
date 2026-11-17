@@ -211,9 +211,9 @@ assert(iceManager.retryCount === 1, 'First backoff retry attempt initiated');
 iceManager.reset();
 
 // -------------------------------------------------------------
-// Benchmark 4: MITM Verbal Safety Code Determinism
+// Benchmark 4: MITM 4-Emoji Safety Fingerprint Determinism
 // -------------------------------------------------------------
-console.log('\n🔐 Benchmark 4: Deterministic DTLS-SRTP 8-digit Safety Code');
+console.log('\n🔐 Benchmark 4: Deterministic DTLS-SRTP 4-Emoji Fingerprint');
 
 const localSdp = 'v=0\r\na=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99\r\n';
 const remoteSdp = 'v=0\r\na=fingerprint:sha-256 99:88:77:66:55:44:33:22:11:00:FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00:FF:EE:DD:CC:BB:AA\r\n';
@@ -221,9 +221,8 @@ const remoteSdp = 'v=0\r\na=fingerprint:sha-256 99:88:77:66:55:44:33:22:11:00:FF
 const code1 = await generateSafetyCode(localSdp, remoteSdp);
 const code2 = await generateSafetyCode(remoteSdp, localSdp); // Order reversed
 
-assert(code1 !== null && code1.length === 8, 'Safety code is a 8-digit string');
-assert(code1 === code2, 'Safety code is symmetric regardless of caller/callee fingerprint ordering');
-assert(/^\d{8}$/.test(code1), 'Safety code consists strictly of 8 numeric digits');
+assert(code1 !== null && code1.split(' ').length === 4, 'Fingerprint consists of 4 space-separated emojis');
+assert(code1 === code2, 'Fingerprint is symmetric regardless of caller/callee fingerprint ordering');
 
 // -------------------------------------------------------------
 // Final Results

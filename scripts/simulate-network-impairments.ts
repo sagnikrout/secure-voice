@@ -33,11 +33,11 @@ async function runImpairmentSimulation() {
     } catch {
       console.log(`🚀 Starting local Vite server on port ${PORT}...`);
       const isWin = process.platform === 'win32';
-      const cmd = isWin ? 'cmd.exe' : 'npm';
-      const args = isWin ? ['/c', 'npm', 'run', 'dev', '--', '--port', `${PORT}`, '--strictPort'] : ['run', 'dev', '--', '--port', `${PORT}`, '--strictPort'];
+      const cmd = isWin ? 'cmd.exe' : 'npx';
+      const args = isWin ? ['/c', 'npx', 'vite', '--port', `${PORT}`, '--strictPort'] : ['vite', '--port', `${PORT}`, '--strictPort'];
       viteProcess = spawn(cmd, args, {
         stdio: 'pipe',
-        shell: false
+        shell: isWin
       });
       await checkServerReady(PORT, 20000);
     }

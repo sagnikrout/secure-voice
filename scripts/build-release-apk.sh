@@ -28,10 +28,12 @@ KEY_PASSWORD="securevoice" \
 ./gradlew assembleRelease
 
 echo "=== [4/4] Verifying APK Signature & Exporting ==="
+APP_VERSION=$(node -p "require('$ROOT_DIR/package.json').version")
 mkdir -p "$ROOT_DIR/dist"
-cp "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" "$ROOT_DIR/dist/SecureVoice-v3.9.0-release.apk"
+OUTPUT_APK="$ROOT_DIR/dist/SecureVoice-v${APP_VERSION}-release.apk"
+cp "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" "$OUTPUT_APK"
 cd "$ROOT_DIR/dist"
-sha256sum SecureVoice-v3.9.0-release.apk > SHA256SUMS.txt
+sha256sum "$(basename "$OUTPUT_APK")" > SHA256SUMS.txt
 
-echo "✅ Release APK built successfully: dist/SecureVoice-v3.9.0-release.apk"
+echo "✅ Release APK built successfully: dist/$(basename "$OUTPUT_APK")"
 cat SHA256SUMS.txt

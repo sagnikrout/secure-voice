@@ -12,11 +12,8 @@ import {
   Activity,
   ShieldAlert,
   PhoneMissed,
-  Sliders,
   SlidersHorizontal,
   QrCode,
-  Volume2,
-  Speaker,
   Lock,
   Share2,
   AlertCircle

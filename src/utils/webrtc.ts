@@ -385,3 +385,5 @@ export async function generateSafetyCode(localSdp: any, remoteSdp: any): Promise
   ].join(' ');
 }
 
+export const generateFingerprintEmojis = generateSafetyCode;
+

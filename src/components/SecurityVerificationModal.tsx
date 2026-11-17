@@ -51,7 +51,7 @@ export default function SecurityVerificationModal({ safetyCode, onClose, connect
         </p>
         
         <p className="inc-sub" style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: '1.4', marginBottom: '16px' }}>
-          Compare these 4 emojis with your contact. If they are identical on both screens, this call is 100% private and protected against eavesdropping.
+          Compare these 4 emojis with your contact. If they match on both screens, your DTLS-SRTP keys are authenticated against MITM tampering.
         </p>
         
         <div
