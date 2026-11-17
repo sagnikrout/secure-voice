@@ -74,23 +74,28 @@ jobs:
           fi
           sha256sum SecureVoice-${{ github.ref_name }}.apk > SHA256SUMS.txt
 
+      - name: Extract Release Notes from CHANGELOG
+        id: release_notes
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION_CLEAN="${VERSION#v}"
+          # Extract section from CHANGELOG.md between the current version header and the next version header
+          awk -v ver="$VERSION_CLEAN" '
+            $0 ~ "^## \\[" ver "\\]" || $0 ~ "^## " ver { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release_body.md
+          if [ ! -s release_body.md ]; then
+            echo "Direct changelog extraction fallback..."
+            sed -n "/## .*${VERSION_CLEAN}/,/## /p" CHANGELOG.md | sed '$d' | sed '1d' > release_body.md
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           make_latest: "true"
-          generate_release_notes: true
-          body: |
-            ### SecureVoice ${{ github.ref_name }}
-
-            - **85% Smaller Download**: Purged unused assets, shrinking release APK from 15.05 MB to 2.3 MB.
-            - **RNNoise v0.2 AI Noise Removal**: Real-time neural background noise reduction running in dedicated AudioWorklet threads.
-            - **Acoustic Presets & 6-Stage Filter Bank**: Standard, Voice Boost, Studio Clean, and Voice Isolation profiles with parametric EQ and dynamics compression.
-            - **Hardened Security**: Ephemeral ECDH (P-256) forward secrecy with session key wipe upon disconnect, anti-downgrade signal protection, Subresource Integrity (SRI), and disabled WebView debugging.
-            - **Telecom & Codec**: Dynamic 6-tier Opus bitrate adaptation down to 2.4 kbps floor with RFC 2198 RED packet loss protection.
-            - **Compatibility**: Android 9.0+ (API level 28+) required for background audio execution and foreground service microphone policies.
-
-            #### Verification
-            - SHA-256 checksums are listed in `SHA256SUMS.txt`.
+          generate_release_notes: false
+          body_path: release_body.md
           files: |
             android/app/build/outputs/apk/release/SecureVoice-${{ github.ref_name }}.apk
             android/app/build/outputs/apk/release/SHA256SUMS.txt
