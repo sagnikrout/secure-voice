@@ -16,4 +16,8 @@ The current ICE server configuration is in src/constants/config.ts. Service oper
 
 The app does not protect audio on a compromised device, prevent the other participant from recording a call, conceal all traffic metadata, or guarantee that a call will connect. Browser and Android permissions control microphone access. Review the current code and service configuration before relying on the app for sensitive communications.
 
+## Emergency calling and warranty
+
+SecureVoice is peer-to-peer software and does not connect to emergency services. Maintain alternative access to local emergency services. The project is provided under the terms of the MIT License; see LICENSE for warranty disclaimers and liability limitations.
+
 For security assumptions and responsible disclosure, see the security policy.
