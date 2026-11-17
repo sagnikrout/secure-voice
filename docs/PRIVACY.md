@@ -1,14 +1,19 @@
-﻿# Privacy policy
+﻿# Privacy notice
 
-SecureVoice operates strictly on a zero-telemetry, zero-knowledge architecture.
+SecureVoice is designed to keep call audio between the participating WebRTC endpoints. This does not mean that all call-related information is invisible to network services or other parties.
 
-## Data collection and retention
-- **Server logs**: SecureVoice operates without central media servers. We do not collect, process, or store call durations, participant IP addresses, or connection metadata. 
-- **Local storage**: Call history and diagnostic logs are stored exclusively in the client device's volatile session storage. This data is permanently destroyed when the application process terminates.
-- **Third-party SDKs**: The application embeds zero third-party analytics, crash reporting, or advertising SDKs.
+## Information on your device
 
-## TURN server infrastructure
-If the peer-to-peer connection requires a TURN relay due to NAT constraints, the TURN server administrator will observe the IP addresses of both endpoints and the encrypted UDP traffic volume. The media payloads remain encrypted end-to-end and inaccessible to the TURN provider.
+The app stores preferences and recent-call information locally in the browser or Android app environment. Local data may remain until it is cleared by the user or removed by the operating system. Anyone with access to an unlocked device or its app data may be able to access it.
 
-## Contact
-For data privacy inquiries or to request further architectural details, refer to the project repository.
+## Services used for calls
+
+Call setup uses signaling infrastructure, and connection establishment may use public STUN or TURN services configured by the application. These services may receive network addresses, peer identifiers, connection metadata, or encrypted traffic needed to provide their function. A TURN operator can observe the network addresses of connected endpoints and the volume and timing of relayed traffic, but WebRTC media remains encrypted between endpoints when the connection is correctly established.
+
+The current ICE server configuration is in src/constants/config.ts. Service operators' own retention and privacy practices are outside this project's control.
+
+## Limits
+
+The app does not protect audio on a compromised device, prevent the other participant from recording a call, conceal all traffic metadata, or guarantee that a call will connect. Browser and Android permissions control microphone access. Review the current code and service configuration before relying on the app for sensitive communications.
+
+For security assumptions and responsible disclosure, see the security policy.

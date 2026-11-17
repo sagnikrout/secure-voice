@@ -1,47 +1,39 @@
-# System Architecture
+# Architecture
 
-SecureVoice is an end-to-end encrypted, peer-to-peer VoIP client built with WebRTC. It delivers low-latency voice communication with hardware-accelerated noise suppression and survivability across high-loss networks.
+SecureVoice is a client application built with React and TypeScript. Capacitor packages the web client for Android. The main call path is divided into signaling, WebRTC media transport, and local audio processing.
 
-## Architecture & Media Flow
+## Call setup and media
 
-### 1. Signaling Phase
-- **Discovery**: Callers exchange 9-character human-readable peer IDs (`PEER_ID_ALPHABET`).
-- **Encrypted Envelopes**: All signaling payloads (SDP offers, answers, and ICE candidates) are encrypted client-side using Web Crypto ECDH (P-256) and AES-256-GCM.
-- **Relay Transport**: Signaled over WebSocket broker relays or air-gapped QR codes with zero plain-text SDP exposure.
-- **Anti-Downgrade Security**: Unencrypted signaling messages are dropped to prevent man-in-the-middle protocol downgrade.
+1. The client obtains a peer identity and uses PeerJS signaling to exchange call setup messages. QR and clipboard invite utilities are also present in the codebase.
+2. WebRTC gathers ICE candidates and negotiates a peer connection. STUN can help discover reachable addresses; a TURN server may relay traffic when a direct route is unavailable.
+3. WebRTC protects media with DTLS-SRTP. A TURN relay forwards encrypted media; it is not the endpoint of the media encryption.
 
-### 2. Media Transport Phase
-- **Direct P2P UDP**: Media streams travel directly between peers using WebRTC DTLS-SRTP encryption without intermediate media servers.
-- **NAT Traversal**: Host and Server-Reflexive candidate gathering via STUN with automatic TURN relay fallback.
-- **Bandwidth Control**: SDP session bandwidth ceilings (`b=AS:42`) and adaptive bitrate ladders prevent bufferbloat.
+Signaling and media are distinct paths. A signaling service can observe connection metadata even when the application encrypts signaling payloads. See the security policy for trust assumptions and verification guidance.
 
----
+## Main components
 
-## Subsystem Details
+| Path | Responsibility |
+| --- | --- |
+| src/App.tsx | Top-level application UI and state wiring. |
+| src/core/telecomEngine.ts | Call and WebRTC coordination. |
+| src/core/audioEngine.ts | Web Audio graph and audio resource lifecycle. |
+| src/hooks/ | React integration for calls, peers, and audio devices. |
+| src/components/ | Call UI, audio settings, QR invites, and diagnostics. |
+| src/utils/signaling/ | Signaling transport interfaces and message encryption helpers. |
+| src/utils/webrtc.ts | WebRTC and SDP helpers. |
+| src/utils/networkAdaptation.ts | Connection-statistics-based codec adaptation. |
+| src/constants/config.ts | ICE servers, codec profiles, audio profiles, and timing settings. |
+| android/ | Native Android project and Capacitor integration. |
+| src/test/, scripts/ | Automated tests, simulations, and maintenance scripts. |
 
-### 1. Web Audio & Neural Speech Enhancement (`src/core/audioEngine.ts`, `src/utils/audio.ts`)
-Microphone audio routes through a real-time Web Audio graph:
+## Audio processing
 
-| Processing Node | Type / Filter | Function |
-| :--- | :--- | :--- |
-| **Highpass Filter** | Biquad (`frequency: 80Hz`) | Cuts mechanical desk rumblings and handling thumps. |
-| **Peaking Filter** | Biquad (`frequency: 2.8kHz, Q: 1.0, gain: +2dB`) | Accentuates human voice presence and intelligibility. |
-| **Hiss Cut Filter** | Biquad (`frequency: 8.5kHz`) | Eliminates high-frequency electrical hiss. |
-| **RNNoise Neural Engine**| AudioWorklet (`@echogarden/rnnoise-wasm`) | Spectral suppression of non-stationary acoustic noise. |
-| **RMS Noise Gate** | Dynamic gain control | Attenuates background room acoustics between spoken words. |
-| **Dynamics Compressor** | DynamicsCompressorNode | Balances amplitude disparities (-20dB threshold, 3:1 ratio). |
-| **Makeup Gain** | GainNode (`+1.21dB`) | Restores post-compression signal level. |
+The audio engine builds a Web Audio processing graph for the microphone. Depending on the selected profile and platform support, it can apply filters, gain control, and RNNoise processing through an AudioWorklet. The processed track is used by the WebRTC connection. Available settings and implementation are maintained in src/core/audioEngine.ts, src/utils/audio.ts, and src/utils/rnnoise/.
 
-### 2. Telecom & Network Adaptation Engine (`src/core/telecomEngine.ts`, `src/utils/networkAdaptation.ts`)
-- **Adaptive Opus Ladder**: 6 tiers from 8 kbps down to 2.4 kbps survival floor for weak links, scaling up to 40 kbps Fullband HD on broadband.
-- **Packet Aggregation**: Ptime scaling from 20ms to 100ms reduces packet header overhead by up to 50%.
-- **RFC 2198 Redundancy**: Injects redundant audio packets to recover from up to 50% packet loss without audible frame drops.
-- **Traffic Shaping**: Marks audio RTP packets with DSCP Expedited Forwarding (DiffServ 46).
+## Network adaptation and recovery
 
-### 3. NetEQ Playout Stabilization (`src/utils/jitterBufferController.ts`)
-- Dual-clamped jitter buffer targets (`jitterBufferTarget` and `playoutDelayHint`) lock receiver buffering to fixed floors, preventing NetEQ pitch-shifting artifacts on high-jitter links.
+The application samples WebRTC connection statistics and can adjust audio transmission settings for changing network conditions. ICE restart and retry behavior is implemented separately from the audio graph so a transient network interruption need not immediately tear down all local audio resources. Current thresholds and timings are defined in src/constants/config.ts; see Codec and network adaptation.
 
-### 4. Connection Circuit Breaker & Reconnection (`src/utils/iceRestartManager.ts`)
-- **Grace Period**: 1500 ms grace period on network disruption before declaring connection interruption.
-- **Exponential Backoff**: Up to 5 non-destructive ICE restarts with backoff pacing.
-- **Circuit Breaker**: Halts reconnection loops when network recovery is mathematically impossible.
+## Source of truth
+
+Code and tests are authoritative when behavior differs from prose. In particular, configuration values can change between releases; avoid treating historical performance numbers or release notes as current guarantees.

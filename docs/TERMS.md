@@ -1,15 +1,15 @@
-# Terms of service
+# Terms and limitations
 
-By using SecureVoice, you agree to the following operational parameters and constraints.
+This project is provided as open-source software under the terms in the repository's MIT License. This page is informational and is not legal advice or a substitute for the applicable license.
 
-## "As-is" provision and liability
-SecureVoice is provided "as-is" without warranties of any kind, explicit or implied. The maintainers accept no liability for data loss, call failure, interception, or consequential damages arising from the use of this software.
+## Availability and security
 
-## Emergency services disclaimer
-SecureVoice cannot be used for emergency calling. The application does not support routing to public safety answering points, 911, 112, or equivalent emergency services. Users must maintain an alternative cellular or landline connection for emergency access.
+The software is provided without a guarantee that calls will connect, remain available, or meet a particular quality or security requirement. Use it at your own risk, keep the app and device updated, and review the project's security policy and privacy notice before using it for sensitive communications.
 
-## Lawful interception
-SecureVoice utilizes peer-to-peer end-to-end encryption and does not implement backdoors or lawful interception capabilities. Users are strictly responsible for ensuring their use of encrypted communication complies with local cryptography export and usage laws.
+## Emergency calls
 
-## Acceptable use
-Users may not utilize the SecureVoice signaling mesh to conduct denial-of-service attacks, distribute malware, or intentionally degrade network performance for other peers.
+SecureVoice is not an emergency calling service. It does not route calls to emergency services. Maintain another way to contact local emergency services.
+
+## User responsibility
+
+Users are responsible for complying with applicable law, respecting other participants' privacy, and having permission to record or share call content. Do not use the project to disrupt services or harm others.

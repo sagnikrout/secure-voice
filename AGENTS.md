@@ -1,23 +1,23 @@
-# SecureVoice Agent Instructions & Build Rules
+# SecureVoice agent instructions
 
-## 1. Android & CI/CD Build Invariants
-- **JDK Version**: Always use JDK 21 (`java-version: '21'`) in GitHub Actions workflows (`actions/setup-java@v5`). Modern Capacitor plugins target Java 21 bytecode.
-- **Android SDK Level**: Maintain `compileSdkVersion = 36` and `targetSdkVersion = 36` in `android/variables.gradle`.
-- **SDK Package Provisioning**: In CI workflows using `android-actions/setup-android@v3`, always specify:
-  `packages: 'tools platform-tools platforms;android-36 build-tools;36.0.0'`
-- **Line Ending Sanitization**: Always sanitize `gradlew` with `sed -i 's/\r$//' gradlew` before executing `./gradlew` on Linux runners.
+Use these notes when making changes in this repository. Source code, current tests, and GitHub Actions workflows are authoritative when documentation conflicts with implementation.
 
-## 2. Release & Checksum Invariants
-- **Release Action**: Use `softprops/action-gh-release@v2` with `make_latest: "true"` for GitHub releases.
-- **Checksum Files**: `SHA256SUMS.txt` must strictly contain only the hash of the current release binary (`SecureVoice-v<version>.apk`), never legacy version hashes.
-- **Permissions**: Release workflows require `permissions: contents: write` and repository settings configured to "Read and write permissions".
+## Build and platform configuration
 
-## 3. Style & Documentation Rules (AG-TSA)
-- Use sentence case for headings.
-- Omit emoji characters and decorative em dashes from release notes and technical documentation.
-- Maintain an objective, encyclopedic tone with zero marketing filler or banned copula substitutes.
+- The Android release workflow currently uses JDK 21, Android SDK 36, and Node.js 24. Keep documentation aligned with the workflow and Gradle configuration when these change.
+- On Linux, ensure android/gradlew has LF line endings and execute permission before running Gradle if the checkout requires it.
+- Keep release signing credentials out of the repository. Never distribute an APK signed with the fixed local credentials in scripts/build-release-apk.sh.
+- Update user-facing documentation when behavior, build steps, or configuration changes.
 
-## 4. Engineering & Environment Guidelines
-- **Universal Version Consistency**: When bumping application versions in package manifests, comprehensively update all user-facing version badges, configuration constants, and documentation headers. Do not leave the UI or documentation in a stale state.
-- **Resilient UI Testing**: Avoid hardcoding volatile data (such as exact semantic version strings or timestamps) directly in UI test assertions. Dynamically import the source-of-truth constants to ensure tests survive routine updates.
-- **PowerShell Exclusion Anti-Pattern**: Never use -Exclude combined with -Recurse in PowerShell's Get-ChildItem when filtering directories, as it only matches leaf names. Use alternative tools or Where-Object path filtering instead.
+## Documentation and security
+
+- Use clear sentence-case headings and concise, factual language.
+- Avoid marketing claims, unsupported performance numbers, and absolute security or privacy guarantees.
+- Distinguish WebRTC media encryption from signaling and from any metadata visible to signaling, STUN, or TURN services.
+- Update user-facing documentation when behavior, build steps, or configuration changes.
+
+## Validation
+
+- Run npm test and npm run build for application changes where feasible.
+- For Android changes, validate the relevant Gradle build. For signaling, audio, or network changes, run the focused tests and simulations when practical.
+- Do not hard-code volatile version strings or test results in documentation unless they are maintained from a source of truth.

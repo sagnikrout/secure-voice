@@ -1,181 +1,59 @@
 # Changelog
 
-All notable changes to SecureVoice are documented in this file.
+Notable changes by release. Entries summarize user-visible changes and fixes; they are not a complete commit history.
 
-## [v3.9.0] - 2026-11-17
+## 3.9.0 - 2026-11-17
 
-### Added
-- **Telegram-Style 4-Emoji Cryptographic Fingerprint**: Replaced verbal 8-digit verification numbers with a 4-emoji visual fingerprint directly in the call header. Built with a curated 256-symbol dictionary providing 32-bit entropy (43x higher collision resistance).
-- **Persistent Incoming Call Alerts**: Added native Android incoming call alerts with full-screen lock screen display, system ringtones, vibration waveforms, and quick Answer / Decline notification actions.
-- **Android Reboot Survival**: Added `BOOT_COMPLETED` broadcast receiver to maintain call readiness after device restarts.
-- **Dual Android Hardware Torture Suite**: Added automated Playwright test suite (`scripts/test-dual-emulator-torture.ts`) verifying 11 real-world stress vectors across simultaneous Android 14 emulators.
+- Replaced the numeric call verification display with a four-emoji fingerprint.
+- Added persistent incoming-call notifications and notification actions on Android.
+- Added a boot receiver for Android call readiness after restart.
+- Fixed call teardown state handling, notification listener cleanup, and Android 14 wake-lock behavior.
+- Added a dual-emulator Android stress test script.
 
-### Fixed
-- **Call Teardown React State**: Fixed `setVerificationDismissed` reference error on hangup.
-- **Notification Action Cleanup**: Fixed event listener leak when answering calls from the notification shade.
-- **Android 14 Cold-Boot Readiness**: Added proactive screen and CPU wake locks to prevent Android 14 WebView process freezing before signaling connection.
+## 3.8.2 - 2026-11-12
 
-## [v3.8.2] - 2026-11-12
+- Added RNNoise-based noise reduction and selectable audio profiles.
+- Added temporary signaling keys and rejection of unencrypted call-signaling messages.
+- Added a dark theme, consolidated audio settings, and QR-based call invites.
+- Reduced the Android package size and set Android 9 (API 28) as the minimum supported version.
 
-### Changed & Improved
-- **85% Smaller Download**: Shrunk release APK from 15.05 MB to 2.3 MB by removing unused mockups.
-- **Smart AI Noise Removal**: Added real-time RNNoise v0.2 neural noise reduction inside Web Audio threads.
-- **Audio Presets**: Added four sound profiles: Standard, Voice Boost, Studio Clean, and Voice Isolation.
-- **Temporary Security Keys**: Added disposable ECDH session keys that erase automatically when calls end.
-- **Anti-Downgrade Protection**: Blocks unencrypted call signals to prevent eavesdropping attacks.
-- **Battery-Saving Dark Theme**: Added pure black AMOLED dark mode to save battery on OLED screens.
-- **Unified Audio Settings**: Combined microphone testing, output switching, and speaker tests into one simple menu.
-- **Instant Busy Feedback**: Plays an immediate busy tone when dialing an offline or unreachable user.
-- **Air-Gapped QR Invites**: Added QR code invites to start calls without cloud signaling servers.
-- **Android 9.0+ Baseline**: Set minimum Android version to 9.0 (API 28) for reliable background calling.
-- **Modern CI/CD**: Upgraded automated build workflows to Ubuntu 24.04 and Node 24.
+## 3.8.1 - 2026-09-11
 
-## [v3.8.1] - 2026-09-11
+- Added system theme synchronization and Android-to-web end-to-end test coverage.
+- Fixed version badge formatting and removed duplicate assets.
 
-### Added
-- **System Theme Sync**: Automatically switches between dark and light modes matching device settings.
-- **Automated Testing**: Added end-to-end calling tests between Android emulators and web browsers.
+## 3.8.0 - 2026-09-06
 
-### Fixed
-- **UI Consistency**: Formatted version badges in clean lowercase across all screens.
-- **Storage Cleanup**: Removed duplicate asset files to reduce repository storage footprint.
+- Added Android foreground call service, incoming call notifications, and battery-optimization guidance.
+- Changed Android back-button behavior to keep an active call running in the background.
+- Fixed the foreground service component name.
 
-## [v3.8.0] - 2026-09-06
+## 3.7.0 - 3.7.5 - 2026-09-05 to 2026-09-06
 
-### Added
-- **Background Call Persistence**: Added Android foreground service with notification to prevent background call drops.
-- **Service Watchdog**: Added background keepalive service to restart background listeners if stopped by the OS.
-- **Restart Recovery**: Added boot receiver to restore call readiness when your phone restarts.
-- **Battery Optimization Alerts**: Prompts to exempt the app from battery savers so calls ring reliably.
-- **Safe Back Button**: Pressing the Android back button minimizes the app instead of ending the call.
+- Improved peer ID recovery and persistence across reloads and reconnects.
+- Added signaling reconnect backoff, lifecycle cleanup, and recovery when the app returns to the foreground.
+- Added an AudioWorklet noise gate, headset detection, and responsive mobile layout updates.
+- Added network statistics and bitrate adaptation; fixed Android build and permission issues.
+- Converted build scripts to TypeScript and updated layout queries.
 
-### Fixed
-- Corrected foreground service component name in Android manifest to fix launch crashes.
+## 3.5.0 - 3.6.3 - 2026-08-26 to 2026-09-05
 
-## [v3.7.5] - 2026-09-06
+- Added low-bitrate audio processing, an audio resampler, and call diagnostics.
+- Added Opus configuration, audio processing, and network bitrate adaptation.
+- Added Android incoming-call notifications and fixed Android build and resource issues.
 
-### Fixed
-- **Fast ID Recovery**: Reclaims your permanent Peer ID in 5-second retries when reconnecting.
-- **Clean Socket Teardown**: Closes network connections immediately when switching apps or closing tabs.
-- **Fast Startup**: Loads your saved Peer ID immediately from memory with zero screen flicker.
+## 3.2.0 - 3.4.0 - 2026-08-24 to 2026-08-26
 
-## [v3.7.4] - 2026-09-06
+- Added encrypted signaling using ECDH and AES-GCM, plus QR/clipboard signaling utilities.
+- Added a numeric call verification display and stricter content security settings.
+- Added Opus configuration, audio processing, and TURN configuration handling.
 
-### Fixed
-- **Connection Stability**: Removed memory leaks during signaling reconnects to prevent connection freezes.
-- **Smooth Reconnection**: Added reconnect backoff delays (3s to 12s) to prevent rapid disconnect loops.
-- **Background Wakeup**: Restores signaling automatically when bringing the app back to the screen.
+## 3.0.0 - 3.1.0 - 2026-08-16 to 2026-08-23
 
-## [v3.7.3] - 2026-09-05
+- First public release of peer-to-peer voice calling for web and Android.
+- Added audio-device routing, call status and bitrate diagnostics, and Android packaging.
+- Added codec and audio settings for constrained network conditions.
 
-### Fixed
-- **ID Preservation**: Fixed bug where force-closing the app could generate a new random Peer ID. The app now waits and reclaims your exact original ID.
+## 2.10.0 - 2026-08-10
 
-## [v3.7.2] - 2026-09-05
-
-### Fixed
-- **Reload Collision Fix**: Fixed signaling conflicts caused by fast browser refreshes.
-- **Persistent Storage**: Saved Peer IDs reliably in local storage to prevent identity resets.
-
-## [v3.7.1] - 2026-09-05
-
-### Changed
-- **TypeScript Tooling**: Converted build and maintenance scripts to TypeScript for better code safety.
-- **Container Queries**: Switched layouts to modern container queries for responsive resizing on all screens.
-
-## [v3.7.0] - 2026-09-05
-
-### Added
-- **Background Noise Gate**: Added real-time AudioWorklet noise gating on a dedicated audio thread to stop UI audio stutter.
-- **Headset Detection**: Added automatic detection for Bluetooth and wired headphones.
-- **Modern Mobile Layout**: Added support for dynamic viewport height and screen notch safe areas.
-
-## [v3.6.3] - 2026-09-05
-
-### Fixed
-- **Android Build Fix**: Fixed invalid notification color metadata in Android manifest that caused build errors.
-
-## [v3.6.2] - 2026-09-05
-
-### Changed
-- **Download Bitrate Tracking**: Added live download speed monitoring to call statistics.
-- **Asymmetric Rate Control**: Automatically lowers send bitrate when the other person experiences packet loss.
-
-## [v3.6.1] - 2026-09-05
-
-### Changed
-- **Low-Bandwidth Mobile Mode**: Tuned low-bitrate Opus calling for slow mobile data and 2G networks.
-- **Smoother Jitter Buffers**: Increased buffer delays across all tiers to absorb mobile network packet jitter.
-
-## [v3.6.0] - 2026-09-04
-
-### Fixed
-- **Android 14+ Stability**: Added required foreground service permissions to prevent Android 14 security crashes.
-- **Bluetooth Permissions**: Added Bluetooth permission checks to prevent crashes on Android 12+.
-- **Memory Leak Fixes**: Fixed mic stream leaks and cleared lingering call timers upon hangup.
-- **Larger Touch Targets**: Enlarged all buttons to at least 44px for easier tapping on mobile screens.
-
-## [v3.5.2] - 2026-08-29
-
-### Added
-- **Incoming Call Notifications**: Added native Android notifications so you can answer calls from outside the app.
-
-### Fixed
-- Aligned Android release version names and cleaned unused modal dialogs.
-
-## [v3.5.1] - 2026-08-29
-
-### Changed
-- Cleaned unused configuration files and consolidated project release history.
-
-## [v3.5.0] - 2026-08-26
-
-### Added
-- **Low-Bitrate Audio Pipeline**: Integrated high-efficiency WebAssembly audio processing for sub-10 kbps connections.
-- **Off-Thread Audio Resampler**: Added 16 kHz polyphase resampler running in a background worker thread.
-- **Live Health Diagnostics**: Added live audio stream overlay showing packet loss and bitrate metrics.
-
-## [v3.4.0] - 2026-08-26
-
-### Added
-- **Opus HD Voice**: Activated wideband Opus voice encoding (16 kHz) for crystal-clear call quality.
-- **Lower Network Overhead**: Packed audio into 40ms frames to cut network header traffic by 50%.
-- **Audio Pre-Processing**: Added voice clarity equalizer and gentle dynamics compressor.
-- **Relay Server Validation**: Fixed crash when public TURN relay servers lack login credentials.
-
-## [v3.2.0] - 2026-08-24
-
-### Added
-- **Encrypted Signaling**: Added end-to-end encrypted call setup using ECDH (P-256) and AES-256-GCM.
-- **Offline QR Signaling**: Added serverless calling via QR code or clipboard text strings.
-- **Verbal Safety Code**: Added 5-digit verification code to confirm you are speaking to the intended peer.
-- **Strict Content Security**: Added security headers to block untrusted external scripts.
-
-## [v3.1.0] - 2026-08-23
-
-### Added
-- **Smooth Constant Bitrate**: Added constant bitrate encoding to prevent lag spikes on cellular networks.
-- **Narrowband Mode**: Added 8 kHz narrowband mode for clear speech on slow connections down to 3.2 kbps.
-- **Fastest Relay Selection**: Automatically tests and selects the fastest relay server by network latency.
-- **6-Stage Audio Filter**: Added highpass filter, voice presence equalizer, and background noise gate.
-
-## [v3.0.1] - 2026-08-16
-
-### Added
-- Live call bitrate display in statistics overlay.
-- Clear error messages when calls fail or microphone access is denied.
-- Safe microphone switching without dropping active calls.
-- Ring spam limiter to block rapid repeated calls from the same user.
-
-## [v3.0.0] - 2026-08-16
-
-### Added
-- **Initial Public Release**: Direct peer-to-peer encrypted voice calling with zero accounts or phone numbers required.
-- **5-Digit Safety Code**: Audio verification code generated from DTLS fingerprints.
-- **Audio Device Routing**: Switch between speaker, earpiece, wired headphones, and Bluetooth.
-- **Android APK Package**: Packaged Android app with background notifications and dark/light themes.
-
-## [v2.10.0] - 2026-08-10
-
-### Added
-- **Initial Prototype**: Basic peer-to-peer voice calling with standard audio filters and initial Android build.
+- Initial prototype with basic peer-to-peer voice calling and an Android build.

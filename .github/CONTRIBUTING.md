@@ -1,19 +1,21 @@
-# Contributing to SecureVoice
+# Contributing
 
-SecureVoice is an open-source, zero-knowledge peer-to-peer communication platform. Contributions must adhere to the following invariants:
+Thanks for considering a contribution. Keep changes focused and describe their effect on users, platforms, and security assumptions.
 
-## 1. Core invariants
-- **Zero telemetry**: No third-party SDKs, tracking pixels, or data collection.
-- **Standard cryptography**: Rely strictly on standard WebRTC DTLS-SRTP protocols.
-- **Low-bandwidth performance**: Codecs must remain operable on devices with degraded network links. The adaptive network fallback matrix must be preserved.
+## Before opening a pull request
 
-## 2. Pull request guidelines
-- All pull requests must pass the test suite (`npm test`) and network benchmarks (`npm run benchmark`).
-- Avoid `any` types where explicit types can be written.
-- Update documentation and AGENTS.md if a change introduces new architectural rules or invariants.
+- Run npm test and npm run build for code changes.
+- Run focused simulations or Android checks when changing signaling, WebRTC, audio, or native lifecycle behavior.
+- Update documentation when commands, user-visible behavior, or configuration changes.
+- Do not commit credentials, private keys, user recordings, or generated release artifacts.
 
-## 3. Scope boundaries
-Pull requests introducing the following will be rejected:
-- Centralized media relays (SFUs).
-- Social network integrations.
-- Monetization or advertisements.
+## Implementation guidelines
+
+- Prefer explicit TypeScript types and small, testable changes.
+- Preserve the separation between signaling and media transport.
+- Do not add analytics or telemetry without clearly documenting the data collected, purpose, and user impact.
+- Treat encryption and privacy claims conservatively; include tests and document trust assumptions for security-sensitive changes.
+
+## Pull requests
+
+Explain the problem and proposed change, list tests run, and note any limitations or manual verification required. For larger design changes, discuss the approach in an issue before implementation.

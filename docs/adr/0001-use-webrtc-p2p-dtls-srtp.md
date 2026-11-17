@@ -1,23 +1,17 @@
-# ADR-0001: Use WebRTC DTLS-SRTP for peer-to-peer communication
+# ADR-0001: WebRTC for peer media
 
 ## Status
+
 Accepted
 
 ## Context
-SecureVoice requires low-latency, end-to-end encrypted audio communications across heterogeneous networks (2G, 3G, 4G, 5G, satellite, Wi-Fi) with zero operational server costs and no central audio relay servers.
+
+The application needs real-time audio between browser and Android clients. WebRTC provides media negotiation, network traversal, and encrypted media transport in supported browsers and WebViews.
 
 ## Decision
-We utilize native WebRTC (RFC 8827) with DTLS-SRTP (RFC 5764) for direct peer-to-peer transport:
-- Direct P2P UDP media transport minimizes relay latency.
-- Mandatory authenticated encryption with AES-GCM cipher suites.
-- Ephemeral session keys negotiated via DTLS without central key escrows.
+
+Use WebRTC peer connections and DTLS-SRTP for media. Use ICE, with STUN and configured TURN services, to attempt connectivity across NATs and firewalls.
 
 ## Consequences
-### Positive
-- Zero server infrastructure: No media servers required; server costs are zero for media relay.
-- Strong privacy: Media cannot be decrypted by signaling relays or ISPs.
-- Cross-platform: Runs natively on modern mobile and desktop browsers and via Capacitor on Android.
 
-### Negative and tradeoffs
-- Requires STUN/TURN traversal for symmetric NAT environments.
-- Browser SDP differences require explicit normalization transforms.
+Media can travel directly between peers when network conditions permit. A TURN relay may be needed, so calls are not guaranteed to be relay-free. Signaling is a separate concern and still requires peers to exchange connection information. Browser and network differences require testing across supported platforms.
