@@ -77,8 +77,9 @@ async function runImpairmentSimulation() {
     await pageB.waitForSelector('.status-chip.in-call');
     console.log('🔒 Active Encrypted WebRTC Session Established.');
 
-    const verifyBtn = await pageA.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 10000 });
-    if (verifyBtn) await verifyBtn.click();
+    const emojiBadge = await pageA.waitForSelector('.call-emoji-badge', { timeout: 10000 });
+    const emojiCode = await pageA.$eval('.call-emoji-icons', el => el.textContent?.trim());
+    console.log(`🔑 DTLS-SRTP 4-Emoji Fingerprint: [${emojiCode}]`);
 
     // 1. Verify SDP Opus parameters (ptime=40, useinbandfec=1)
     console.log('\n🔍 [Scenario 1: SDP Verification]');

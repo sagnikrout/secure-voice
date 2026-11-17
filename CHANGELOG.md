@@ -2,6 +2,19 @@
 
 All notable changes to SecureVoice are documented in this file.
 
+## [v3.9.0] - 2026-11-17
+
+### Added
+- **Telegram-Style 4-Emoji Cryptographic Fingerprint**: Replaced verbal 8-digit verification numbers with a 4-emoji visual fingerprint directly in the call header. Built with a curated 256-symbol dictionary providing 32-bit entropy (43x higher collision resistance).
+- **Persistent Incoming Call Alerts**: Added native Android incoming call alerts with full-screen lock screen display, system ringtones, vibration waveforms, and quick Answer / Decline notification actions.
+- **Android Reboot Survival**: Added `BOOT_COMPLETED` broadcast receiver to maintain call readiness after device restarts.
+- **Dual Android Hardware Torture Suite**: Added automated Playwright test suite (`scripts/test-dual-emulator-torture.ts`) verifying 11 real-world stress vectors across simultaneous Android 14 emulators.
+
+### Fixed
+- **Call Teardown React State**: Fixed `setVerificationDismissed` reference error on hangup.
+- **Notification Action Cleanup**: Fixed event listener leak when answering calls from the notification shade.
+- **Android 14 Cold-Boot Readiness**: Added proactive screen and CPU wake locks to prevent Android 14 WebView process freezing before signaling connection.
+
 ## [v3.8.2] - 2026-11-12
 
 ### Changed & Improved

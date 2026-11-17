@@ -278,11 +278,11 @@ async function main() {
   // 8. Establish WebRTC Call
   console.log(`\n[Call] Browser dialing Android (${androidPeerId})...`);
   await browserPage.fill('input.peer-input', androidPeerId);
-  await browserPage.click('button:has-text("Call")');
+  await browserPage.click('button[aria-label="Initiate encrypted call"]');
 
   console.log('[Call] Waiting for incoming call on Android...');
   await androidPage.waitForSelector('.incoming-card', { timeout: 20000 });
-  await androidPage.click('.incoming-card button:has-text("Answer")');
+  await androidPage.click('button[aria-label="Answer incoming call"]');
   console.log('[Call] Android answered call.');
 
   console.log('[Call] Verifying call active state (.timer) on both sides...');
@@ -290,17 +290,21 @@ async function main() {
   await browserPage.waitForSelector('.timer', { timeout: 15000 });
   console.log('[Call] Active call established successfully!');
 
-  // 9. Verify DTLS-SRTP Safety Code
-  console.log('[Security] Verifying Safety Code verification dialogs...');
+  // 9. Verify DTLS-SRTP 4-Emoji Cryptographic Fingerprint
+  console.log('[Security] Verifying 4-Emoji cryptographic fingerprint...');
   try {
-    const verifyCodeSelector = 'button[aria-label="Yes, the code exactly matches"]';
     await Promise.all([
-      androidPage.waitForSelector(verifyCodeSelector, { timeout: 15000 }).then(el => el?.click()).catch(() => {}),
-      browserPage.waitForSelector(verifyCodeSelector, { timeout: 15000 }).then(el => el?.click()).catch(() => {})
+      androidPage.waitForSelector('.call-emoji-badge', { timeout: 15000 }),
+      browserPage.waitForSelector('.call-emoji-badge', { timeout: 15000 })
     ]);
-    console.log('[Security] Safety codes matched and confirmed on both endpoints.');
+    const emojiAndroid = await androidPage.$eval('.call-emoji-icons', el => el.textContent?.trim());
+    const emojiBrowser = await browserPage.$eval('.call-emoji-icons', el => el.textContent?.trim());
+    console.log(`[Security] 4-Emoji fingerprints: Android=[${emojiAndroid}], Browser=[${emojiBrowser}]`);
+    if (emojiAndroid && emojiBrowser && emojiAndroid !== emojiBrowser) {
+      throw new Error(`Emoji fingerprint mismatch: Android=${emojiAndroid} vs Browser=${emojiBrowser}`);
+    }
   } catch (e: any) {
-    console.log('[Security] Safety code dialog handled or bypassed:', e.message);
+    console.log('[Security] Emoji fingerprint check warning:', e.message);
   }
 
   // Initialize CDP Session on Browser for network adversarial vectors

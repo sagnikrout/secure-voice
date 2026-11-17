@@ -98,10 +98,21 @@ async function runSimulation() {
     const durationB = await pageB.$eval('.timer', el => el.textContent.trim());
     console.log(`⏱️ Active Call Duration: Peer A = ${durationA}, Peer B = ${durationB}`);
 
-    // 7. Verify DTLS Safety Codes & Confirm Authenticity
-    await pageA.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 10000 });
-    await pageA.click('button[aria-label="Yes, the code exactly matches"]');
-    console.log(`🔑 DTLS-SRTP MITM Safety Code verified on call.`);
+    // 7. Verify Telegram-Style 4-Emoji Cryptographic Fingerprint
+    const emojiBadgeA = await pageA.waitForSelector('.call-emoji-badge', { timeout: 10000 });
+    const emojiBadgeB = await pageB.waitForSelector('.call-emoji-badge', { timeout: 10000 });
+    const emojiCodeA = await pageA.$eval('.call-emoji-icons', el => el.textContent?.trim());
+    const emojiCodeB = await pageB.$eval('.call-emoji-icons', el => el.textContent?.trim());
+    console.log(`🔑 DTLS-SRTP 4-Emoji Fingerprint: Peer A = [${emojiCodeA}], Peer B = [${emojiCodeB}]`);
+    if (emojiCodeA && emojiCodeB && emojiCodeA !== emojiCodeB) {
+      throw new Error(`Emoji fingerprint mismatch: Peer A=${emojiCodeA} vs Peer B=${emojiCodeB}`);
+    }
+    if (emojiBadgeA) {
+      await emojiBadgeA.click();
+      await pageA.waitForSelector('button[aria-label="Close security info"]', { timeout: 5000 });
+      await pageA.click('button[aria-label="Close security info"]');
+      console.log(`🔑 Security modal verified and dismissed.`);
+    }
 
     // 8. Extract WebRTC Telemetry via getStats()
     console.log('\n📊 Extracting Live WebRTC getStats() Telemetry from Browser Kernel...');

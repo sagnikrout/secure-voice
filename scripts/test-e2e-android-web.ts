@@ -1,9 +1,13 @@
 import { _android, chromium, Page } from 'playwright';
-import { execSync } from 'child_process';
+import { execSync, spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
+import http from 'http';
 
 const WEB_URL = 'http://localhost:5173';
-const ADB_PATH = process.env.LOCALAPPDATA + '\\Android\\Sdk\\platform-tools\\adb.exe';
+const ADB_PATH = fs.existsSync('/home/sagnik/Android/Sdk/platform-tools/adb')
+  ? '/home/sagnik/Android/Sdk/platform-tools/adb'
+  : (process.env.LOCALAPPDATA ? process.env.LOCALAPPDATA + '\\Android\\Sdk\\platform-tools\\adb.exe' : 'adb');
 
 function adb(command: string): string {
   try {
@@ -11,6 +15,33 @@ function adb(command: string): string {
   } catch (e: any) {
     return e.stdout?.toString() || e.message;
   }
+}
+
+function ensureViteServer(port = 5173, timeoutMs = 25000): Promise<ChildProcess | null> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const check = () => {
+      const req = http.get(`http://localhost:${port}`, () => resolve(null));
+      req.on('error', () => {
+        if (Date.now() - startTime > timeoutMs) {
+          reject(new Error(`Vite server did not respond on port ${port} within ${timeoutMs}ms`));
+        } else {
+          setTimeout(check, 500);
+        }
+      });
+    };
+
+    const initialReq = http.get(`http://localhost:${port}`, () => resolve(null));
+    initialReq.on('error', () => {
+      console.log(`[Vite] Spawning Vite dev server on port ${port}...`);
+      const viteBin = path.join('/home/sagnik/secure-voice', 'node_modules', 'vite', 'bin', 'vite.js');
+      const child = spawn('node', [viteBin, '--port', `${port}`, '--strictPort', '--host'], {
+        cwd: '/home/sagnik/secure-voice',
+        stdio: 'ignore'
+      });
+      setTimeout(check, 1000);
+    });
+  });
 }
 
 async function waitForPeerReady(page: Page, label: string): Promise<string> {
@@ -51,7 +82,9 @@ async function run() {
     console.log(text);
   });
 
-  // 2. Launch Desktop Web Browser via Playwright
+  // 2. Ensure Vite server and launch Desktop Web Browser via Playwright
+  console.log('[Setup] Ensuring Vite Dev Server is running...');
+  await ensureViteServer(5173);
   console.log('[Setup] Launching Desktop Chromium instance for Web App...');
   const webBrowser = await chromium.launch({
     headless: true,
@@ -81,8 +114,8 @@ async function run() {
 
   // 4. Test Idle UI Controls (Copy button & Audio Settings Modal)
   console.log('\n--- Scenario 0: Testing Idle UI Controls (Copy ID & Audio Settings) ---');
-  await androidPage.click('button[aria-label="Copy ID to clipboard"]');
-  await androidPage.waitForSelector('button.copy-btn.copied', { timeout: 5000 });
+  await androidPage.click('button[aria-label="Copy Peer ID"]');
+  await androidPage.waitForSelector('button[title="Copied"]', { timeout: 5000 });
   console.log('[Android] Copy ID button successfully copied and updated state.');
 
   await androidPage.click('button[aria-label="Audio & Codec Settings"]');
@@ -95,7 +128,7 @@ async function run() {
   // 5. Test Scenario 1: Web dials Android
   console.log(`\n--- Scenario 1: Web client dialing Android (${androidPeerId}) ---`);
   await webPage.fill('input.peer-input', androidPeerId);
-  await webPage.click('button:has-text("Call")');
+  await webPage.click('button[aria-label="Initiate encrypted call"]');
   console.log('[Web] Clicked "Call"');
 
   // 6. Test Scenario 2: Android receives incoming call
@@ -120,39 +153,32 @@ async function run() {
   console.log(`[Android] Active call timer: ${androidTimer}`);
   console.log(`[Web] Active call timer: ${webTimer}`);
 
-  // 9. Test Scenario 5: Verify Safety Code matching & Complete Security Verification
-  console.log('\n--- Scenario 5: Verifying E2E DTLS-SRTP Safety Code agreement & Verification Modal ---');
-  await androidPage.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 15000 });
-  await webPage.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { timeout: 15000 });
+  // 9. Test Scenario 5: Verify Telegram-Style 4-Emoji Cryptographic Fingerprint & Sheet
+  console.log('\n--- Scenario 5: Verifying E2E DTLS-SRTP 4-Emoji Fingerprint Agreement ---');
+  await androidPage.waitForSelector('.call-emoji-badge', { timeout: 15000 });
+  await webPage.waitForSelector('.call-emoji-badge', { timeout: 15000 });
 
-  const getSafetyCode = (page: Page) => page.evaluate(() => {
-    const el = Array.from(document.querySelectorAll('.overlay-card div')).find(d => /^\d{4}-\d{4}$/.test(d.textContent?.trim() || ''));
-    return el?.textContent?.trim() || '';
-  });
+  const getEmojiFingerprint = (page: Page) => page.$eval('.call-emoji-icons', el => el.textContent?.trim() || '');
 
-  const androidModalCode = await getSafetyCode(androidPage);
-  const webModalCode = await getSafetyCode(webPage);
-  console.log(`[Android Modal] Safety Code: ${androidModalCode}`);
-  console.log(`[Web Modal] Safety Code: ${webModalCode}`);
+  const androidEmojiCode = await getEmojiFingerprint(androidPage);
+  const webEmojiCode = await getEmojiFingerprint(webPage);
+  console.log(`[Android Badge] Safety Emojis: [${androidEmojiCode}]`);
+  console.log(`[Web Badge] Safety Emojis: [${webEmojiCode}]`);
 
-  if (androidModalCode && webModalCode && androidModalCode !== webModalCode) {
-    throw new Error(`Safety code mismatch: Android=${androidModalCode} vs Web=${webModalCode}`);
+  if (!androidEmojiCode || !webEmojiCode || androidEmojiCode !== webEmojiCode) {
+    throw new Error(`Safety emoji fingerprint mismatch: Android=${androidEmojiCode} vs Web=${webEmojiCode}`);
   }
 
-  // Click "Matches" on Android and Web to confirm authenticity
-  console.log('[Android] User clicking "Matches" to verify security fingerprint...');
-  await androidPage.click('button[aria-label="Yes, the code exactly matches"]');
-  console.log('[Web] User clicking "Matches" to verify security fingerprint...');
-  await webPage.click('button[aria-label="Yes, the code exactly matches"]');
+  // Click emoji badge on Android to open verification sheet
+  console.log('[Android] User clicking emoji badge to open verification details...');
+  await androidPage.click('.call-emoji-badge');
+  await androidPage.waitForSelector('button[aria-label="Close security info"]', { timeout: 5000 });
 
-  // Verify modals dismissed
-  await androidPage.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { state: 'detached', timeout: 5000 });
-  await webPage.waitForSelector('button[aria-label="Yes, the code exactly matches"]', { state: 'detached', timeout: 5000 });
-  console.log('[Security] Verification dialogs completed and dismissed.');
-
-  // Check verified badge
-  const verifiedBadge = await androidPage.$eval('button[aria-label="Security Verification Code"]', el => el.textContent?.trim());
-  console.log(`[Android] Verified badge state: ${verifiedBadge}`);
+  // Dismiss modal
+  console.log('[Android] Dismissing security verification modal...');
+  await androidPage.click('button[aria-label="Close security info"]');
+  await androidPage.waitForSelector('button[aria-label="Close security info"]', { state: 'detached', timeout: 5000 });
+  console.log('[Security] Verification sheet displayed and dismissed cleanly.');
 
   // 10. Test Scenario 6: Verify Audio Controls: Microphone Mute / Unmute
   console.log('\n--- Scenario 6: Testing Microphone Mute and Live state toggles ---');
@@ -160,8 +186,8 @@ async function run() {
   console.log('[Android] Clicked Mute');
   await androidPage.waitForSelector('button.icon-btn[aria-label="Unmute microphone"]', { timeout: 5000 });
   await androidPage.waitForFunction(() => {
-    const text = document.querySelector('.call-center')?.textContent || '';
-    return text.includes('Microphone Muted');
+    const text = document.querySelector('.mic-status-badge')?.textContent?.toLowerCase() || '';
+    return text.includes('muted');
   }, { timeout: 5000 });
   console.log('[Android] Verified state: Microphone Muted');
 
@@ -169,8 +195,8 @@ async function run() {
   console.log('[Android] Clicked Unmute');
   await androidPage.waitForSelector('button.icon-btn[aria-label="Mute microphone"]', { timeout: 5000 });
   await androidPage.waitForFunction(() => {
-    const text = document.querySelector('.call-center')?.textContent || '';
-    return text.includes('Microphone Live');
+    const text = document.querySelector('.mic-status-badge')?.textContent?.toLowerCase() || '';
+    return text.includes('live');
   }, { timeout: 5000 });
   console.log('[Android] Verified state: Microphone Live');
 

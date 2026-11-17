@@ -64,7 +64,7 @@ describe('Core Engine Architecture (TelecomEngine & AudioEngine)', () => {
       engine.destroy();
     });
 
-    it('derives deterministic 8-digit DTLS Safety Code from session SDPs', async () => {
+    it('derives deterministic 4-emoji DTLS Safety Code from session SDPs', async () => {
       const engine = new TelecomEngine();
       const sdpA = 'v=0\r\na=fingerprint:sha-256 11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:01\r\n';
       const sdpB = 'v=0\r\na=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:02\r\n';
@@ -73,8 +73,7 @@ describe('Core Engine Architecture (TelecomEngine & AudioEngine)', () => {
       const code2 = await engine.getDtlsSafetyCode(sdpB, sdpA);
 
       expect(code1).toBeDefined();
-      expect(code1?.length).toBe(8);
-      expect(/^\d{8}$/.test(code1!)).toBe(true);
+      expect(code1?.split(' ').length).toBe(4);
       expect(code1).toBe(code2); // Symmetric regardless of caller/callee ordering
       engine.destroy();
     });

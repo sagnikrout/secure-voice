@@ -845,6 +845,34 @@ body {
   gap: 8px;
 }
 
+.call-emoji-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--card-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.call-emoji-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.call-emoji-icons {
+  font-size: 14px;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
 .call-safety-btn {
   display: inline-flex;
   align-items: center;

@@ -557,7 +557,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
   });
 
   describe('generateSafetyCode & Security Invariants', () => {
-    it('generates the same 8-digit code regardless of parameter order', async () => {
+    it('generates the same 4-emoji fingerprint regardless of parameter order', async () => {
       const sdpA = 'v=0\r\na=fingerprint:sha-256 00:11:22:33:44:55:66:77\r\nm=audio';
       const sdpB = 'v=0\r\na=fingerprint:sha-256 AA:BB:CC:DD:EE:FF:11:22\r\nm=audio';
       
@@ -565,7 +565,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       const code2 = await generateSafetyCode(sdpB, sdpA);
       
       expect(code1).toBe(code2);
-      expect(code1).toMatch(/^\d{8}$/); // 8 digits
+      expect(code1?.split(' ')).toHaveLength(4); // 4 emojis
     });
 
     it('returns null if fingerprint is missing', async () => {
@@ -604,7 +604,7 @@ describe('WebRTC Utilities & Milestone 2 Transport Suite', () => {
       const mungedCode = await generateSafetyCode(mungedA, mungedB);
 
       expect(mungedCode).toBe(originalCode);
-      expect(mungedCode).toMatch(/^\d{8}$/);
+      expect(mungedCode?.split(' ')).toHaveLength(4);
     });
   });
 });

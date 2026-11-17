@@ -25,9 +25,9 @@ describe("Property-Based Fuzz Testing (Adversarial Robustness)", () => {
       fc.asyncProperty(fc.string(), fc.string(), async (localSdp, remoteSdp) => {
         try {
           const code = await generateSafetyCode(localSdp, remoteSdp);
-          // Must either be an 8 digit string or null
+          // Must either be a 4-emoji string or null
           if (code !== null) {
-            expect(code).toMatch(/^\d{8}$/);
+            expect(code.split(' ')).toHaveLength(4);
           } else {
             expect(code).toBeNull();
           }

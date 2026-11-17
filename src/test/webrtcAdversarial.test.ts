@@ -391,7 +391,7 @@ describe('Milestone 2 Adversarial & Stress Testing Suite (Challenger 2)', () => 
       const mungedCode = await generateSafetyCode(mungedA, mungedB);
 
       expect(originalCode).toBe(mungedCode);
-      expect(originalCode).toMatch(/^\d{8}$/);
+      expect(originalCode?.split(' ')).toHaveLength(4);
     });
   });
 

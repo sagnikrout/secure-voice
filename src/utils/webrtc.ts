@@ -323,12 +323,40 @@ export function getQualityRating(rttSeconds: any) {
 }
 
 /**
- * Generate a deterministic 8-digit verbal Safety Code from DTLS-SRTP fingerprints for MITM detection
+ * Curated 256-symbol emoji dictionary for Telegram-style cryptographic call verification.
+ * 256 items ensure uniform 8-bit mapping (zero modulo bias) with 32 bits of total entropy (256^4 = ~4.3 billion combinations).
+ */
+export const EMOJI_FINGERPRINT_DICTIONARY: readonly string[] = [
+  // Animals (64)
+  "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔",
+  "🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞",
+  "🐜","🐢","🐍","🐙","🦑","🦐","🦀","🐡","🐠","🐟","🐬","🐳","🦈","🐊","🐅","🐆",
+  "🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🐃","🐂","🐄","🐎","🐖","🐏",
+  // Food & Drinks (64)
+  "🍇","🍈","🍉","🍊","🍋","🍌","🍍","🥭","🍎","🍏","🍐","🍑","🍒","🍓","🫐","🥝",
+  "🍅","🥥","🥑","🍆","🥔","🥕","🌽","🌶","🍄","🥜","🌰","🍞","🥐","🥖","🥨","🥯",
+  "🥞","🧇","🧀","🍖","🍗","🥩","🥓","🍔","🍟","🍕","🌭","🥪","🌮","🌯","🥚","🍳",
+  "🥘","🍲","🥣","🥗","🍿","🧈","🍱","🍘","🍙","🍚","🍛","🍜","🍝","🍦","🍧","🍨",
+  // Objects, Sports & Vehicles (64)
+  "🍩","🍪","🎂","🍰","🧁","🥧","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🫖","🍵",
+  "⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🎱","🪀","🏓","🏸","🏒","⛳","🎯","🪁",
+  "🚗","🚕","🚙","🚌","🚎","🏎","🚓","🚑","🚒","🚐","🛻","🚚","🚜","🛴","🚲","🛵",
+  "🏍","🚨","✈","🚀","🛸","🚁","⛵","⚓","🧭","🏔","🌋","🏖","🏝","🏠","🏢","🏰",
+  // Nature, Symbols & Everyday Tools (64)
+  "⌚","📱","💻","⌨","🖥","🖨","🕹","💾","💿","📀","📷","📸","📹","🎥","📞","☎",
+  "📺","📻","🎙","⏱","⏲","⏰","🕰","⌛","📡","🔋","🔌","💡","🔦","🕯","💸","💵",
+  "💰","💳","💎","⚖","🔧","🔨","⛏","🔩","⚙","🧱","🧲","🔫","💣","🧨","🔪","🗡",
+  "⚔","🛡","🔮","💈","🔭","🔬","🩹","💊","💉","🧬","🎈","🎉","🎁","🏆","🥇","👑"
+];
+
+/**
+ * Generate a deterministic 4-emoji cryptographic fingerprint from DTLS-SRTP fingerprints for MITM detection.
+ * Inspired by Telegram voice calls: 4 emojis provide 32 bits of entropy (4.3B combinations) for instant visual comparison.
  * @param {string} localSdp - Local session description
  * @param {string} remoteSdp - Remote session description
- * @returns {Promise<string|null>} 8-digit code string
+ * @returns {Promise<string|null>} 4-emoji string (space-separated)
  */
-export async function generateSafetyCode(localSdp: any, remoteSdp: any) {
+export async function generateSafetyCode(localSdp: any, remoteSdp: any): Promise<string | null> {
   if (!localSdp || !remoteSdp || typeof localSdp !== 'string' || typeof remoteSdp !== 'string') return null;
   
   const extractFingerprint = (sdp: any) => {
@@ -348,8 +376,12 @@ export async function generateSafetyCode(localSdp: any, remoteSdp: any) {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   
-  // Extract 32 bits to form an 8-digit number (increases MITM collision resistance)
-  const num = ((hashArray[0] << 24) | (hashArray[1] << 16) | (hashArray[2] << 8) | hashArray[3]) >>> 0;
-  return String(num % 100000000).padStart(8, '0');
+  // Extract first 4 bytes (32 bits of entropy) and map to curated 256-emoji dictionary
+  return [
+    EMOJI_FINGERPRINT_DICTIONARY[hashArray[0]],
+    EMOJI_FINGERPRINT_DICTIONARY[hashArray[1]],
+    EMOJI_FINGERPRINT_DICTIONARY[hashArray[2]],
+    EMOJI_FINGERPRINT_DICTIONARY[hashArray[3]]
+  ].join(' ');
 }
 

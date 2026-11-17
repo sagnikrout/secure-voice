@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import {
   unlockAudioContext,
   createDenoisePipeline,
@@ -241,7 +240,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
     setIsMuted(false);
     setQuality('good');
     setIncomingCall(null);
-    try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
+    platform.cancelIncomingCallNotification().catch(() => {});
     setSafetyCode(null);
     setIsVerified(false);
     setActiveTier(LADDER_TIERS[0]);
@@ -485,16 +484,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
     structuredLogger.setSession(`call_${Date.now().toString(36)}`, call?.peer);
     structuredLogger.info('call-incoming', { callerPeer: call?.peer });
 
-    try {
-      LocalNotifications.schedule({
-        notifications: [{
-          title: 'Incoming Encrypted Call',
-          body: `Call from ${call.peer}`,
-          id: 1122,
-          autoCancel: true
-        }]
-      }).catch(() => {});
-    } catch (e) {}
+    platform.showIncomingCallNotification(call.peer).catch(() => {});
 
     stopRingtoneRef.current = playRingtone();
 
@@ -506,7 +496,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
         stopRingtoneRef.current = null;
       }
       setIncomingCall(null);
-      try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
+      platform.cancelIncomingCallNotification().catch(() => {});
     }, TIMINGS.INCOMING_CALL_TIMEOUT_MS);
   }, []);
 
@@ -520,7 +510,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       stopRingtoneRef.current = null;
     }
     setIncomingCall(null);
-    try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
+    platform.cancelIncomingCallNotification().catch(() => {});
     if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
 
     try {
@@ -556,9 +546,22 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       if (incomingTimeoutRef.current) { clearTimeout(incomingTimeoutRef.current); incomingTimeoutRef.current = null; }
       try { incomingCall.close(); } catch (e: any) {}
       setIncomingCall(null);
-      try { LocalNotifications.cancel({ notifications: [{ id: 1122 }] }).catch(() => {}); } catch(e) {}
+      platform.cancelIncomingCallNotification().catch(() => {});
     }
   }, [incomingCall]);
+
+  // Native notification action listener (Answer / Decline from heads-up notification)
+  useEffect(() => {
+    if (!platform.onCallAction) return;
+    const cleanup = platform.onCallAction((action) => {
+      if (action === 'answer') {
+        answerCall();
+      } else if (action === 'decline') {
+        declineCall();
+      }
+    });
+    return cleanup;
+  }, [answerCall, declineCall]);
 
   // Cancel Outgoing Call
   const cancelCall = useCallback(() => {

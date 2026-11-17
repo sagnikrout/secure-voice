@@ -17,6 +17,7 @@ export interface PlatformService {
   cancelIncomingCallNotification(): Promise<void>;
   onAppStateChange(callback: (isActive: boolean) => void): () => void;
   onBackButton(callback: (canGoBack: boolean) => boolean | void): () => void;
+  onCallAction?(callback: (action: 'answer' | 'decline') => void): () => void;
   acquireWakeLock(): Promise<void>;
   releaseWakeLock(): Promise<void>;
 }
@@ -101,6 +102,9 @@ interface KeepAlivePlugin {
   startKeepAliveWatchdog(): Promise<void>;
   acquireWakeLock(): Promise<void>;
   releaseWakeLock(): Promise<void>;
+  triggerIncomingCallAlert(options: { callerPeer: string }): Promise<void>;
+  stopIncomingCallAlert(): Promise<void>;
+  addListener(eventName: 'callAction', listenerFunc: (data: { action: 'answer' | 'decline' }) => void): Promise<{ remove: () => void }>;
 }
 
 interface AudioRoutingPlugin {
@@ -187,25 +191,43 @@ class AndroidPlatformService implements PlatformService {
 
   async showIncomingCallNotification(callerPeerId: string): Promise<void> {
     try {
-      await LocalNotifications.schedule({
-        notifications: [{
-          id: INCOMING_CALL_NOTIFICATION_ID,
-          title: 'Incoming SecureVoice Call',
-          body: `Encrypted call from ${callerPeerId}`,
-          ongoing: true,
-          autoCancel: false,
-          smallIcon: 'ic_launcher'
-        }]
-      });
+      await KeepAlive.triggerIncomingCallAlert({ callerPeer: callerPeerId });
     } catch (e: any) {
-      console.warn('[AndroidPlatform] Failed to schedule call notification:', e);
+      console.warn('[AndroidPlatform] KeepAlive native alert failed, falling back to LocalNotifications:', e);
+      try {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: INCOMING_CALL_NOTIFICATION_ID,
+            title: 'Incoming SecureVoice Call',
+            body: `Encrypted call from ${callerPeerId}`,
+            ongoing: true,
+            autoCancel: false,
+            smallIcon: 'ic_launcher'
+          }]
+        });
+      } catch (err: any) {}
     }
   }
 
   async cancelIncomingCallNotification(): Promise<void> {
     try {
+      await KeepAlive.stopIncomingCallAlert();
+    } catch (e: any) {}
+    try {
       await LocalNotifications.cancel({ notifications: [{ id: INCOMING_CALL_NOTIFICATION_ID }] });
     } catch {}
+  }
+
+  onCallAction(callback: (action: 'answer' | 'decline') => void): () => void {
+    let handle: any = null;
+    try {
+      KeepAlive.addListener('callAction', (data) => {
+        if (data && data.action) {
+          callback(data.action);
+        }
+      }).then(h => { handle = h; }).catch(() => {});
+    } catch (e) {}
+    return () => { handle?.remove?.(); };
   }
 
   onAppStateChange(callback: (isActive: boolean) => void): () => void {

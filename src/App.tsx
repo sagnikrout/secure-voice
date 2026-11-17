@@ -52,7 +52,7 @@ export default function App() {
   const [showRateLimitToast, setShowRateLimitToast] = useState(false);
   const [missedCallNotice, setMissedCallNotice] = useState(null);
   const [callNotice, setCallNotice] = useState<{ message: string; type: 'error' | 'warning' | 'info' } | null>(null);
-  const [verificationDismissed, setVerificationDismissed] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [acousticProfile, setAcousticProfile] = useState<AcousticProfileId>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -122,10 +122,10 @@ export default function App() {
     }
   });
 
-  // Reset verification dismissed flag when not in active call
+  // Reset security modal state when call ends
   useEffect(() => {
     if (!callSession.isInCall) {
-      setVerificationDismissed(false);
+      setShowSecurityModal(false);
     }
   }, [callSession.isInCall]);
 
@@ -264,17 +264,13 @@ export default function App() {
                 {callSession.safetyCode && (
                   <button
                     type="button"
-                    onClick={() => setVerificationDismissed(false)}
-                    className={`call-safety-btn ${callSession.isVerified ? 'verified' : ''}`}
-                    title="Click to view full security verification dialog"
-                    aria-label="Security Verification Code"
+                    onClick={() => setShowSecurityModal(true)}
+                    className="call-emoji-badge"
+                    title="End-to-End Encryption: If these 4 emojis match on both screens, your call is 100% private. Click for details."
+                    aria-label={`Security verification emojis: ${callSession.safetyCode}`}
                   >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>
-                      {callSession.isVerified
-                        ? `Verified (${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)})`
-                        : `Code: ${callSession.safetyCode.slice(0, 4)}-${callSession.safetyCode.slice(4)}`}
-                    </span>
+                    <Lock className="w-3.5 h-3.5 text-green" />
+                    <span className="call-emoji-icons">{callSession.safetyCode}</span>
                   </button>
                 )}
 
@@ -645,19 +641,12 @@ export default function App() {
           </div>
         )}
 
-        {/* MITM Security Verification Modal */}
-        {callSession.isInCall && callSession.safetyCode && !callSession.isVerified && (
+        {/* MITM Security Verification Modal (Non-blocking Info Sheet) */}
+        {showSecurityModal && callSession.safetyCode && (
           <SecurityVerificationModal
             safetyCode={callSession.safetyCode}
             connectedPeer={callSession.connectedPeer}
-            onVerify={() => {
-              callSession.setIsVerified(true);
-              addLog('Connection authenticity verified by user', 'ok');
-            }}
-            onReject={() => {
-              addLog('Security verification rejected. Terminating call.', 'error');
-              callSession.endCall();
-            }}
+            onClose={() => setShowSecurityModal(false)}
           />
         )}
 

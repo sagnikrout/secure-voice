@@ -1,4 +1,4 @@
-# SecureVoice (v3.8.2)
+# SecureVoice (v3.9.0)
 
 SecureVoice is an open-source, peer-to-peer encrypted voice calling application engineered for resilience on weak networks (2G, EDGE, high latency, and severe packet loss) and zero-trust private communication. Voice streams connect directly between devices via WebRTC DTLS-SRTP encryption with zero intermediate media relays by default.
 
@@ -129,7 +129,7 @@ To assemble the optimized, R8-minified production APK (~2.3 MB):
 bash scripts/build-release-apk.sh
 ```
 
-The signed binary is written to `dist/SecureVoice-v3.8.2-release.apk` alongside its SHA-256 checksum in `dist/SHA256SUMS.txt`.
+The signed binary is written to `dist/SecureVoice-v3.9.0-release.apk` alongside its SHA-256 checksum in `dist/SHA256SUMS.txt`.
 
 ---
 

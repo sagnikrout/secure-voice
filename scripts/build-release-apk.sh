@@ -29,9 +29,9 @@ KEY_PASSWORD="securevoice" \
 
 echo "=== [4/4] Verifying APK Signature & Exporting ==="
 mkdir -p "$ROOT_DIR/dist"
-cp "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" "$ROOT_DIR/dist/SecureVoice-v3.8.2-release.apk"
+cp "$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk" "$ROOT_DIR/dist/SecureVoice-v3.9.0-release.apk"
 cd "$ROOT_DIR/dist"
-sha256sum SecureVoice-v3.8.2-release.apk > SHA256SUMS.txt
+sha256sum SecureVoice-v3.9.0-release.apk > SHA256SUMS.txt
 
-echo "✅ Release APK built successfully: dist/SecureVoice-v3.8.2-release.apk"
+echo "✅ Release APK built successfully: dist/SecureVoice-v3.9.0-release.apk"
 cat SHA256SUMS.txt
