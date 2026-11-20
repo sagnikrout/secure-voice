@@ -72,13 +72,31 @@ export default function App() {
     callNoticeTimeoutRef.current = setTimeout(() => setCallNotice(null), 5000);
   }, []);
 
-  // Parse deep-link invite on launch
+  // Parse deep-link invite on launch (supporting Web routes, hashes, and native Android intent launches)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const target = parseCallTargetFromUrl(window.location.hash);
-    if (target) {
-      setCalleeInput(sanitizePeerId(target));
-      addLog(`Prepared call target from link: ${target}`, 'info');
+    const handleTarget = (rawUrl: string, source: string) => {
+      const target = parseCallTargetFromUrl(rawUrl);
+      if (target) {
+        const sanitized = sanitizePeerId(target);
+        setCalleeInput(sanitized);
+        addLog(`Prepared call target from ${source}: ${sanitized}`, 'info');
+      }
+    };
+
+    // 1. Initial launch check
+    if (platform.getDeepLink) {
+      platform.getDeepLink().then(url => {
+        if (url) handleTarget(url, 'deep link');
+      }).catch(() => {});
+    } else if (typeof window !== 'undefined') {
+      const initial = window.location.hash || window.location.search;
+      if (initial) handleTarget(initial, 'web link');
+    }
+
+    // 2. Continuous listener (warm launches, in-app QR scans, route changes)
+    if (platform.onDeepLink) {
+      const unsubscribe = platform.onDeepLink(url => handleTarget(url, 'deep link'));
+      return unsubscribe;
     }
   }, [addLog]);
 

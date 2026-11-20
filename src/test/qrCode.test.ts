@@ -22,15 +22,21 @@ describe('QR Code & Deep Link Utilities', () => {
     await expect(generateQrCodeDataUrl(null as any)).rejects.toThrow('Valid string required');
   });
 
-  it('formats call invite URLs correctly', () => {
+  it('formats call invite URLs correctly using canonical web domain on local/native host', () => {
     const url = buildCallInviteUrl('ABC-DEF-GHI');
     expect(url).toContain('#call=ABC-DEF-GHI');
+    expect(url).toBe('https://sagnikrout.github.io/secure-voice/#call=ABC-DEF-GHI');
+    expect(url).not.toContain('localhost');
+    expect(url).not.toContain('securevoice.local');
   });
 
-  it('parses call target from valid URLs and hashes', () => {
+  it('parses call target from valid URLs, query parameters, and custom URI schemes', () => {
     expect(parseCallTargetFromUrl('#call=ABC-DEF-GHI')).toBe('ABC-DEF-GHI');
     expect(parseCallTargetFromUrl('https://app.securevoice.io/#call=XYZ-456-789')).toBe('XYZ-456-789');
     expect(parseCallTargetFromUrl('https://app.securevoice.io/path#call=123-456-789')).toBe('123-456-789');
+    expect(parseCallTargetFromUrl('https://sagnikrout.github.io/secure-voice/?call=987-654-321')).toBe('987-654-321');
+    expect(parseCallTargetFromUrl('securevoice://call/ABC-123-XYZ')).toBe('ABC-123-XYZ');
+    expect(parseCallTargetFromUrl('securevoice://#call=ABC-123-XYZ')).toBe('ABC-123-XYZ');
   });
 
   it('returns null when URL does not contain a call target', () => {

@@ -28,6 +28,12 @@ public class MainActivity extends BridgeActivity {
         moveTaskToBack(true);
     }
 
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+    }
+
     private void configureLockScreenVisibility() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);

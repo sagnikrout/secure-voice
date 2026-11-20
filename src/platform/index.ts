@@ -18,6 +18,8 @@ export interface PlatformService {
   onAppStateChange(callback: (isActive: boolean) => void): () => void;
   onBackButton(callback: (canGoBack: boolean) => boolean | void): () => void;
   onCallAction?(callback: (action: 'answer' | 'decline') => void): () => void;
+  onDeepLink?(callback: (url: string) => void): () => void;
+  getDeepLink?(): Promise<string | null>;
   acquireWakeLock(): Promise<void>;
   releaseWakeLock(): Promise<void>;
 }
@@ -90,6 +92,25 @@ class WebPlatformService implements PlatformService {
     const handler = () => callback(window.history.length > 1);
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
+  }
+
+  onDeepLink(callback: (url: string) => void): () => void {
+    if (typeof window === 'undefined') return () => {};
+    const handler = () => {
+      const full = window.location.hash || window.location.search || window.location.href;
+      if (full) callback(full);
+    };
+    window.addEventListener('hashchange', handler);
+    window.addEventListener('popstate', handler);
+    return () => {
+      window.removeEventListener('hashchange', handler);
+      window.removeEventListener('popstate', handler);
+    };
+  }
+
+  async getDeepLink(): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    return window.location.hash || window.location.search || window.location.href || null;
   }
 
   async acquireWakeLock(): Promise<void> {}
@@ -247,6 +268,43 @@ class AndroidPlatformService implements PlatformService {
       }
     }).then(h => { handle = h; }).catch(() => {});
     return () => { handle?.remove?.(); };
+  }
+
+  onDeepLink(callback: (url: string) => void): () => void {
+    let handle: any = null;
+    try {
+      CapacitorApp.addListener('appUrlOpen', (event) => {
+        if (event && event.url) {
+          callback(event.url);
+        }
+      }).then(h => { handle = h; }).catch(() => {});
+    } catch {}
+
+    const webHandler = () => {
+      const full = window.location.hash || window.location.search;
+      if (full) callback(full);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('hashchange', webHandler);
+    }
+
+    return () => {
+      handle?.remove?.();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('hashchange', webHandler);
+      }
+    };
+  }
+
+  async getDeepLink(): Promise<string | null> {
+    try {
+      const launch = await CapacitorApp.getLaunchUrl();
+      if (launch && launch.url) return launch.url;
+    } catch {}
+    if (typeof window !== 'undefined') {
+      return window.location.hash || window.location.search || null;
+    }
+    return null;
   }
 
   async acquireWakeLock(): Promise<void> {
