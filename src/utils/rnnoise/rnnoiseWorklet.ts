@@ -146,11 +146,11 @@ class RNNoiseAudioWorkletProcessor extends AudioWorkletProcessor {
     const rms = Math.sqrt(sumSq / this.FRAME_SIZE);
 
     // Approximate voice activity probability
-    const isSpeech = rms > 0.008;
-    this.speechProb = isSpeech ? 0.85 : 0.15;
+    const isSpeech = rms > 0.002;
+    this.speechProb = isSpeech ? 0.90 : 0.15;
 
-    // Modulate per-band envelope
-    const gainFactor = isSpeech ? 1.0 : Math.max(0.05, rms / 0.008);
+    // Modulate per-band envelope without dropping microphone voice
+    const gainFactor = isSpeech ? 1.0 : Math.max(0.15, rms / 0.002);
     for (let i = 0; i < this.FRAME_SIZE; i++) {
       output[i] = input[i] * gainFactor;
     }

@@ -111,6 +111,9 @@ describe('Audio Pipeline Benchmark & Acoustic Verification Suite', () => {
       inFrame[i] = 0.2 * Math.sin((2 * Math.PI * 220 * i) / SAMPLE_RATE);
     }
 
+    // Warm-up iteration to stabilize JIT/cache before timing
+    processor.processFrame(inFrame, outFrame);
+
     const latencies: number[] = [];
     for (let i = 0; i < 50; i++) {
       const t0 = performance.now();

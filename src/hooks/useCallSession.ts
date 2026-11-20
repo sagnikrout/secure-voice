@@ -312,6 +312,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       });
 
       rawStreamRef.current = stream;
+      stream.getAudioTracks().forEach(t => { t.enabled = true; });
       callbacksRef.current.addLog?.('Microphone access granted', 'ok');
 
       const pipeline = createDenoisePipeline(stream, { profile: acousticProfile });
@@ -326,7 +327,26 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       platform.acquireWakeLock().catch(() => {});
 
       if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+          try {
+            await audioCtx.resume();
+          } catch (e) {
+            console.warn('AudioContext resume failed:', e);
+          }
+        }
         callbacksRef.current.addLog?.('Web Audio 6-stage filter & noise gate active', 'ok');
+      }
+
+      // Safeguard: If audioCtx failed to enter running state, fallback directly to raw hardware mic
+      if (!audioCtx || audioCtx.state !== 'running') {
+        callbacksRef.current.addLog?.('AudioContext not active; using direct hardware microphone stream', 'warn');
+        setActiveCodec('opus');
+        acquiringMicRef.current = false;
+        return stream;
+      }
+
+      if (processedStream && typeof processedStream.getAudioTracks === 'function') {
+        processedStream.getAudioTracks().forEach(t => { t.enabled = true; });
       }
 
       // Production Fullband Opus Codec active
@@ -342,7 +362,7 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
       }
       throw err;
     }
-  }, []);
+  }, [acousticProfile]);
 
   /**
    * Attach WebRTC call event listeners and setup monitoring
@@ -360,10 +380,16 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
         if (rawStreamRef.current) {
           rawStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
         }
+        if (processedStreamRef.current) {
+          processedStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
       } else if (event?.state === 'gain') {
         callbacksRef.current.addLog?.('Audio focus restored', 'ok');
         if (rawStreamRef.current && !isMuted) {
           rawStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
+        }
+        if (processedStreamRef.current && !isMuted) {
+          processedStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
         }
       }
     });
@@ -504,6 +530,9 @@ export function useCallSession({ addLog, onStatusChange, selectedInputId, acoust
   const answerCall = useCallback(async () => {
     const call = incomingCall;
     if (!call) return;
+
+    // Immediately trigger user gesture unlock for Web Audio
+    unlockAudioContext().catch(() => {});
 
     if (stopRingtoneRef.current) {
       stopRingtoneRef.current();

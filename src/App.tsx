@@ -54,12 +54,12 @@ export default function App() {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(STORAGE_KEYS.ACOUSTIC_PROFILE);
-        if (saved === 'neural-enhanced' || saved === 'balanced') {
+        if (saved === 'neural-enhanced' || saved === 'balanced' || saved === 'voice-boost' || saved === 'studio-clean') {
           return saved as AcousticProfileId;
         }
       } catch {}
     }
-    return 'balanced';
+    return 'neural-enhanced';
   });
   const copyTimeoutRef = useRef(null);
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);

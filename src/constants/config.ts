@@ -427,7 +427,7 @@ export const ACOUSTIC_PROFILES: Record<AcousticProfileId, AcousticProfile> = {
     presenceFreq: 3000,
     hissCutFreq: 18000,
     gateThreshold: -44,
-    gateFloor: 0.015,
+    gateFloor: 0.08,
     compressorRatio: 2.8,
     compressorThreshold: -22,
     makeupGain: 1.20
