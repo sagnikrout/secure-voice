@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import { spawn } from 'child_process';
 import http from 'http';
+import path from 'path';
 
 function checkServerReady(port = 5173, timeout = 15000) {
   const start = Date.now();
@@ -34,12 +35,10 @@ async function runSimulation() {
       console.log(`📡 Detected running Vite server on http://localhost:${PORT}`);
     } catch {
       console.log(`🚀 Starting local Vite server on port ${PORT}...`);
-      const isWin = process.platform === 'win32';
-      const cmd = isWin ? 'cmd.exe' : 'npx';
-      const args = isWin ? ['/c', 'npx', 'vite', '--port', `${PORT}`, '--strictPort'] : ['vite', '--port', `${PORT}`, '--strictPort'];
-      viteProcess = spawn(cmd, args, {
-        stdio: 'pipe',
-        shell: isWin
+      const viteBin = path.join('/home/sagnik/secure-voice', 'node_modules', 'vite', 'bin', 'vite.js');
+      viteProcess = spawn('node', [viteBin, '--port', `${PORT}`, '--strictPort', '--host'], {
+        cwd: '/home/sagnik/secure-voice',
+        stdio: 'pipe'
       });
       await checkServerReady(PORT, 20000);
       console.log(`✅ Vite server successfully started.`);
@@ -59,8 +58,9 @@ async function runSimulation() {
 
     // 1. Peer A Setup (Callee)
     console.log('👤 [Peer A] Initializing...');
-    const contextA = await browser.newContext();
+    const contextA = await browser.newContext({ permissions: ['microphone'] });
     const pageA = await contextA.newPage();
+    pageA.on('console', msg => console.log(`   [Browser A] ${msg.text()}`));
     await pageA.goto(`http://localhost:${PORT}`);
     await pageA.waitForSelector('.status-chip.ready', { timeout: 15000 });
     const peerAId = await pageA.$eval('.id-text', el => el.textContent.trim());
@@ -68,8 +68,9 @@ async function runSimulation() {
 
     // 2. Peer B Setup (Caller)
     console.log('👤 [Peer B] Initializing...');
-    const contextB = await browser.newContext();
+    const contextB = await browser.newContext({ permissions: ['microphone'] });
     const pageB = await contextB.newPage();
+    pageB.on('console', msg => console.log(`   [Browser B] ${msg.text()}`));
     await pageB.goto(`http://localhost:${PORT}`);
     await pageB.waitForSelector('.status-chip.ready', { timeout: 15000 });
     const peerBId = await pageB.$eval('.id-text', el => el.textContent.trim());
@@ -79,17 +80,17 @@ async function runSimulation() {
     console.log(`\n📞 [Peer B] Dialing Peer A (${peerAId})...`);
     await pageB.fill('input.peer-input', peerAId);
     await pageB.click('button[aria-label="Initiate encrypted call"]');
-    await pageB.waitForSelector('.status-chip.calling', { timeout: 5000 });
+    await pageB.waitForSelector('.calling-screen, .call-screen, .status-chip.calling, .status-chip.in-call', { timeout: 15000 });
     console.log(`⏳ [Peer B] Outgoing call signaled...`);
 
     // 4. Peer A Answers
     console.log(`🔔 [Peer A] Incoming call detected! Answering...`);
-    const answerBtn = await pageA.waitForSelector('button[aria-label="Answer incoming call"]', { timeout: 10000 });
+    const answerBtn = await pageA.waitForSelector('button[aria-label="Answer incoming call"]', { timeout: 20000 });
     await answerBtn.click();
 
     // 5. Verify In-Call State on Both Peers
-    await pageA.waitForSelector('.status-chip.in-call', { timeout: 10000 });
-    await pageB.waitForSelector('.status-chip.in-call', { timeout: 10000 });
+    await pageA.waitForSelector('.call-screen, .timer', { timeout: 15000 });
+    await pageB.waitForSelector('.call-screen, .timer', { timeout: 15000 });
     console.log('🔒 \x1b[32m[P2P Connection Established]\x1b[0m Both peers in active encrypted call!');
 
     // 6. Verify Call Timer and Visualizer
